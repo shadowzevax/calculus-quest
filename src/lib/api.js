@@ -53,10 +53,10 @@ export const api = {
   },
   auth: {
     login: (email, password) =>
-      request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-    register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-    logout: () => request('/auth/logout', { method: 'POST' }),
-    me: () => request('/auth/me'),
+      request('/auth?action=login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    register: (data) => request('/auth?action=register', { method: 'POST', body: JSON.stringify(data) }),
+    logout: () => request('/auth?action=logout', { method: 'POST' }),
+    me: () => request('/auth?action=me'),
   },
   stats: {
     get: () => cachedGet('/stats'),
