@@ -4,10 +4,14 @@ import { ChevronLeft, Trophy } from 'lucide-react'
 import { api } from '@/lib/api'
 import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercise'
 import FillBlankExercise from '@/components/exercises/FillBlankExercise'
+import TrueFalseExercise from '@/components/exercises/TrueFalseExercise'
+import MatchingExercise from '@/components/exercises/MatchingExercise'
 
 const EXERCISE_COMPONENTS = {
   multiple_choice: MultipleChoiceExercise,
   fill_blank: FillBlankExercise,
+  true_false: TrueFalseExercise,
+  matching: MatchingExercise,
 }
 
 export default function MissionDetail() {

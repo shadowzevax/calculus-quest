@@ -33,6 +33,11 @@ function invalidate(prefix) {
 export const api = {
   missions: {
     list: (module = 'misiones') => cachedGet(`/missions?module=${module}`),
+    update: (data) =>
+      request('/missions', { method: 'PATCH', body: JSON.stringify(data) }).then((r) => {
+        invalidate('/missions');
+        return r;
+      }),
   },
   exercises: {
     byMission: (missionId) => cachedGet(`/exercises?mission_id=${missionId}`),
@@ -69,5 +74,18 @@ export const api = {
         invalidate('/users');
         return r;
       }),
+  },
+  messages: {
+    list: () => request('/messages'),
+    send: (content) => request('/messages', { method: 'POST', body: JSON.stringify({ content }) }),
+    clear: () => request('/messages', { method: 'DELETE' }),
+  },
+  settings: {
+    get: () => request('/settings'),
+    set: (key, value) => request('/settings', { method: 'PATCH', body: JSON.stringify({ key, value }) }),
+  },
+  exercisesAudit: {
+    scan: () => request('/exercises-audit'),
+    disable: (ids) => request('/exercises-audit', { method: 'PATCH', body: JSON.stringify({ ids }) }),
   },
 };
