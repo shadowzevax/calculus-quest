@@ -54,8 +54,8 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen flex font-body">
-      <aside className="w-64 bg-blueprint bg-grid-dark bg-grid flex flex-col shrink-0 relative">
+    <div className="h-screen flex font-body overflow-hidden">
+      <aside className="w-64 h-full bg-blueprint bg-grid-dark bg-grid flex flex-col shrink-0 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-blueprint/0 via-blueprint/40 to-blueprint pointer-events-none" />
 
         <div className="relative p-5 flex items-center gap-3 border-b border-white/10">
@@ -111,7 +111,7 @@ export default function Layout({ children }) {
         )}
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-paper bg-grid-light bg-grid p-8">{children}</main>
+      <main className="flex-1 h-full overflow-y-auto bg-paper bg-grid-light bg-grid p-8">{children}</main>
     </div>
   )
 }

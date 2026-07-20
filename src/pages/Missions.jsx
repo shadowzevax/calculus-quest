@@ -4,6 +4,7 @@ import * as Icons from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
+import { MissionsGridSkeleton } from '@/components/Skeleton'
 
 const difficultyStyle = {
   facil: 'bg-teal/10 text-teal',
@@ -31,7 +32,6 @@ export default function Missions() {
       .finally(() => setLoading(false))
   }, [user])
 
-  if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misiones...</p>
   if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
 
   return (
@@ -41,6 +41,7 @@ export default function Missions() {
       <p className="text-ink/50 mb-8">
         {isAdmin ? 'Tienes acceso completo a todas las misiones.' : 'Completa las misiones en orden para avanzar.'}
       </p>
+      {loading ? <MissionsGridSkeleton /> : (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {missions.map((m) => {
           const Icon = Icons[m.icon] || Icons.BookOpen
@@ -104,6 +105,7 @@ export default function Missions() {
           )
         })}
       </div>
+      )}
     </div>
   )
 }

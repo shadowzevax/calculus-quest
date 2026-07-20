@@ -4,6 +4,7 @@ import * as Icons from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
+import { SkeletonBlock, MissionCardSkeleton } from '@/components/Skeleton'
 
 const XP_PER_LEVEL = 500
 
@@ -40,10 +41,13 @@ function MissionPreviewCard({ mission }) {
 export default function Dashboard() {
   const { user, isLoadingAuth } = useAuth()
   const [missions, setMissions] = useState([])
+  const [missionsLoading, setMissionsLoading] = useState(true)
   const [stats, setStats] = useState(null)
   const isAdmin = user?.role === 'admin'
 
-  useEffect(() => { api.missions.list('misiones').then(setMissions).catch(() => {}) }, [])
+  useEffect(() => {
+    api.missions.list('misiones').then(setMissions).catch(() => {}).finally(() => setMissionsLoading(false))
+  }, [])
   useEffect(() => { if (isAdmin) api.stats.get().then(setStats).catch(() => {}) }, [isAdmin])
 
   if (isLoadingAuth) return <p className="text-ink/40 font-mono-lab text-sm">Cargando...</p>
@@ -70,7 +74,9 @@ export default function Dashboard() {
             <Link to="/missions" className="text-sm text-coral font-medium">Ver todas →</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {missions.slice(0, 3).map((m) => <MissionPreviewCard key={m.id} mission={m} />)}
+            {missionsLoading
+              ? Array.from({ length: 3 }).map((_, i) => <MissionCardSkeleton key={i} />)
+              : missions.slice(0, 3).map((m) => <MissionPreviewCard key={m.id} mission={m} />)}
           </div>
         </div>
       </div>
@@ -104,7 +110,9 @@ export default function Dashboard() {
       <div className="mt-8">
         <h2 className="font-display font-semibold text-ink mb-3">Continúa donde quedaste</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {missions.slice(0, 3).map((m) => <MissionPreviewCard key={m.id} mission={m} />)}
+          {missionsLoading
+            ? Array.from({ length: 3 }).map((_, i) => <MissionCardSkeleton key={i} />)
+            : missions.slice(0, 3).map((m) => <MissionPreviewCard key={m.id} mission={m} />)}
         </div>
       </div>
     </div>
