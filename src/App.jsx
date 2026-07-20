@@ -4,6 +4,7 @@ import { AuthProvider } from './lib/AuthContext'
 import Layout from './Layout'
 import Dashboard from './pages/Dashboard'
 import Missions from './pages/Missions'
+import MissionDetail from './pages/MissionDetail'
 import Login from './pages/Login'
 import Ranking from './pages/Ranking'
 import Profile from './pages/Profile'
@@ -21,6 +22,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/missions" element={<Missions />} />
+            <Route path="/missions/:id" element={<MissionDetail />} />
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/profile" element={<Profile />} />

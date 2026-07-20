@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import * as Icons from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
@@ -17,6 +18,7 @@ export default function Missions() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const isAdmin = user?.role === 'admin'
+  const navigate = useNavigate()
 
   useEffect(() => {
     Promise.all([
@@ -73,6 +75,7 @@ export default function Missions() {
               )}
               <button
                 disabled={locked}
+                onClick={() => navigate(`/missions/${m.id}`)}
                 className="mt-4 w-full rounded-lg py-2 text-sm font-medium disabled:bg-slate-100 disabled:text-slate-400 bg-[#457B9D] text-white"
               >
                 {locked ? 'Bloqueada' : pct >= 100 ? 'Revisar' : pct > 0 ? 'Continuar' : 'Comenzar'}
