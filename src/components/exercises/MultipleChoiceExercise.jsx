@@ -27,24 +27,23 @@ export default function MultipleChoiceExercise({ exercise, onComplete }) {
     if (index < questions.length - 1) {
       setIndex(index + 1)
     } else {
-      const pct = (correctCount + (feedback?.isCorrect ? 0 : 0)) / questions.length
-      onComplete({ isCorrect: pct >= 0.6 })
+      onComplete({ isCorrect: correctCount / questions.length >= 0.6 })
     }
   }
 
   return (
     <div>
-      <p className="text-xs text-slate-400 mb-2">Pregunta {index + 1} de {questions.length}</p>
-      <p className="font-medium text-slate-800 mb-4" dangerouslySetInnerHTML={{ __html: q.question }} />
+      <p className="text-xs font-mono-lab text-ink/35 mb-2">PREGUNTA {index + 1} / {questions.length}</p>
+      <p className="font-display font-medium text-ink mb-4" dangerouslySetInnerHTML={{ __html: q.question }} />
       <div className="space-y-2">
         {q.options.map((opt, i) => (
           <button
             key={i}
             onClick={() => !feedback && setSelected(i)}
             disabled={!!feedback}
-            className={`w-full text-left border rounded-lg px-4 py-2.5 text-sm transition-colors ${
-              selected === i ? 'border-[#457B9D] bg-[#457B9D]/5' : 'border-slate-200'
-            } ${feedback && i === q.correct_index ? 'border-green-500 bg-green-50' : ''} ${
+            className={`w-full text-left border rounded-lg px-4 py-2.5 text-sm font-mono-lab transition-colors ${
+              selected === i ? 'border-coral bg-coral/5' : 'border-ink/10'
+            } ${feedback && i === q.correct_index ? 'border-teal bg-teal/10' : ''} ${
               feedback && selected === i && i !== q.correct_index ? 'border-red-400 bg-red-50' : ''
             }`}
           >
@@ -54,7 +53,7 @@ export default function MultipleChoiceExercise({ exercise, onComplete }) {
       </div>
 
       {feedback && (
-        <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+        <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-teal/10 text-teal' : 'bg-gold/10 text-gold'}`}>
           {feedback.isCorrect ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
           <span>{feedback.isCorrect ? '¡Correcto!' : 'Buen intento.'} {feedback.explanation}</span>
         </div>
@@ -62,11 +61,11 @@ export default function MultipleChoiceExercise({ exercise, onComplete }) {
 
       <div className="mt-4">
         {!feedback ? (
-          <button onClick={check} disabled={selected === null} className="bg-[#457B9D] text-white rounded px-4 py-2 text-sm disabled:opacity-40">
+          <button onClick={check} disabled={selected === null} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-30">
             Verificar
           </button>
         ) : (
-          <button onClick={next} className="bg-[#457B9D] text-white rounded px-4 py-2 text-sm">
+          <button onClick={next} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">
             {index < questions.length - 1 ? 'Siguiente pregunta' : 'Finalizar'}
           </button>
         )}

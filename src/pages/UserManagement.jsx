@@ -16,23 +16,26 @@ export default function UserManagement() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1 flex items-center gap-2"><Users className="w-5 h-5" /> Gestión de Usuarios</h1>
-      <p className="text-slate-500 mb-6">Administra los roles de docentes y estudiantes.</p>
+      <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">ADMINISTRACIÓN</div>
+      <h1 className="text-3xl font-display font-bold text-ink mb-1 flex items-center gap-2">
+        <Users className="w-6 h-6 text-blueprint" /> Gestión de Usuarios
+      </h1>
+      <p className="text-ink/50 mb-6">Administra los roles de docentes y estudiantes.</p>
 
-      <div className="bg-white rounded-xl border divide-y">
+      <div className="bg-white rounded-xl border border-ink/10 divide-y divide-ink/5">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between px-5 py-3">
+          <div key={u.id} className="flex items-center justify-between px-5 py-3.5">
             <div>
-              <div className="font-medium text-slate-800">{u.full_name}</div>
-              <div className="text-xs text-slate-400">{u.email}</div>
+              <div className="font-medium text-ink">{u.full_name}</div>
+              <div className="text-xs text-ink/40">{u.email}</div>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${u.role === 'admin' ? 'bg-gold/15 text-gold' : 'bg-ink/5 text-ink/50'}`}>
                 {u.role === 'admin' ? 'Docente' : 'Estudiante'}
               </span>
               <button
                 onClick={() => toggleRole(u)}
-                className="text-xs border rounded px-2 py-1 text-slate-600 hover:bg-slate-50"
+                className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5"
               >
                 Cambiar Rol
               </button>

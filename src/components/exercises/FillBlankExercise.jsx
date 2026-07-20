@@ -43,10 +43,10 @@ export default function FillBlankExercise({ exercise, onComplete }) {
 
   return (
     <div>
-      <p className="text-xs text-slate-400 mb-2">Problema {index + 1} de {problems.length}</p>
-      <p className="font-medium text-slate-800 mb-4" dangerouslySetInnerHTML={{ __html: p.question }} />
+      <p className="text-xs font-mono-lab text-ink/35 mb-2">PROBLEMA {index + 1} / {problems.length}</p>
+      <p className="font-display font-medium text-ink mb-4" dangerouslySetInnerHTML={{ __html: p.question }} />
       <input
-        className="w-full border rounded-lg px-3 py-2 text-sm"
+        className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm font-mono-lab focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
         placeholder="Escribe tu respuesta"
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -54,7 +54,7 @@ export default function FillBlankExercise({ exercise, onComplete }) {
       />
 
       {feedback && (
-        <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+        <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-teal/10 text-teal' : 'bg-gold/10 text-gold'}`}>
           {feedback.isCorrect ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
           <span>{feedback.isCorrect ? '¡Correcto!' : 'Buen intento.'} {feedback.explanation}</span>
         </div>
@@ -62,11 +62,11 @@ export default function FillBlankExercise({ exercise, onComplete }) {
 
       <div className="mt-4">
         {!feedback ? (
-          <button onClick={check} disabled={!value.trim()} className="bg-[#457B9D] text-white rounded px-4 py-2 text-sm disabled:opacity-40">
+          <button onClick={check} disabled={!value.trim()} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-30">
             Verificar
           </button>
         ) : (
-          <button onClick={next} className="bg-[#457B9D] text-white rounded px-4 py-2 text-sm">
+          <button onClick={next} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">
             {index < problems.length - 1 ? 'Siguiente problema' : 'Finalizar'}
           </button>
         )}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
+import MiniCurve from '@/components/MiniCurve'
 
 export default function Login() {
   const { login, register } = useAuth()
@@ -31,19 +32,35 @@ export default function Login() {
   }
 
   return (
-    <div className="max-w-sm mx-auto mt-12 bg-white rounded-lg shadow p-6">
-      <h1 className="text-xl font-bold mb-4">{mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h1>
+    <div className="bg-white rounded-xl border border-ink/10 shadow-sm p-8 font-body">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-11 h-11 rounded-lg bg-coral/10 border border-coral/30 flex items-center justify-center">
+          <MiniCurve seed="login" width={26} height={20} stroke="#FF6B4A" animate={false} />
+        </div>
+        <div>
+          <div className="font-display font-semibold text-ink leading-tight">Cálculo Lab</div>
+          <div className="text-[11px] font-mono-lab text-ink/40">LABORATORIO DEL FUTURO</div>
+        </div>
+      </div>
+
+      <h1 className="text-xl font-display font-semibold text-ink mb-1">
+        {mode === 'login' ? 'Bienvenido de vuelta' : 'Crea tu cuenta'}
+      </h1>
+      <p className="text-sm text-ink/50 mb-6">
+        {mode === 'login' ? 'Continúa tu recorrido por el laboratorio.' : 'Empieza a resolver misiones y ganar XP.'}
+      </p>
+
       <form onSubmit={submit} className="space-y-3">
         {mode === 'register' && (
           <input
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
             placeholder="Nombre completo"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
           />
         )}
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
           type="email"
           placeholder="Correo"
           value={email}
@@ -51,7 +68,7 @@ export default function Login() {
           required
         />
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
           type="password"
           placeholder="Contraseña"
           value={password}
@@ -62,13 +79,13 @@ export default function Login() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#457B9D] text-white rounded px-3 py-2 disabled:opacity-50"
+          className="w-full bg-coral hover:bg-coral/90 transition-colors text-white rounded-lg px-3 py-2.5 text-sm font-medium disabled:opacity-50"
         >
           {loading ? 'Cargando...' : mode === 'login' ? 'Entrar' : 'Registrarme'}
         </button>
       </form>
       <button
-        className="text-sm text-[#457B9D] mt-3"
+        className="text-sm text-coral mt-4 font-medium"
         onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
       >
         {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}

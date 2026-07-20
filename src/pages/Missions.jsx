@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import * as Icons from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
+import MiniCurve from '@/components/MiniCurve'
 
-const difficultyColor = {
-  facil: 'bg-green-100 text-green-700',
-  intermedio: 'bg-amber-100 text-amber-700',
-  dificil: 'bg-red-100 text-red-700',
-  experto: 'bg-purple-100 text-purple-700',
+const difficultyStyle = {
+  facil: 'bg-teal/10 text-teal',
+  intermedio: 'bg-gold/15 text-gold',
+  dificil: 'bg-coral/10 text-coral',
+  experto: 'bg-blueprint/10 text-blueprint',
 }
 
 export default function Missions() {
@@ -30,16 +31,17 @@ export default function Missions() {
       .finally(() => setLoading(false))
   }, [user])
 
-  if (loading) return <p className="text-slate-500">Cargando misiones...</p>
-  if (error) return <p className="text-red-500">Error: {error}</p>
+  if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misiones...</p>
+  if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1">Misiones</h1>
-      <p className="text-slate-500 mb-6">
+      <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">CATÁLOGO DE MISIONES</div>
+      <h1 className="text-3xl font-display font-bold text-ink mb-1">Misiones</h1>
+      <p className="text-ink/50 mb-8">
         {isAdmin ? 'Tienes acceso completo a todas las misiones.' : 'Completa las misiones en orden para avanzar.'}
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {missions.map((m) => {
           const Icon = Icons[m.icon] || Icons.BookOpen
           const p = progress.find((pr) => pr.mission_id === m.id)
@@ -49,37 +51,55 @@ export default function Missions() {
           )
 
           return (
-            <div key={m.id} className="bg-white rounded-xl p-5 shadow-sm border flex flex-col">
-              <div
-                className="w-11 h-11 rounded-lg flex items-center justify-center mb-3 text-white"
-                style={{ backgroundColor: m.color || '#457B9D' }}
-              >
-                <Icon className="w-5 h-5" />
+            <div
+              key={m.id}
+              className={`relative bg-white rounded-xl border border-ink/10 flex flex-col overflow-hidden transition-all ${
+                locked ? 'opacity-60' : 'hover:border-coral/40 hover:-translate-y-0.5'
+              }`}
+            >
+              <div className="absolute top-0 left-0 right-0 h-2 flex justify-around px-4">
+                {[...Array(6)].map((_, i) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-paper border border-ink/10 -translate-y-1/2" />
+                ))}
               </div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${difficultyColor[m.difficulty] || 'bg-slate-100 text-slate-600'}`}>
-                  {m.difficulty}
-                </span>
-                <span className="text-xs text-slate-400">{m.estimated_time} min</span>
-              </div>
-              <h2 className="font-semibold text-slate-800">{m.title}</h2>
-              <p className="text-sm text-slate-500 mt-1 flex-1">{m.description}</p>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                <span>+{m.xp_reward} XP</span>
-                {!isAdmin && pct > 0 && <span>{pct.toFixed(0)}%</span>}
-              </div>
-              {!isAdmin && pct > 0 && (
-                <div className="w-full h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
-                  <div className="h-full bg-[#457B9D]" style={{ width: `${pct}%` }} />
+
+              <div className="p-5 pt-6 flex-1 flex flex-col">
+                <div className="flex items-start justify-between mb-3">
+                  <div
+                    className="w-11 h-11 rounded-lg flex items-center justify-center text-white"
+                    style={{ backgroundColor: m.color || '#1B3A5C' }}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <MiniCurve seed={m.id} width={72} height={30} stroke={m.color || '#FF6B4A'} animate={false} />
                 </div>
-              )}
-              <button
-                disabled={locked}
-                onClick={() => navigate(`/missions/${m.id}`)}
-                className="mt-4 w-full rounded-lg py-2 text-sm font-medium disabled:bg-slate-100 disabled:text-slate-400 bg-[#457B9D] text-white"
-              >
-                {locked ? 'Bloqueada' : pct >= 100 ? 'Revisar' : pct > 0 ? 'Continuar' : 'Comenzar'}
-              </button>
+
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${difficultyStyle[m.difficulty] || 'bg-ink/5 text-ink/50'}`}>
+                    {m.difficulty}
+                  </span>
+                  <span className="text-[11px] font-mono-lab text-ink/35">{m.estimated_time} min</span>
+                </div>
+                <h2 className="font-display font-semibold text-ink">{m.title}</h2>
+                <p className="text-sm text-ink/50 mt-1 flex-1">{m.description}</p>
+
+                <div className="mt-3 flex items-center justify-between text-xs font-mono-lab">
+                  <span className="text-coral">+{m.xp_reward} XP</span>
+                  {!isAdmin && pct > 0 && <span className="text-ink/40">{pct.toFixed(0)}%</span>}
+                </div>
+                {!isAdmin && pct > 0 && (
+                  <div className="w-full h-1.5 bg-ink/5 rounded-full mt-1.5 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
+                  </div>
+                )}
+                <button
+                  disabled={locked}
+                  onClick={() => navigate(`/missions/${m.id}`)}
+                  className="mt-4 w-full rounded-lg py-2.5 text-sm font-medium transition-colors disabled:bg-ink/5 disabled:text-ink/30 bg-blueprint hover:bg-coral text-white"
+                >
+                  {locked ? 'Bloqueada' : pct >= 100 ? 'Revisar' : pct > 0 ? 'Continuar' : 'Comenzar'}
+                </button>
+              </div>
             </div>
           )
         })}

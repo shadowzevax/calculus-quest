@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, Trophy } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useAuth } from '@/lib/AuthContext'
 import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercise'
 import FillBlankExercise from '@/components/exercises/FillBlankExercise'
 
@@ -14,12 +13,10 @@ const EXERCISE_COMPONENTS = {
 export default function MissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [mission, setMission] = useState(null)
   const [exercises, setExercises] = useState([])
   const [current, setCurrent] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [completedIds, setCompletedIds] = useState(new Set())
   const [showDone, setShowDone] = useState(false)
 
   useEffect(() => {
@@ -31,8 +28,8 @@ export default function MissionDetail() {
       .finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <p className="text-slate-500">Cargando misión...</p>
-  if (!mission) return <p className="text-red-500">Misión no encontrada.</p>
+  if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misión...</p>
+  if (!mission) return <p className="text-red-500 text-sm">Misión no encontrada.</p>
 
   const exercise = exercises[current]
   const Component = exercise ? EXERCISE_COMPONENTS[exercise.type] : null
@@ -47,7 +44,6 @@ export default function MissionDetail() {
           xp_earned: exercise.xp_value || 10,
         })
       } catch {}
-      setCompletedIds((prev) => new Set(prev).add(exercise.id))
     }
     if (current < exercises.length - 1) {
       setCurrent(current + 1)
@@ -58,24 +54,25 @@ export default function MissionDetail() {
 
   return (
     <div className="max-w-2xl">
-      <Link to="/missions" className="text-sm text-slate-500 flex items-center gap-1 mb-4">
+      <Link to="/missions" className="text-sm text-ink/50 hover:text-coral flex items-center gap-1 mb-4 transition-colors">
         <ChevronLeft className="w-4 h-4" /> Volver a Misiones
       </Link>
 
-      <h1 className="text-2xl font-bold">{mission.title}</h1>
-      <p className="text-slate-500 mt-1 mb-6">{mission.story || mission.description}</p>
+      <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-1">MISIÓN</div>
+      <h1 className="text-2xl font-display font-bold text-ink">{mission.title}</h1>
+      <p className="text-ink/50 mt-1 mb-6">{mission.story || mission.description}</p>
 
       {exercises.length === 0 && (
-        <div className="bg-white rounded-xl border p-6 text-slate-400 text-sm">
+        <div className="bg-white rounded-xl border border-ink/10 p-6 text-ink/40 text-sm">
           Esta misión aún no tiene ejercicios cargados.
         </div>
       )}
 
       {!showDone && exercise && (
-        <div className="bg-white rounded-xl border p-6">
+        <div className="bg-white rounded-xl border border-ink/10 p-6">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs text-slate-400">Ejercicio {current + 1} de {exercises.length}</span>
-            <span className="text-xs font-medium text-[#457B9D]">+{exercise.xp_value} XP</span>
+            <span className="text-xs font-mono-lab text-ink/40">EJERCICIO {current + 1} / {exercises.length}</span>
+            <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
           </div>
           {Component ? (
             <Component exercise={exercise} onComplete={handleComplete} />
@@ -86,11 +83,13 @@ export default function MissionDetail() {
       )}
 
       {showDone && (
-        <div className="bg-white rounded-xl border p-8 text-center">
-          <Trophy className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-          <h2 className="text-xl font-bold">¡Misión completada!</h2>
-          <p className="text-slate-500 mt-1">Ganaste XP por los ejercicios que resolviste correctamente.</p>
-          <button onClick={() => navigate('/missions')} className="mt-4 bg-[#457B9D] text-white rounded px-4 py-2 text-sm">
+        <div className="bg-white rounded-xl border border-ink/10 p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-gold/15 flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-7 h-7 text-gold" />
+          </div>
+          <h2 className="text-xl font-display font-bold text-ink">¡Misión completada!</h2>
+          <p className="text-ink/50 mt-1">Ganaste XP por los ejercicios que resolviste correctamente.</p>
+          <button onClick={() => navigate('/missions')} className="mt-5 bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium">
             Volver a Misiones
           </button>
         </div>

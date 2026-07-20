@@ -1,9 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Home, BookOpen, Trophy, MessageSquare, User, BarChart3,
-  Users, Map, Wrench, LogOut, Sparkles, Shield,
+  Users, Map, Wrench, LogOut, Shield,
 } from 'lucide-react'
 import { useAuth } from './lib/AuthContext'
+import MiniCurve from './components/MiniCurve'
 
 const studentNav = [
   { to: '/', label: 'Dashboard', icon: Home },
@@ -24,13 +25,16 @@ function NavItem({ to, label, icon: Icon }) {
   return (
     <NavLink
       to={to}
+      end={to === '/'}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-          isActive ? 'bg-[#457B9D]/10 text-[#457B9D]' : 'text-slate-600 hover:bg-slate-100'
+        `group flex items-center gap-3 pl-3 pr-4 py-2.5 rounded-md text-sm font-medium font-body transition-colors border-l-2 ${
+          isActive
+            ? 'bg-white/10 text-white border-coral'
+            : 'text-white/55 border-transparent hover:text-white/85 hover:bg-white/5'
         }`
       }
     >
-      <Icon className="w-4 h-4" />
+      <Icon className="w-4 h-4 shrink-0" />
       {label}
     </NavLink>
   )
@@ -43,61 +47,63 @@ export default function Layout({ children }) {
 
   if (!isLoadingAuth && !user) {
     return (
-      <div className="min-h-screen bg-[#FAF8F3] flex items-center justify-center">
+      <div className="min-h-screen bg-paper bg-grid-light bg-grid flex items-center justify-center font-body">
         <div className="max-w-md w-full">{children}</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F3] flex">
-      <aside className="w-64 bg-white border-r flex flex-col shrink-0">
-        <div className="p-5 flex items-center gap-3 border-b">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#457B9D] to-[#F4A261] flex items-center justify-center text-white">
-            <Sparkles className="w-5 h-5" />
+    <div className="min-h-screen flex font-body">
+      <aside className="w-64 bg-blueprint bg-grid-dark bg-grid flex flex-col shrink-0 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-blueprint/0 via-blueprint/40 to-blueprint pointer-events-none" />
+
+        <div className="relative p-5 flex items-center gap-3 border-b border-white/10">
+          <div className="w-10 h-10 rounded-lg bg-coral/15 border border-coral/40 flex items-center justify-center">
+            <MiniCurve seed="logo" width={26} height={20} stroke="#FF6B4A" animate={false} />
           </div>
           <div>
-            <div className="font-bold text-slate-800 leading-tight">Cálculo Lab</div>
-            <div className="text-xs text-slate-400">Laboratorio del Futuro</div>
+            <div className="font-display font-semibold text-white leading-tight tracking-tight">Cálculo Lab</div>
+            <div className="text-[11px] font-mono-lab text-white/40 tracking-wide">LABORATORIO DEL FUTURO</div>
           </div>
         </div>
 
         {isAdmin && (
-          <div className="mx-4 mt-4 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
-            <div className="flex items-center gap-2 text-purple-700 text-sm font-semibold">
-              <Shield className="w-4 h-4" /> Panel de Administrador
+          <div className="relative mx-4 mt-4 p-3 rounded-md bg-gold/10 border border-gold/30">
+            <div className="flex items-center gap-2 text-gold text-xs font-semibold font-mono-lab tracking-wide">
+              <Shield className="w-3.5 h-3.5" /> MODO DOCENTE
             </div>
-            <div className="text-xs text-purple-500 mt-0.5">Acceso completo al sistema</div>
+            <div className="text-[11px] text-white/50 mt-0.5">Acceso completo al sistema</div>
           </div>
         )}
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="relative flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {studentNav.map((item) => <NavItem key={item.to} {...item} />)}
           {isAdmin && (
             <>
-              <div className="pt-3 pb-1 px-4 text-xs font-semibold text-slate-400 uppercase">Administración</div>
+              <div className="pt-4 pb-1 px-4 text-[10px] font-mono-lab font-semibold text-white/30 tracking-widest">ADMINISTRACIÓN</div>
               {adminNav.map((item) => <NavItem key={item.to} {...item} />)}
             </>
           )}
         </nav>
 
         {user && (
-          <div className="p-4 border-t">
+          <div className="relative p-4 border-t border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-semibold text-slate-600">
+              <div className="w-9 h-9 rounded-full bg-coral/20 border border-coral/40 flex items-center justify-center text-sm font-display font-semibold text-coral">
                 {user.full_name?.[0]?.toUpperCase() || '?'}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-slate-800 truncate">{user.full_name}</div>
-                <div className="text-xs text-slate-400 truncate">{user.email}</div>
+                <div className="text-sm font-medium text-white truncate">{user.full_name}</div>
+                <div className="text-[11px] font-mono-lab text-white/40 truncate">{user.xp} XP</div>
               </div>
               {isAdmin && (
-                <span className="text-[10px] font-bold bg-purple-100 text-purple-600 rounded px-1.5 py-0.5">Admin</span>
+                <span className="text-[10px] font-mono-lab font-bold bg-gold/20 text-gold rounded px-1.5 py-0.5">ADMIN</span>
               )}
             </div>
             <button
               onClick={async () => { await logout(); navigate('/login') }}
-              className="mt-3 flex items-center gap-2 text-xs text-red-500 hover:text-red-600"
+              className="mt-3 flex items-center gap-2 text-xs text-white/40 hover:text-coral transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" /> Cerrar Sesión
             </button>
@@ -105,7 +111,7 @@ export default function Layout({ children }) {
         )}
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-8">{children}</main>
+      <main className="flex-1 overflow-y-auto bg-paper bg-grid-light bg-grid p-8">{children}</main>
     </div>
   )
 }
