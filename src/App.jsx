@@ -5,6 +5,13 @@ import Layout from './Layout'
 import Dashboard from './pages/Dashboard'
 import Missions from './pages/Missions'
 import Login from './pages/Login'
+import Ranking from './pages/Ranking'
+import Profile from './pages/Profile'
+import Chat from './pages/Chat'
+import TeacherPanel from './pages/TeacherPanel'
+import UserManagement from './pages/UserManagement'
+import MissionManagement from './pages/MissionManagement'
+import RepairMissions from './pages/RepairMissions'
 
 function App() {
   return (
@@ -14,6 +21,13 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/missions" element={<Missions />} />
+            <Route path="/ranking" element={<Ranking />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/teacher-panel" element={<TeacherPanel />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/mission-management" element={<MissionManagement />} />
+            <Route path="/repair-missions" element={<RepairMissions />} />
             <Route path="/login" element={<Login />} />
           </Routes>
         </Layout>

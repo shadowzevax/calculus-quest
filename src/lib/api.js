@@ -31,4 +31,17 @@ export const api = {
     logout: () => request('/auth/logout', { method: 'POST' }),
     me: () => request('/auth/me'),
   },
+  stats: {
+    get: () => request('/stats'),
+  },
+  ranking: {
+    list: () => request('/ranking'),
+  },
+  profile: {
+    update: (data) => request('/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  users: {
+    list: () => request('/users'),
+    setRole: (id, role) => request('/users', { method: 'PATCH', body: JSON.stringify({ id, role }) }),
+  },
 };
