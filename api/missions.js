@@ -1,6 +1,7 @@
 import { sql } from './_db.js';
 import { requireAdmin } from './_auth.js';
 
+// GET es público (cualquiera ve las misiones), PATCH exige rol admin.
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     const module = req.query.module || 'misiones';

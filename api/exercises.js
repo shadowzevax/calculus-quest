@@ -5,6 +5,7 @@ export default async function handler(req, res) {
   const { mission_id } = req.query;
   if (!mission_id) return res.status(400).json({ error: 'mission_id requerido' });
 
+  // parent_exercise_id IS NULL: solo los ejercicios "principales" de la misión.
   const rows = await sql`
     SELECT * FROM exercises
     WHERE mission_id = ${mission_id} AND parent_exercise_id IS NULL AND is_active = true
