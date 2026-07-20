@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from './lib/AuthContext'
 import MiniCurve from './components/MiniCurve'
+import Login from './pages/Login'
 
 const studentNav = [
   { to: '/', label: 'Dashboard', icon: Home },
@@ -45,13 +46,18 @@ export default function Layout({ children }) {
   const navigate = useNavigate()
   const isAdmin = user?.role === 'admin'
 
+  // Sin sesión: se muestra el login sin importar qué ruta se haya pedido
+  // (antes se mostraba "children", es decir la página de esa ruta, lo que
+  // dejaba ver el Dashboard sin haber iniciado sesión).
   if (!isLoadingAuth && !user) {
     return (
       <div className="min-h-screen bg-paper bg-grid-light bg-grid flex items-center justify-center font-body">
-        <div className="max-w-md w-full">{children}</div>
+        <div className="max-w-md w-full"><Login /></div>
       </div>
     )
   }
+
+  if (isLoadingAuth) return null
 
   // h-screen + overflow-hidden aquí y overflow-y-auto solo en <main>: así el
   // scroll queda contenido en el contenido y el sidebar no se mueve.
