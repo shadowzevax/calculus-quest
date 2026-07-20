@@ -12,7 +12,6 @@ import Chat from './pages/Chat'
 import TeacherPanel from './pages/TeacherPanel'
 import UserManagement from './pages/UserManagement'
 import MissionManagement from './pages/MissionManagement'
-import RepairMissions from './pages/RepairMissions'
 
 function App() {
   return (
@@ -29,7 +28,6 @@ function App() {
             <Route path="/teacher-panel" element={<TeacherPanel />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/mission-management" element={<MissionManagement />} />
-            <Route path="/repair-missions" element={<RepairMissions />} />
             <Route path="/login" element={<Login />} />
           </Routes>
         </Layout>

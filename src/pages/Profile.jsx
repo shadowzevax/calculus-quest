@@ -8,12 +8,31 @@ export default function Profile() {
   const [bio, setBio] = useState(user?.bio || '')
   const [saved, setSaved] = useState(false)
 
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSaved, setPasswordSaved] = useState(false)
+
   const save = async (e) => {
     e.preventDefault()
     await api.profile.update({ full_name: fullName, bio })
     await refresh()
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const changePassword = async (e) => {
+    e.preventDefault()
+    setPasswordError('')
+    try {
+      await api.profile.update({ current_password: currentPassword, new_password: newPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setPasswordSaved(true)
+      setTimeout(() => setPasswordSaved(false), 2000)
+    } catch (err) {
+      setPasswordError(err.message)
+    }
   }
 
   if (!user) return null
@@ -43,6 +62,36 @@ export default function Profile() {
           </div>
           <button type="submit" className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">Guardar cambios</button>
           {saved && <span className="text-teal text-sm ml-3">Guardado ✓</span>}
+        </form>
+      </div>
+
+      <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
+        <h2 className="text-lg font-display font-semibold text-ink mb-4">Cambiar contraseña</h2>
+        <form onSubmit={changePassword} className="space-y-3">
+          <div>
+            <label className="text-sm text-ink/50">Contraseña actual</label>
+            <input
+              type="password"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="text-sm text-ink/50">Contraseña nueva</label>
+            <input
+              type="password"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+          </div>
+          {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
+          <button type="submit" className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">Actualizar contraseña</button>
+          {passwordSaved && <span className="text-teal text-sm ml-3">Actualizada ✓</span>}
         </form>
       </div>
     </div>

@@ -9,3 +9,4 @@ dist
 # son notas/soporte para el autor. No se suben al repositorio.
 claude-workspace/
 .claude/
+.playwright-mcp/

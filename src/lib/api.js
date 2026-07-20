@@ -88,8 +88,4 @@ export const api = {
     get: () => request('/settings'),
     set: (key, value) => request('/settings', { method: 'PATCH', body: JSON.stringify({ key, value }) }),
   },
-  exercisesAudit: {
-    scan: () => request('/exercises-audit'),
-    disable: (ids) => request('/exercises-audit', { method: 'PATCH', body: JSON.stringify({ ids }) }),
-  },
 };

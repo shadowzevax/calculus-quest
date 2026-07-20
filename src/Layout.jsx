@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Home, BookOpen, Trophy, MessageSquare, User, BarChart3,
-  Users, Map, Wrench, LogOut, Shield,
+  Users, Map, LogOut, Shield,
 } from 'lucide-react'
 import { useAuth } from './lib/AuthContext'
 import MiniCurve from './components/MiniCurve'
@@ -19,7 +19,6 @@ const adminNav = [
   { to: '/teacher-panel', label: 'Panel Docente', icon: BarChart3 },
   { to: '/user-management', label: 'Gestión Usuarios', icon: Users },
   { to: '/mission-management', label: 'Gestión Misiones', icon: Map },
-  { to: '/repair-missions', label: 'Reparar Misiones', icon: Wrench },
 ]
 
 function NavItem({ to, label, icon: Icon }) {
