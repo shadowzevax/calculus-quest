@@ -1,8 +1,13 @@
+// ============================================================================
+// Progreso del estudiante: GET trae su avance por misión, POST registra el
+// resultado de haber intentado un ejercicio (correcto o no) y, si aplica,
+// otorga puntos de experiencia (XP) y recalcula el % de avance de la misión.
+// ============================================================================
 import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
 
 export default async function handler(req, res) {
-  const user = requireAuth(req, res);
+  const user = requireAuth(req, res); // debe estar logueado para ver/registrar su propio progreso
   if (!user) return;
 
   if (req.method === 'GET') {
@@ -17,12 +22,17 @@ export default async function handler(req, res) {
     const [exercise] = await sql`SELECT * FROM exercises WHERE id = ${exercise_id}`;
     if (!exercise) return res.status(404).json({ error: 'Ejercicio no existe' });
 
+    // Guardamos SIEMPRE el intento (para poder auditar/depurar más adelante),
+    // sin importar si fue correcto o no.
     await sql`
       INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned, hint_used)
       VALUES (${user.id}, ${exercise_id}, ${answer_given || ''}, ${!!is_correct}, ${xp_earned || 0}, ${!!hint_used})
     `;
 
     if (is_correct) {
+      // Regla de negocio: el XP solo se otorga la PRIMERA vez que el
+      // estudiante acierta un ejercicio (evita que repita el mismo
+      // ejercicio en bucle para "farmear" puntos infinitos).
       const priorCorrect = await sql`
         SELECT id FROM exercise_attempts
         WHERE user_id = ${user.id} AND exercise_id = ${exercise_id} AND is_correct = true
@@ -45,6 +55,8 @@ export default async function handler(req, res) {
             SELECT id FROM exercises WHERE mission_id = ${exercise.mission_id} AND parent_exercise_id IS NULL
           )
       `;
+      // Recalculamos el % de avance de la misión completa cada vez que se
+      // acierta un ejercicio nuevo: (ejercicios distintos acertados / total) * 100.
       const total = totalExercises[0].count || 1;
       const completed = Math.min(completedDistinct[0].count, total);
       const pct = Math.min(100, Math.round((completed / total) * 10000) / 100);

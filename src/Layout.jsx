@@ -53,6 +53,13 @@ export default function Layout({ children }) {
     )
   }
 
+  // Truco de CSS para que el menú lateral (sidebar) NUNCA se mueva al hacer
+  // scroll: el contenedor exterior mide exactamente h-screen (alto de la
+  // pantalla) y NO tiene su propio scroll (overflow-hidden). El <aside>
+  // (sidebar) toma h-full y se queda fijo. Solo el <main> de la derecha
+  // tiene overflow-y-auto, así que es la ÚNICA parte que puede hacer scroll.
+  // Antes se usaba min-h-screen en el contenedor exterior, lo que dejaba
+  // crecer TODA la página (sidebar incluido) y el menú se "perdía" al bajar.
   return (
     <div className="h-screen flex font-body overflow-hidden">
       <aside className="w-64 h-full bg-blueprint bg-grid-dark bg-grid flex flex-col shrink-0 relative">

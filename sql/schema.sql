@@ -2,7 +2,14 @@
 -- Generado a partir de las entidades Base44: Mission, Exercise, Badge, UserProgress,
 -- UserBadge, ExerciseAttempt, SystemLog, CollaborativeRoom, ForumPost, ForumReply,
 -- Game, GameProgress, GameStats, User
+--
+-- Este archivo se ejecutó UNA sola vez en el editor SQL de Neon para crear
+-- todas las tablas. No se vuelve a correr automáticamente; si se necesita
+-- reconstruir la base de datos desde cero, se copia y pega este archivo
+-- completo en el SQL Editor de Neon.
 
+-- pgcrypto nos da gen_random_uuid(), para generar los IDs de cada fila
+-- como UUID (identificadores únicos) en vez de números autoincrementales.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE users (

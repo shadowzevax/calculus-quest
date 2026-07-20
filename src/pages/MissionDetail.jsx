@@ -7,6 +7,14 @@ import FillBlankExercise from '@/components/exercises/FillBlankExercise'
 import TrueFalseExercise from '@/components/exercises/TrueFalseExercise'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 
+// Motor de ejercicios "dirigido por metadata": cada fila de la tabla
+// exercises tiene una columna `type` (texto) y una columna `metadata`
+// (JSON con la forma que necesite ese tipo de ejercicio: preguntas,
+// opciones, pares a emparejar, etc). En vez de tener un componente gigante
+// con ifs para cada tipo, este mapa asocia el string `type` con el
+// componente React que sabe renderizarlo. Para agregar un tipo de
+// ejercicio nuevo en el futuro: crear el componente en
+// src/components/exercises/ y agregar una línea aquí.
 const EXERCISE_COMPONENTS = {
   multiple_choice: MultipleChoiceExercise,
   fill_blank: FillBlankExercise,
