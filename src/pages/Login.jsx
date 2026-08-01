@@ -38,7 +38,7 @@ export default function Login() {
           <MiniCurve seed="login" width={26} height={20} stroke="#FF6B4A" animate={false} />
         </div>
         <div>
-          <div className="font-display font-semibold text-ink leading-tight">Cálculo Lab</div>
+          <div className="font-display font-semibold text-ink leading-tight">FuncionLab</div>
           <div className="text-[11px] font-mono-lab text-ink/40">LABORATORIO DEL FUTURO</div>
         </div>
       </div>

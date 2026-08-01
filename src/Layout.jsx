@@ -70,7 +70,7 @@ export default function Layout({ children }) {
             <MiniCurve seed="logo" width={26} height={20} stroke="#FF6B4A" animate={false} />
           </div>
           <div>
-            <div className="font-display font-semibold text-white leading-tight tracking-tight">Cálculo Lab</div>
+            <div className="font-display font-semibold text-white leading-tight tracking-tight">FuncionLab</div>
             <div className="text-[11px] font-mono-lab text-white/40 tracking-wide">LABORATORIO DEL FUTURO</div>
           </div>
         </div>
