@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import MathText from '@/lib/mathText'
 
 export default function TrueFalseExercise({ exercise, onComplete }) {
   const statements = exercise.metadata?.statements || []
@@ -35,7 +36,7 @@ export default function TrueFalseExercise({ exercise, onComplete }) {
   return (
     <div>
       <p className="text-xs font-mono-lab text-ink/35 mb-2">ENUNCIADO {index + 1} / {statements.length}</p>
-      <p className="font-display font-medium text-ink mb-4" dangerouslySetInnerHTML={{ __html: s.statement }} />
+      <p className="font-display font-medium text-ink mb-4"><MathText text={s.statement} /></p>
 
       <div className="flex gap-3">
         <button

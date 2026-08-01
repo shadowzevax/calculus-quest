@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import MathText from '@/lib/mathText'
+import SymbolToolbar from '@/components/SymbolToolbar'
 
 function normalize(str) {
   return String(str).trim().toLowerCase().replace(/\s+/g, '')
@@ -11,6 +13,7 @@ export default function FillBlankExercise({ exercise, onComplete }) {
   const [value, setValue] = useState('')
   const [feedback, setFeedback] = useState(null)
   const [correctCount, setCorrectCount] = useState(0)
+  const inputRef = useRef(null)
 
   if (problems.length === 0) {
     return <p className="text-red-500 text-sm">Este ejercicio no tiene problemas configurados.</p>
@@ -44,8 +47,10 @@ export default function FillBlankExercise({ exercise, onComplete }) {
   return (
     <div>
       <p className="text-xs font-mono-lab text-ink/35 mb-2">PROBLEMA {index + 1} / {problems.length}</p>
-      <p className="font-display font-medium text-ink mb-4" dangerouslySetInnerHTML={{ __html: p.question }} />
+      <p className="font-display font-medium text-ink mb-4"><MathText text={p.question} /></p>
+      <SymbolToolbar inputRef={inputRef} value={value} onChange={setValue} />
       <input
+        ref={inputRef}
         className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm font-mono-lab focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
         placeholder="Escribe tu respuesta"
         value={value}

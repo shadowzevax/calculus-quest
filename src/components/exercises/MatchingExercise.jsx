@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
+import MathText from '@/lib/mathText'
 
 function shuffle(arr) {
   const a = [...arr]
@@ -58,7 +59,7 @@ export default function MatchingExercise({ exercise, onComplete }) {
                 submitted && connections[i] === i ? 'border-teal bg-teal/10' : ''
               } ${submitted && connections[i] !== i ? 'border-red-300 bg-red-50' : ''}`}
             >
-              {p.left} {connections[i] !== undefined && <span className="text-ink/30">→ conectado</span>}
+              <MathText text={p.left} /> {connections[i] !== undefined && <span className="text-ink/30">→ conectado</span>}
             </button>
           ))}
         </div>
@@ -72,7 +73,7 @@ export default function MatchingExercise({ exercise, onComplete }) {
                 usedRightIndexes.has(r.pairIndex) ? 'bg-ink/[0.03] text-ink/30' : 'border-ink/10'
               }`}
             >
-              {r.text}
+              <MathText text={r.text} />
             </button>
           ))}
         </div>

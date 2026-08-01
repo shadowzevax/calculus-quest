@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import MathText from '@/lib/mathText'
 
 export default function MultipleChoiceExercise({ exercise, onComplete }) {
   const questions = exercise.metadata?.questions || []
@@ -34,7 +35,7 @@ export default function MultipleChoiceExercise({ exercise, onComplete }) {
   return (
     <div>
       <p className="text-xs font-mono-lab text-ink/35 mb-2">PREGUNTA {index + 1} / {questions.length}</p>
-      <p className="font-display font-medium text-ink mb-4" dangerouslySetInnerHTML={{ __html: q.question }} />
+      <p className="font-display font-medium text-ink mb-4"><MathText text={q.question} /></p>
       <div className="space-y-2">
         {q.options.map((opt, i) => (
           <button
@@ -47,7 +48,7 @@ export default function MultipleChoiceExercise({ exercise, onComplete }) {
               feedback && selected === i && i !== q.correct_index ? 'border-red-400 bg-red-50' : ''
             }`}
           >
-            {opt}
+            <MathText text={opt} />
           </button>
         ))}
       </div>
