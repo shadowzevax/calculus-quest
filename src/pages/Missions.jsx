@@ -66,7 +66,7 @@ export default function Missions() {
           const locked = !isAdmin && m.order > 1 && !progress.some(
             (pr) => pr.mission_id !== m.id && pr.progress_percentage >= 100
           )
-          const rewards = rewardsFor(m, pct)
+          const rewards = locked ? [] : rewardsFor(m, pct)
 
           return (
             <div

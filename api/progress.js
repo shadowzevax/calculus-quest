@@ -53,10 +53,11 @@ export default async function handler(req, res) {
       const completed = Math.min(completedDistinct[0].count, total);
       const pct = Math.min(100, Math.round((completed / total) * 10000) / 100);
       const status = pct >= 100 ? 'completed' : 'in_progress';
+      const completedDate = status === 'completed' ? new Date() : null;
 
       await sql`
         INSERT INTO user_progress (user_id, mission_id, status, progress_percentage, exercises_completed, total_exercises, started_date, completed_date)
-        VALUES (${user.id}, ${exercise.mission_id}, ${status}, ${pct}, ${completed}, ${total}, now(), ${status === 'completed' ? sql`now()` : null})
+        VALUES (${user.id}, ${exercise.mission_id}, ${status}, ${pct}, ${completed}, ${total}, now(), ${completedDate})
         ON CONFLICT (user_id, mission_id) DO UPDATE SET
           status = ${status},
           progress_percentage = ${pct},
