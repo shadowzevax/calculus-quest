@@ -81,12 +81,12 @@ CREATE TABLE user_progress (
   UNIQUE (user_id, mission_id)
 );
 
--- Recompensas cosméticas desbloqueadas al ganar insignias: color de nombre e insignia
--- equipada, visibles para otros estudiantes en el ranking y el chat.
-ALTER TABLE users ADD COLUMN IF NOT EXISTS name_color TEXT;
+-- Recompensa cosmética: insignia equipada (solo su ícono, sin cambio de color),
+-- visible para otros estudiantes en el ranking y el chat.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge_id UUID REFERENCES badges(id);
--- Nombre arcoiris animado: recompensa maxima, solo se puede activar tras ganar la
--- insignia "Maestro de Funciones" (completar las 14 misiones, incluida la ultima).
+-- Nombre arcoiris animado: la única forma de cambiar el color del nombre, recompensa
+-- maxima que solo se puede activar tras ganar la insignia "Maestro de Funciones"
+-- (completar las 14 misiones, incluida la ultima).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name_rainbow BOOLEAN NOT NULL DEFAULT false;
 
 CREATE TABLE user_badges (

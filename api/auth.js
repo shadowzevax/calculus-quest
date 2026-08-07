@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     const authUser = getUserFromRequest(req);
     if (!authUser) return res.status(401).json({ error: 'No autenticado' });
     const [user] = await sql`
-      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, name_color, equipped_badge_id, name_rainbow
+      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, equipped_badge_id, name_rainbow
       FROM users WHERE id = ${authUser.id}
     `;
     if (!user) return res.status(401).json({ error: 'No autenticado' });

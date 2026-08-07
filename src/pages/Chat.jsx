@@ -84,7 +84,7 @@ export default function Chat() {
                 m.user_id === user?.id ? 'bg-coral text-white' : 'bg-ink/5 text-ink'
               }`}>
                 <div className="text-[10px] font-mono-lab opacity-60 mb-0.5 flex items-center gap-1">
-                  <span className={m.name_rainbow ? 'name-rainbow' : ''} style={!m.name_rainbow && m.name_color ? { color: m.name_color } : undefined}>{m.author_name}</span>
+                  <span className={m.name_rainbow ? 'name-rainbow' : ''}>{m.author_name}</span>
                   {m.badge_icon && (() => {
                     const Icon = Icons[m.badge_icon] || Icons.Award
                     return <Icon className="w-3 h-3" style={{ color: m.badge_color }} />

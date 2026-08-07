@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const user = requireAuth(req, res);
     if (!user) return;
     const rows = await sql`
-      SELECT m.*, u.name_color, u.name_rainbow, b.icon AS badge_icon, b.color AS badge_color
+      SELECT m.*, u.name_rainbow, b.icon AS badge_icon, b.color AS badge_color
       FROM messages m
       LEFT JOIN users u ON u.id = m.user_id
       LEFT JOIN badges b ON b.id = u.equipped_badge_id

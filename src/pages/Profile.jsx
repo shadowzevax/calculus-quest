@@ -18,7 +18,8 @@ export default function Profile() {
     await refresh()
   }
 
-  const rainbowUnlocked = badges.some((b) => b.requirement_type === 'missions_completed' && b.requirement_value === 14 && b.earned)
+  const isAdmin = user?.role === 'admin'
+  const rainbowUnlocked = isAdmin || badges.some((b) => b.requirement_type === 'missions_completed' && b.requirement_value === 14 && b.earned)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -59,10 +60,7 @@ export default function Profile() {
             {user.full_name?.[0]?.toUpperCase() || '?'}
           </div>
           <div>
-            <div
-              className={`font-medium flex items-center gap-1.5 ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}
-              style={!user.name_rainbow && user.name_color ? { color: user.name_color } : undefined}
-            >
+            <div className={`font-medium flex items-center gap-1.5 ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>
               {user.full_name}
               {user.equipped_badge_id && badges.find((b) => b.id === user.equipped_badge_id) && (() => {
                 const b = badges.find((b) => b.id === user.equipped_badge_id)
@@ -89,7 +87,7 @@ export default function Profile() {
 
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
         <h2 className="text-lg font-display font-semibold text-ink mb-1">Insignias y logros</h2>
-        <p className="text-sm text-ink/40 mb-4">Se ganan al completar misiones. Cada insignia desbloquea un color de nombre e ícono que otros estudiantes ven en el ranking y el chat.</p>
+        <p className="text-sm text-ink/40 mb-4">Se ganan al completar misiones. Equipa una para mostrar su ícono junto a tu nombre en el ranking y el chat.</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {badges.map((b) => {
             const Icon = Icons[b.icon] || Icons.Award
@@ -99,7 +97,7 @@ export default function Profile() {
                 key={b.id}
                 type="button"
                 disabled={!b.earned}
-                onClick={() => applyStyle({ equipped_badge_id: b.id, name_color: b.color })}
+                onClick={() => applyStyle({ equipped_badge_id: b.id })}
                 className={`text-left border rounded-lg p-3 transition-colors ${
                   b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 opacity-40 cursor-not-allowed'
                 } ${isEquipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
