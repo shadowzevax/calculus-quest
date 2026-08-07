@@ -2,6 +2,7 @@
 // ejercicio y, si aplica, suma XP y recalcula el % de avance.
 import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
+import { checkAndAwardBadges } from './_badges.js';
 
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
@@ -65,7 +66,17 @@ export default async function handler(req, res) {
       `;
     }
 
-    return res.status(200).json({ ok: true });
+    let newBadges = [];
+    if (is_correct) {
+      const [prog] = await sql`
+        SELECT status FROM user_progress WHERE user_id = ${user.id} AND mission_id = ${exercise.mission_id}
+      `;
+      newBadges = await checkAndAwardBadges(user.id, {
+        justCompletedMissionId: prog?.status === 'completed' ? exercise.mission_id : null,
+      });
+    }
+
+    return res.status(200).json({ ok: true, new_badges: newBadges });
   }
 
   res.status(405).json({ error: 'Method not allowed' });

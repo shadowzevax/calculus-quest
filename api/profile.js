@@ -7,7 +7,26 @@ export default async function handler(req, res) {
   if (!user) return;
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { full_name, bio, avatar, current_password, new_password } = req.body || {};
+  const { full_name, bio, avatar, current_password, new_password, name_color, equipped_badge_id } = req.body || {};
+
+  // El color de nombre y la insignia equipada son recompensas cosméticas:
+  // solo se pueden usar insignias que el estudiante ya ganó (ver api/_badges.js).
+  // El docente no "juega" la plataforma, así que puede equipar cualquier insignia libremente.
+  const isTeacher = user.role === 'admin';
+  if (!isTeacher && equipped_badge_id !== undefined && equipped_badge_id !== null) {
+    const [owned] = await sql`
+      SELECT b.color FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+      WHERE ub.user_id = ${user.id} AND ub.badge_id = ${equipped_badge_id}
+    `;
+    if (!owned) return res.status(403).json({ error: 'Esa insignia no ha sido desbloqueada' });
+  }
+  if (!isTeacher && name_color) {
+    const [owned] = await sql`
+      SELECT 1 FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+      WHERE ub.user_id = ${user.id} AND b.color = ${name_color}
+    `;
+    if (!owned) return res.status(403).json({ error: 'Ese color no ha sido desbloqueado' });
+  }
 
   // Cambio de contraseña: se pide la actual para confirmar que es el
   // dueño de la cuenta (no solo alguien con la sesión abierta en el navegador).
@@ -27,9 +46,11 @@ export default async function handler(req, res) {
     UPDATE users SET
       full_name = COALESCE(${full_name}, full_name),
       bio = COALESCE(${bio}, bio),
-      avatar = COALESCE(${avatar}, avatar)
+      avatar = COALESCE(${avatar}, avatar),
+      name_color = COALESCE(${name_color}, name_color),
+      equipped_badge_id = COALESCE(${equipped_badge_id}, equipped_badge_id)
     WHERE id = ${user.id}
-    RETURNING id, email, full_name, role, avatar, bio, xp, level
+    RETURNING id, email, full_name, role, avatar, bio, xp, level, name_color, equipped_badge_id
   `;
   res.status(200).json({ user: updated });
 }

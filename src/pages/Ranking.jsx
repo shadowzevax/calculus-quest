@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import * as Icons from 'lucide-react'
 import { Trophy } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
@@ -24,7 +25,13 @@ export default function Ranking() {
               {r.full_name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1">
-              <div className="font-medium text-ink">{r.full_name}</div>
+              <div className="font-medium text-ink flex items-center gap-1.5" style={r.name_color ? { color: r.name_color } : undefined}>
+                {r.full_name}
+                {r.badge_icon && (() => {
+                  const Icon = Icons[r.badge_icon] || Icons.Award
+                  return <Icon className="w-3.5 h-3.5" style={{ color: r.badge_color }} />
+                })()}
+              </div>
               <div className="text-[11px] font-mono-lab text-ink/35">NIVEL {r.level}</div>
             </div>
             <div className="font-mono-lab font-semibold text-coral">{r.xp} XP</div>

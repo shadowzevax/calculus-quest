@@ -52,6 +52,7 @@ export const api = {
       request('/progress', { method: 'POST', body: JSON.stringify(data) }).then((r) => {
         invalidate('/ranking');
         invalidate('/stats');
+        invalidate('/badges');
         return r;
       }),
   },
@@ -69,7 +70,14 @@ export const api = {
     list: () => cachedGet('/ranking'),
   },
   profile: {
-    update: (data) => request('/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+    update: (data) =>
+      request('/profile', { method: 'PATCH', body: JSON.stringify(data) }).then((r) => {
+        invalidate('/ranking');
+        return r;
+      }),
+  },
+  badges: {
+    list: () => cachedGet('/badges'),
   },
   users: {
     list: () => cachedGet('/users'),

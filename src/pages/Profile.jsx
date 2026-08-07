@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import * as Icons from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 
@@ -7,6 +9,14 @@ export default function Profile() {
   const [fullName, setFullName] = useState(user?.full_name || '')
   const [bio, setBio] = useState(user?.bio || '')
   const [saved, setSaved] = useState(false)
+  const [badges, setBadges] = useState([])
+
+  useEffect(() => { api.badges.list().then(setBadges).catch(() => {}) }, [])
+
+  const applyStyle = async (data) => {
+    await api.profile.update(data)
+    await refresh()
+  }
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -47,7 +57,14 @@ export default function Profile() {
             {user.full_name?.[0]?.toUpperCase() || '?'}
           </div>
           <div>
-            <div className="font-medium text-ink">{user.email}</div>
+            <div className="font-medium text-ink flex items-center gap-1.5" style={user.name_color ? { color: user.name_color } : undefined}>
+              {user.full_name}
+              {user.equipped_badge_id && badges.find((b) => b.id === user.equipped_badge_id) && (() => {
+                const b = badges.find((b) => b.id === user.equipped_badge_id)
+                const Icon = Icons[b.icon] || Icons.Award
+                return <Icon className="w-4 h-4" style={{ color: b.color }} />
+              })()}
+            </div>
             <div className="text-sm font-mono-lab text-ink/40">{user.xp} XP · Nivel {user.level}</div>
           </div>
         </div>
@@ -63,6 +80,36 @@ export default function Profile() {
           <button type="submit" className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">Guardar cambios</button>
           {saved && <span className="text-teal text-sm ml-3">Guardado ✓</span>}
         </form>
+      </div>
+
+      <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
+        <h2 className="text-lg font-display font-semibold text-ink mb-1">Insignias y logros</h2>
+        <p className="text-sm text-ink/40 mb-4">Se ganan al completar misiones. Cada insignia desbloquea un color de nombre e ícono que otros estudiantes ven en el ranking y el chat.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {badges.map((b) => {
+            const Icon = Icons[b.icon] || Icons.Award
+            const isEquipped = user.equipped_badge_id === b.id
+            return (
+              <button
+                key={b.id}
+                type="button"
+                disabled={!b.earned}
+                onClick={() => applyStyle({ equipped_badge_id: b.id, name_color: b.color })}
+                className={`text-left border rounded-lg p-3 transition-colors ${
+                  b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 opacity-40 cursor-not-allowed'
+                } ${isEquipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {b.earned ? <Icon className="w-4 h-4" style={{ color: b.color }} /> : <Lock className="w-3.5 h-3.5 text-ink/30" />}
+                  <span className="text-sm font-medium text-ink">{b.name}</span>
+                </div>
+                <p className="text-xs text-ink/40">{b.description}</p>
+                {isEquipped && <p className="text-[10px] font-mono-lab text-coral mt-1">EQUIPADA</p>}
+              </button>
+            )
+          })}
+          {badges.length === 0 && <p className="text-ink/35 text-sm col-span-full">Cargando insignias...</p>}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">

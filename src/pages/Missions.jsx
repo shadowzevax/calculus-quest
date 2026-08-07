@@ -17,6 +17,7 @@ export default function Missions() {
   const { user } = useAuth()
   const [missions, setMissions] = useState([])
   const [progress, setProgress] = useState([])
+  const [badges, setBadges] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const isAdmin = user?.role === 'admin'
@@ -26,11 +27,26 @@ export default function Missions() {
     Promise.all([
       api.missions.list('misiones'),
       user ? api.progress.list().catch(() => []) : Promise.resolve([]),
+      user ? api.badges.list().catch(() => []) : Promise.resolve([]),
     ])
-      .then(([m, p]) => { setMissions(m); setProgress(p) })
+      .then(([m, p, b]) => { setMissions(m); setProgress(p); setBadges(b) })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [user])
+
+  const completedCount = progress.filter((p) => p.progress_percentage >= 100).length
+  const pendingBadges = badges.filter((b) => !b.earned)
+
+  // Insignias que esta misión en particular podría desbloquear si se completa ahora.
+  const rewardsFor = (mission, pct) => {
+    if (!user || isAdmin || pct >= 100) return []
+    return pendingBadges.filter((b) => {
+      if (b.requirement_type === 'missions_completed') return completedCount + 1 === b.requirement_value
+      if (b.requirement_type === 'xp_reached') return user.xp < b.requirement_value && user.xp + mission.xp_reward >= b.requirement_value
+      if (b.requirement_type === 'perfect_mission') return true
+      return false
+    })
+  }
 
   if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
 
@@ -50,6 +66,7 @@ export default function Missions() {
           const locked = !isAdmin && m.order > 1 && !progress.some(
             (pr) => pr.mission_id !== m.id && pr.progress_percentage >= 100
           )
+          const rewards = rewardsFor(m, pct)
 
           return (
             <div
@@ -91,6 +108,21 @@ export default function Missions() {
                 {!isAdmin && pct > 0 && (
                   <div className="w-full h-1.5 bg-ink/5 rounded-full mt-1.5 overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
+                  </div>
+                )}
+                {rewards.length > 0 && (
+                  <div className="mt-2.5 pt-2.5 border-t border-ink/5 space-y-1">
+                    <p className="text-[10px] font-mono-lab text-ink/35 tracking-wide">RECOMPENSA AL COMPLETAR</p>
+                    {rewards.map((b) => {
+                      const RewardIcon = Icons[b.icon] || Icons.Award
+                      return (
+                        <div key={b.id} className="flex items-center gap-1.5 text-xs">
+                          <RewardIcon className="w-3.5 h-3.5 shrink-0" style={{ color: b.color }} />
+                          <span className="text-ink/60">{b.name}</span>
+                          <span className="font-medium" style={{ color: b.color }}>· nombre a color</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
                 <button

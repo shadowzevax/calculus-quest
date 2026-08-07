@@ -81,6 +81,11 @@ CREATE TABLE user_progress (
   UNIQUE (user_id, mission_id)
 );
 
+-- Recompensas cosméticas desbloqueadas al ganar insignias: color de nombre e insignia
+-- equipada, visibles para otros estudiantes en el ranking y el chat.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name_color TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge_id UUID REFERENCES badges(id);
+
 CREATE TABLE user_badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,

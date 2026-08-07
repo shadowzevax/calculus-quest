@@ -5,7 +5,13 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const user = requireAuth(req, res);
     if (!user) return;
-    const rows = await sql`SELECT * FROM messages ORDER BY created_at ASC LIMIT 100`;
+    const rows = await sql`
+      SELECT m.*, u.name_color, b.icon AS badge_icon, b.color AS badge_color
+      FROM messages m
+      LEFT JOIN users u ON u.id = m.user_id
+      LEFT JOIN badges b ON b.id = u.equipped_badge_id
+      ORDER BY m.created_at ASC LIMIT 100
+    `;
     return res.status(200).json(rows);
   }
 

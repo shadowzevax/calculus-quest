@@ -6,9 +6,12 @@ export default async function handler(req, res) {
   if (!user) return;
 
   const rows = await sql`
-    SELECT id, full_name, avatar, xp, level
-    FROM users WHERE role = 'user'
-    ORDER BY xp DESC LIMIT 50
+    SELECT u.id, u.full_name, u.avatar, u.xp, u.level, u.name_color,
+           b.icon AS badge_icon, b.color AS badge_color, b.name AS badge_name
+    FROM users u
+    LEFT JOIN badges b ON b.id = u.equipped_badge_id
+    WHERE u.role = 'user'
+    ORDER BY u.xp DESC LIMIT 50
   `;
   res.status(200).json(rows);
 }
