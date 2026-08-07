@@ -3,9 +3,10 @@ import * as Icons from 'lucide-react'
 import { Lock } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
+import { Switch } from '@/components/ui/switch'
 
 export default function Profile() {
-  const { user, refresh } = useAuth()
+  const { user, setUser, refresh } = useAuth()
   const [fullName, setFullName] = useState(user?.full_name || '')
   const [bio, setBio] = useState(user?.bio || '')
   const [saved, setSaved] = useState(false)
@@ -13,9 +14,12 @@ export default function Profile() {
 
   useEffect(() => { api.badges.list().then(setBadges).catch(() => {}) }, [])
 
-  const applyStyle = async (data) => {
-    await api.profile.update(data)
-    await refresh()
+  // Actualiza la interfaz al instante (sin esperar la respuesta del servidor) y revierte
+  // si la petición falla, para que activar el switch/insignia se sienta inmediato.
+  const applyStyle = (data) => {
+    const previous = user
+    setUser((u) => ({ ...u, ...data }))
+    api.profile.update(data).catch(() => setUser(previous))
   }
 
   const isAdmin = user?.role === 'admin'
@@ -120,13 +124,10 @@ export default function Profile() {
               <p className="text-sm font-medium name-rainbow inline-block">Nombre arcoíris</p>
               <p className="text-xs text-ink/40">Recompensa máxima: completaste las 14 misiones. Actívalo para lucir tu nombre en todos lados.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => applyStyle({ name_rainbow: !user.name_rainbow })}
-              className={`shrink-0 w-11 h-6 rounded-full transition-colors relative ${user.name_rainbow ? 'bg-coral' : 'bg-ink/15'}`}
-            >
-              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${user.name_rainbow ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-            </button>
+            <Switch
+              checked={!!user.name_rainbow}
+              onCheckedChange={(checked) => applyStyle({ name_rainbow: checked })}
+            />
           </div>
         )}
       </div>
