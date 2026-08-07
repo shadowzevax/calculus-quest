@@ -25,7 +25,10 @@ export default function Ranking() {
               {r.full_name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1">
-              <div className="font-medium text-ink flex items-center gap-1.5" style={r.name_color ? { color: r.name_color } : undefined}>
+              <div
+                className={`font-medium flex items-center gap-1.5 ${r.name_rainbow ? 'name-rainbow' : 'text-ink'}`}
+                style={!r.name_rainbow && r.name_color ? { color: r.name_color } : undefined}
+              >
                 {r.full_name}
                 {r.badge_icon && (() => {
                   const Icon = Icons[r.badge_icon] || Icons.Award

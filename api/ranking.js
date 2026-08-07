@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (!user) return;
 
   const rows = await sql`
-    SELECT u.id, u.full_name, u.avatar, u.xp, u.level, u.name_color,
+    SELECT u.id, u.full_name, u.avatar, u.xp, u.level, u.name_color, u.name_rainbow,
            b.icon AS badge_icon, b.color AS badge_color, b.name AS badge_name
     FROM users u
     LEFT JOIN badges b ON b.id = u.equipped_badge_id

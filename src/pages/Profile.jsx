@@ -18,6 +18,8 @@ export default function Profile() {
     await refresh()
   }
 
+  const rainbowUnlocked = badges.some((b) => b.requirement_type === 'missions_completed' && b.requirement_value === 14 && b.earned)
+
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
@@ -57,7 +59,10 @@ export default function Profile() {
             {user.full_name?.[0]?.toUpperCase() || '?'}
           </div>
           <div>
-            <div className="font-medium text-ink flex items-center gap-1.5" style={user.name_color ? { color: user.name_color } : undefined}>
+            <div
+              className={`font-medium flex items-center gap-1.5 ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}
+              style={!user.name_rainbow && user.name_color ? { color: user.name_color } : undefined}
+            >
               {user.full_name}
               {user.equipped_badge_id && badges.find((b) => b.id === user.equipped_badge_id) && (() => {
                 const b = badges.find((b) => b.id === user.equipped_badge_id)
@@ -110,6 +115,22 @@ export default function Profile() {
           })}
           {badges.length === 0 && <p className="text-ink/35 text-sm col-span-full">Cargando insignias...</p>}
         </div>
+
+        {rainbowUnlocked && (
+          <div className="mt-4 pt-4 border-t border-ink/10 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium name-rainbow inline-block">Nombre arcoíris</p>
+              <p className="text-xs text-ink/40">Recompensa máxima: completaste las 14 misiones. Actívalo para lucir tu nombre en todos lados.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => applyStyle({ name_rainbow: !user.name_rainbow })}
+              className={`shrink-0 w-11 h-6 rounded-full transition-colors relative ${user.name_rainbow ? 'bg-coral' : 'bg-ink/15'}`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${user.name_rainbow ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">

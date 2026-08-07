@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (!user) return;
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { full_name, bio, avatar, current_password, new_password, name_color, equipped_badge_id } = req.body || {};
+  const { full_name, bio, avatar, current_password, new_password, name_color, equipped_badge_id, name_rainbow } = req.body || {};
 
   // El color de nombre y la insignia equipada son recompensas cosméticas:
   // solo se pueden usar insignias que el estudiante ya ganó (ver api/_badges.js).
@@ -26,6 +26,14 @@ export default async function handler(req, res) {
       WHERE ub.user_id = ${user.id} AND b.color = ${name_color}
     `;
     if (!owned) return res.status(403).json({ error: 'Ese color no ha sido desbloqueado' });
+  }
+  // El nombre arcoiris es la recompensa maxima: solo se activa tras completar las 14 misiones.
+  if (!isTeacher && name_rainbow) {
+    const [owned] = await sql`
+      SELECT 1 FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+      WHERE ub.user_id = ${user.id} AND b.requirement_type = 'missions_completed' AND b.requirement_value = 14
+    `;
+    if (!owned) return res.status(403).json({ error: 'El nombre arcoíris aún no ha sido desbloqueado' });
   }
 
   // Cambio de contraseña: se pide la actual para confirmar que es el
@@ -48,9 +56,10 @@ export default async function handler(req, res) {
       bio = COALESCE(${bio}, bio),
       avatar = COALESCE(${avatar}, avatar),
       name_color = COALESCE(${name_color}, name_color),
-      equipped_badge_id = COALESCE(${equipped_badge_id}, equipped_badge_id)
+      equipped_badge_id = COALESCE(${equipped_badge_id}, equipped_badge_id),
+      name_rainbow = COALESCE(${name_rainbow}, name_rainbow)
     WHERE id = ${user.id}
-    RETURNING id, email, full_name, role, avatar, bio, xp, level, name_color, equipped_badge_id
+    RETURNING id, email, full_name, role, avatar, bio, xp, level, name_color, equipped_badge_id, name_rainbow
   `;
   res.status(200).json({ user: updated });
 }
