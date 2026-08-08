@@ -56,13 +56,14 @@ export default function Missions() {
       .finally(() => setLoading(false))
   }, [user])
 
-  const completedCount = progress.filter((p) => p.progress_percentage >= 100).length
   const pendingBadges = badges.filter((b) => !b.earned)
 
-  // Insignia que esta misión en particular podría desbloquear si se completa ahora.
-  const rewardsFor = (pct) => {
+  // Insignia que esta misión en particular (según su número de orden) podría desbloquear
+  // si se completa ahora. Se compara contra el "order" de la misión, no contra un conteo
+  // global — así cada tarjeta muestra únicamente SU propia recompensa, nunca la de otra.
+  const rewardsFor = (mission, pct) => {
     if (!user || isAdmin || pct >= 100) return []
-    return pendingBadges.filter((b) => completedCount + 1 === b.requirement_value)
+    return pendingBadges.filter((b) => mission.order === b.requirement_value)
   }
 
   if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
@@ -80,10 +81,14 @@ export default function Missions() {
           const Icon = Icons[m.icon] || Icons.BookOpen
           const p = progress.find((pr) => pr.mission_id === m.id)
           const pct = isAdmin ? 100 : Math.min(100, Number(p?.progress_percentage || 0))
-          const locked = !isAdmin && m.order > 1 && !progress.some(
-            (pr) => pr.mission_id !== m.id && pr.progress_percentage >= 100
-          )
-          const rewards = locked ? [] : rewardsFor(pct)
+          // Bloqueada a menos que la misión JUSTO ANTERIOR (por orden) esté al 100% —
+          // antes esto comprobaba "cualquier otra misión completada", lo que desbloqueaba
+          // todas de golpe apenas se completaba la primera.
+          const locked = !isAdmin && m.order > 1 && !progress.some((pr) => {
+            const prevMission = missions.find((mm) => mm.order === m.order - 1)
+            return prevMission && pr.mission_id === prevMission.id && pr.progress_percentage >= 100
+          })
+          const rewards = locked ? [] : rewardsFor(m, pct)
 
           return (
             <div
