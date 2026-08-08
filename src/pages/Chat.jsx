@@ -91,9 +91,11 @@ export default function Chat() {
                     ))}
                   </div>
                 )}
-                <div className="text-[10px] font-mono-lab opacity-60 mb-0.5">
-                  <span className={m.name_rainbow ? 'name-rainbow' : ''}>{m.author_name}</span>
-                  {m.role === 'admin' && ' · Docente'}
+                <div className="flex items-baseline gap-1.5 mb-0.5">
+                  <span className={`text-sm font-bold ${m.name_rainbow ? 'name-rainbow' : ''}`}>{m.author_name}</span>
+                  {m.role === 'admin' && (
+                    <span className="text-[10px] font-mono-lab opacity-60 uppercase tracking-wide">Docente</span>
+                  )}
                 </div>
                 {m.content}
               </div>
