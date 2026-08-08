@@ -41,14 +41,30 @@ function MissionPreviewCard({ mission }) {
 export default function Dashboard() {
   const { user, isLoadingAuth } = useAuth()
   const [missions, setMissions] = useState([])
+  const [progress, setProgress] = useState([])
   const [missionsLoading, setMissionsLoading] = useState(true)
   const [stats, setStats] = useState(null)
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
-    api.missions.list('misiones').then(setMissions).catch(() => {}).finally(() => setMissionsLoading(false))
-  }, [])
+    Promise.all([
+      api.missions.list('misiones'),
+      user && !isAdmin ? api.progress.list().catch(() => []) : Promise.resolve([]),
+    ])
+      .then(([m, p]) => { setMissions(m); setProgress(p) })
+      .catch(() => {})
+      .finally(() => setMissionsLoading(false))
+  }, [user, isAdmin])
   useEffect(() => { if (isAdmin) api.stats.get().then(setStats).catch(() => {}) }, [isAdmin])
+
+  // La misión "actual" es la primera, en orden, que todavía no está al 100% — el mismo
+  // criterio de desbloqueo secuencial que usa el catálogo de Misiones.
+  const sortedMissions = [...missions].sort((a, b) => a.order - b.order)
+  const currentMission = sortedMissions.find((m) => {
+    const p = progress.find((pr) => pr.mission_id === m.id)
+    return Number(p?.progress_percentage || 0) < 100
+  })
+  const allCompleted = sortedMissions.length > 0 && !currentMission
 
   if (isLoadingAuth) return <p className="text-ink/40 font-mono-lab text-sm">Cargando...</p>
 
@@ -110,9 +126,15 @@ export default function Dashboard() {
       <div className="mt-8">
         <h2 className="font-display font-semibold text-ink mb-3">Continúa donde quedaste</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {missionsLoading
-            ? Array.from({ length: 3 }).map((_, i) => <MissionCardSkeleton key={i} />)
-            : missions.slice(0, 3).map((m) => <MissionPreviewCard key={m.id} mission={m} />)}
+          {missionsLoading ? (
+            <MissionCardSkeleton />
+          ) : currentMission ? (
+            <MissionPreviewCard mission={currentMission} />
+          ) : allCompleted ? (
+            <p className="text-ink/40 text-sm col-span-full">¡Completaste todas las misiones!</p>
+          ) : (
+            <p className="text-ink/40 text-sm col-span-full">Aún no hay misiones disponibles.</p>
+          )}
         </div>
       </div>
     </div>

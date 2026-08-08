@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft, Trophy } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/AuthContext'
 import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercise'
 import FillBlankExercise from '@/components/exercises/FillBlankExercise'
 import TrueFalseExercise from '@/components/exercises/TrueFalseExercise'
@@ -19,6 +20,7 @@ const EXERCISE_COMPONENTS = {
 export default function MissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { refresh } = useAuth()
   const [mission, setMission] = useState(null)
   const [exercises, setExercises] = useState([])
   const [current, setCurrent] = useState(0)
@@ -49,6 +51,9 @@ export default function MissionDetail() {
           is_correct: true,
           xp_earned: exercise.xp_value || 10,
         })
+        // El XP/nivel del usuario vive en el AuthContext (se usa en Dashboard, la barra
+        // lateral, etc.) — sin este refresh, se quedaba desactualizado hasta el próximo login.
+        await refresh()
       } catch {}
     }
     if (current < exercises.length - 1) {
