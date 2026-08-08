@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, Trophy } from 'lucide-react'
+import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercise'
@@ -22,15 +22,19 @@ export default function MissionDetail() {
   const navigate = useNavigate()
   const { refresh } = useAuth()
   const [mission, setMission] = useState(null)
+  const [allMissions, setAllMissions] = useState([])
   const [exercises, setExercises] = useState([])
   const [current, setCurrent] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showDone, setShowDone] = useState(false)
+  const [results, setResults] = useState([]) // [{exercise, isCorrect}] de este intento
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     Promise.all([api.missions.list('misiones'), api.exercises.byMission(id)])
       .then(([missions, ex]) => {
         setMission(missions.find((m) => m.id === id))
+        setAllMissions(missions)
         setExercises(ex)
       })
       .finally(() => setLoading(false))
@@ -41,6 +45,9 @@ export default function MissionDetail() {
 
   const exercise = exercises[current]
   const Component = exercise ? EXERCISE_COMPONENTS[exercise.type] : null
+  const allCorrect = results.length > 0 && results.every((r) => r.isCorrect)
+  const earnedXp = results.filter((r) => r.isCorrect).reduce((sum, r) => sum + (r.exercise.xp_value || 0), 0)
+  const nextMission = allMissions.find((m) => m.order === mission.order + 1)
 
   const handleComplete = async ({ isCorrect }) => {
     if (isCorrect) {
@@ -56,11 +63,19 @@ export default function MissionDetail() {
         await refresh()
       } catch {}
     }
+    setResults((r) => [...r, { exercise, isCorrect }])
     if (current < exercises.length - 1) {
       setCurrent(current + 1)
     } else {
       setShowDone(true)
     }
+  }
+
+  const retry = () => {
+    setResults([])
+    setCurrent(0)
+    setShowDone(false)
+    setRetryKey((k) => k + 1)
   }
 
   return (
@@ -86,7 +101,7 @@ export default function MissionDetail() {
             <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
           </div>
           {Component ? (
-            <Component exercise={exercise} onComplete={handleComplete} />
+            <Component key={`${exercise.id}-${retryKey}`} exercise={exercise} onComplete={handleComplete} />
           ) : (
             <p className="text-red-500 text-sm">Tipo de ejercicio no soportado: {exercise.type}</p>
           )}
@@ -95,14 +110,60 @@ export default function MissionDetail() {
 
       {showDone && (
         <div className="bg-white rounded-xl border border-ink/10 p-8 text-center">
-          <div className="w-14 h-14 rounded-full bg-gold/15 flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-7 h-7 text-gold" />
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${allCorrect ? 'bg-gold/15' : 'bg-ink/5'}`}>
+            <Trophy className={`w-7 h-7 ${allCorrect ? 'text-gold' : 'text-ink/30'}`} />
           </div>
-          <h2 className="text-xl font-display font-bold text-ink">¡Misión completada!</h2>
-          <p className="text-ink/50 mt-1">Ganaste XP por los ejercicios que resolviste correctamente.</p>
-          <button onClick={() => navigate('/missions')} className="mt-5 bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium">
-            Volver a Misiones
-          </button>
+          <h2 className="text-xl font-display font-bold text-ink">
+            {allCorrect ? '¡Misión completada!' : 'Casi lo logras'}
+          </h2>
+          <p className="text-ink/50 mt-1">
+            {allCorrect
+              ? `Acertaste los ${results.length} ejercicios y ganaste ${earnedXp} XP.`
+              : 'Debes acertar todos los ejercicios de la misión para avanzar y desbloquear su recompensa.'}
+          </p>
+
+          <div className="text-left mt-6 space-y-2">
+            {results.map((r, i) => (
+              <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${r.isCorrect ? 'bg-teal/5' : 'bg-red-50'}`}>
+                <div className="flex items-center gap-2">
+                  {r.isCorrect ? (
+                    <CheckCircle2 className="w-4 h-4 text-teal shrink-0" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  )}
+                  <span className="text-ink/70">Ejercicio {i + 1}</span>
+                </div>
+                <span className={`font-mono-lab text-xs font-medium ${r.isCorrect ? 'text-teal' : 'text-red-500'}`}>
+                  {r.isCorrect ? `+${r.exercise.xp_value} XP` : 'Incorrecto'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-3 mt-6">
+            {!allCorrect && (
+              <button
+                onClick={retry}
+                className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" /> Reintentar misión
+              </button>
+            )}
+            {allCorrect && nextMission && (
+              <button
+                onClick={() => navigate(`/missions/${nextMission.id}`)}
+                className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2"
+              >
+                Siguiente misión <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/missions')}
+              className="border border-ink/15 hover:bg-ink/5 transition-colors text-ink/70 rounded-lg px-5 py-2.5 text-sm font-medium"
+            >
+              Volver a Misiones
+            </button>
+          </div>
         </div>
       )}
     </div>
