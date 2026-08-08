@@ -155,6 +155,33 @@ CREATE TABLE forum_replies (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Marca la(s) mision(es) que se juegan en sala cooperativa por turnos (hoy solo la
+-- mision 14, "Escape Room: Crisis en el Data Center") en vez del flujo individual normal.
+ALTER TABLE missions ADD COLUMN IF NOT EXISTS is_collaborative BOOLEAN NOT NULL DEFAULT false;
+
+-- Sala de escape cooperativa: cualquier estudiante crea una sala para una mision
+-- colaborativa y comparte el codigo con companeros. Reutilizable (no se "gasta" al
+-- jugarla) y se borra sola cuando queda vacia, para no acumular filas huerfanas.
+CREATE TABLE escape_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mission_id UUID NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+  code TEXT NOT NULL UNIQUE,
+  host_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'lobby', -- lobby | playing | done
+  current_puzzle_index INTEGER NOT NULL DEFAULT 0,
+  max_members INTEGER NOT NULL, -- tope = cantidad de acertijos de la mision (no tiene sentido mas gente que retos)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- join_order define el orden del turno rotativo entre los miembros de la sala.
+CREATE TABLE escape_room_members (
+  room_id UUID NOT NULL REFERENCES escape_rooms(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  join_order INTEGER NOT NULL,
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (room_id, user_id)
+);
+
 CREATE INDEX idx_exercises_mission ON exercises(mission_id);
 CREATE INDEX idx_exercises_parent ON exercises(parent_exercise_id);
 CREATE INDEX idx_progress_user ON user_progress(user_id);

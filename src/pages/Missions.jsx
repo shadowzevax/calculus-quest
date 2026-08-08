@@ -124,6 +124,9 @@ export default function Missions() {
                     {m.difficulty}
                   </span>
                   <span className="text-[11px] font-mono-lab text-ink/35">{m.estimated_time} min</span>
+                  {m.is_collaborative && (
+                    <span className="text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase bg-teal/10 text-teal">Cooperativo</span>
+                  )}
                 </div>
                 <h2 className="font-display font-semibold text-ink">{m.title}</h2>
                 <p className="text-sm text-ink/50 mt-1 flex-1">{m.description}</p>

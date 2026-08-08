@@ -7,6 +7,7 @@ import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercis
 import FillBlankExercise from '@/components/exercises/FillBlankExercise'
 import TrueFalseExercise from '@/components/exercises/TrueFalseExercise'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
+import EscapeRoomGame from '@/components/EscapeRoomGame'
 
 // Cada ejercicio tiene un `type`; este mapa elige qué componente lo renderiza
 // (evita un if/else gigante). Nuevo tipo = nuevo componente + una línea aquí.
@@ -94,6 +95,12 @@ export default function MissionDetail() {
       <h1 className="text-2xl font-display font-bold text-ink">{mission.title}</h1>
       <p className="text-ink/50 mt-1 mb-6">{mission.story || mission.description}</p>
 
+      {mission.is_collaborative ? (
+        <div className="bg-white rounded-xl border border-ink/10 p-8">
+          <EscapeRoomGame mission={mission} />
+        </div>
+      ) : (
+        <>
       {exercises.length === 0 && (
         <div className="bg-white rounded-xl border border-ink/10 p-6 text-ink/40 text-sm">
           Esta misión aún no tiene ejercicios cargados.
@@ -171,6 +178,8 @@ export default function MissionDetail() {
             </button>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

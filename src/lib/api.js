@@ -102,4 +102,14 @@ export const api = {
     get: () => request('/settings'),
     set: (key, value) => request('/settings', { method: 'PATCH', body: JSON.stringify({ key, value }) }),
   },
+  rooms: {
+    state: (roomId) => request(`/rooms?room_id=${roomId}`),
+    create: (missionId) => request('/rooms?action=create', { method: 'POST', body: JSON.stringify({ mission_id: missionId }) }),
+    join: (code) => request('/rooms?action=join', { method: 'POST', body: JSON.stringify({ code }) }),
+    start: (roomId) => request('/rooms?action=start', { method: 'POST', body: JSON.stringify({ room_id: roomId }) }),
+    cancel: (roomId) => request('/rooms?action=cancel', { method: 'POST', body: JSON.stringify({ room_id: roomId }) }),
+    leave: (roomId) => request('/rooms?action=leave', { method: 'POST', body: JSON.stringify({ room_id: roomId }) }),
+    answer: (roomId, selectedIndex) =>
+      request('/rooms?action=answer', { method: 'POST', body: JSON.stringify({ room_id: roomId, selected_index: selectedIndex }) }),
+  },
 };
