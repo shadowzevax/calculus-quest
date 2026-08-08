@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const user = requireAuth(req, res);
     if (!user) return;
     const rows = await sql`
-      SELECT m.*, u.name_rainbow, u.dark_bubble, u.avatar_glow, COALESCE(eb.images, '{}') AS equipped_badge_images
+      SELECT m.*, u.name_rainbow, u.dark_bubble, u.avatar_glow, u.avatar, COALESCE(eb.images, '{}') AS equipped_badge_images
       FROM messages m
       LEFT JOIN users u ON u.id = m.user_id
       LEFT JOIN LATERAL (

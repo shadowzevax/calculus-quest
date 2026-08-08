@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Icons from 'lucide-react'
-import { HelpCircle } from 'lucide-react'
+import { HelpCircle, Camera } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
@@ -31,6 +31,16 @@ const SPECIAL_REWARDS = {
     label: 'Nombre arcoíris',
     desc: 'Tu nombre se muestra con un degradado de colores animado en todos lados: Perfil, Ranking y Chat.',
     preview: <span className="name-rainbow font-bold text-xs">Aa</span>,
+  },
+}
+
+// Recompensas que no tienen una insignia coleccionable asociada (no aparecen en "Insignias y
+// logros"), pero igual se otorgan al completar esa misión — se muestran igual en la tarjeta.
+const STANDALONE_REWARDS = {
+  11: {
+    label: 'Foto de perfil personalizada',
+    desc: 'Puedes subir tu propia foto en Mi Perfil en vez de usar la inicial de tu nombre (solo imágenes, sin GIF ni video).',
+    preview: <Camera className="w-4 h-4 text-blueprint" />,
   },
 }
 
@@ -127,9 +137,31 @@ export default function Missions() {
                     <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
                   </div>
                 )}
-                {rewards.length > 0 && (
+                {(rewards.length > 0 || STANDALONE_REWARDS[m.order]) && (
                   <div className="mt-2.5 pt-2.5 border-t border-ink/5 space-y-1.5">
                     <p className="text-[10px] font-mono-lab text-ink/35 tracking-wide">RECOMPENSA AL COMPLETAR</p>
+                    {STANDALONE_REWARDS[m.order] && (() => {
+                      const reward = STANDALONE_REWARDS[m.order]
+                      const infoKey = `${m.id}-standalone`
+                      const isOpen = openInfo === infoKey
+                      return (
+                        <div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            {reward.preview}
+                            <span className="text-ink/70">{reward.label}</span>
+                            <button
+                              type="button"
+                              onClick={() => setOpenInfo(isOpen ? null : infoKey)}
+                              className="text-ink/35 hover:text-coral transition-colors"
+                              aria-label={`Qué es ${reward.label}`}
+                            >
+                              <HelpCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          {isOpen && <p className="text-[11px] text-ink/50 mt-1 pl-6 pr-1">{reward.desc}</p>}
+                        </div>
+                      )
+                    })()}
                     {rewards.map((b) => {
                       const special = SPECIAL_REWARDS[b.requirement_value]
                       const infoKey = `${m.id}-${b.id}`

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MessageSquare, Send, Trash2, Ban } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
+import { AvatarCircle } from '@/components/ui/avatar-circle'
 
 export default function Chat() {
   const { user } = useAuth()
@@ -80,9 +81,13 @@ export default function Chat() {
           {messages.map((m) => {
             const isMine = m.user_id === user?.id
             const avatar = (
-              <div className={`w-7 h-7 rounded-full bg-blueprint/10 flex items-center justify-center text-xs font-display font-semibold text-blueprint shrink-0 ${m.avatar_glow ? 'avatar-glow' : ''}`}>
-                {m.author_name?.[0]?.toUpperCase() || '?'}
-              </div>
+              <AvatarCircle
+                name={m.author_name}
+                image={m.avatar}
+                glow={m.avatar_glow}
+                className="w-7 h-7 bg-blueprint/10"
+                textClassName="text-xs font-display font-semibold text-blueprint"
+              />
             )
             const bubble = (
               <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${

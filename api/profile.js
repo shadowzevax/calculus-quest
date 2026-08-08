@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
 
+const MAX_AVATAR_LENGTH = 400_000; // ~300KB de imagen en base64, ya redimensionada en el navegador
+
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
@@ -20,8 +22,22 @@ export default async function handler(req, res) {
     `;
     if (!owned) throw new Error(`${label} aún no ha sido desbloqueado`);
   };
+  // La foto de perfil personalizada no está atada a una insignia (no todas las recompensas
+  // tienen un ícono coleccionable), así que se verifica directo contra el progreso: haber
+  // completado la misión con orden 11.
+  const requireMissionOrder = async (order, label) => {
+    const [done] = await sql`
+      SELECT 1 FROM user_progress up JOIN missions m ON m.id = up.mission_id
+      WHERE up.user_id = ${user.id} AND m."order" = ${order} AND up.progress_percentage >= 100
+    `;
+    if (!done) throw new Error(`${label} aún no ha sido desbloqueada`);
+  };
 
   try {
+    if (!isTeacher && avatar) {
+      await requireMissionOrder(11, 'La foto de perfil personalizada');
+      if (avatar.length > MAX_AVATAR_LENGTH) throw new Error('La imagen es demasiado grande');
+    }
     if (!isTeacher && avatar_glow) await requireBadge(12, 'El aro del avatar');
     if (!isTeacher && dark_bubble) await requireBadge(13, 'La burbuja oscura');
     if (!isTeacher && name_rainbow) await requireBadge(14, 'El nombre arcoíris');
@@ -43,6 +59,8 @@ export default async function handler(req, res) {
     await sql`UPDATE users SET password_hash = ${password_hash} WHERE id = ${user.id}`;
   }
 
+  // Al reemplazar la foto, el UPDATE sobrescribe directamente el valor anterior en la misma
+  // columna — no queda ningún archivo viejo guardado en ningún lado que haya que borrar aparte.
   const [updated] = await sql`
     UPDATE users SET
       full_name = COALESCE(${full_name}, full_name),

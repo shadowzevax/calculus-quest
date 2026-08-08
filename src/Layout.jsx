@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from './lib/AuthContext'
 import MiniCurve from './components/MiniCurve'
+import { AvatarCircle } from './components/ui/avatar-circle'
 import Login from './pages/Login'
 
 const studentNav = [
@@ -97,9 +98,13 @@ export default function Layout({ children }) {
         {user && (
           <div className="relative p-4 border-t border-white/10">
             <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-full bg-coral/20 border border-coral/40 flex items-center justify-center text-sm font-display font-semibold text-coral shrink-0 ${user.avatar_glow ? 'avatar-glow' : ''}`}>
-                {user.full_name?.[0]?.toUpperCase() || '?'}
-              </div>
+              <AvatarCircle
+                name={user.full_name}
+                image={user.avatar}
+                glow={user.avatar_glow}
+                className="w-9 h-9 bg-coral/20 border border-coral/40"
+                textClassName="text-sm font-display font-semibold text-coral"
+              />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white truncate">{user.full_name}</div>
                 <div className="text-[11px] font-mono-lab text-white/40 truncate">{user.xp} XP</div>

@@ -1,8 +1,24 @@
-import { useEffect, useState } from 'react'
-import { Lock } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Lock, Camera } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import { Switch } from '@/components/ui/switch'
+import { AvatarCircle } from '@/components/ui/avatar-circle'
+
+// Redimensiona y comprime la imagen en el navegador antes de subirla, para no acumular
+// fotos pesadas en la base de datos (se guarda como un JPEG chico, máx. ~320px de lado).
+async function resizeImage(file) {
+  const bitmap = await createImageBitmap(file)
+  const maxDim = 320
+  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
+  const w = Math.round(bitmap.width * scale)
+  const h = Math.round(bitmap.height * scale)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', 0.85)
+}
 
 export default function Profile() {
   const { user, setUser, refresh } = useAuth()
@@ -10,8 +26,17 @@ export default function Profile() {
   const [bio, setBio] = useState(user?.bio || '')
   const [saved, setSaved] = useState(false)
   const [badges, setBadges] = useState([])
+  const [progress, setProgress] = useState([])
+  const [missions, setMissions] = useState([])
+  const [photoError, setPhotoError] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const fileInputRef = useRef(null)
 
-  useEffect(() => { api.badges.list().then(setBadges).catch(() => {}) }, [])
+  useEffect(() => {
+    api.badges.list().then(setBadges).catch(() => {})
+    api.progress.list().then(setProgress).catch(() => {})
+    api.missions.list().then(setMissions).catch(() => {})
+  }, [])
 
   // Actualiza la interfaz al instante (sin esperar la respuesta del servidor) y revierte
   // si la petición falla, para que el switch/insignia se sientan inmediatos.
@@ -36,6 +61,31 @@ export default function Profile() {
   const rainbowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 14 && b.earned)
   const darkBubbleUnlocked = isAdmin || badges.some((b) => b.requirement_value === 13 && b.earned)
   const avatarGlowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 12 && b.earned)
+  const mission11 = missions.find((m) => m.order === 11)
+  const photoUnlocked = isAdmin || (mission11 && progress.some((p) => p.mission_id === mission11.id && p.progress_percentage >= 100))
+
+  const choosePhoto = () => fileInputRef.current?.click()
+
+  const onPhotoSelected = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setPhotoError('')
+    if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+      setPhotoError('Solo se admiten imágenes (no GIF ni video).')
+      return
+    }
+    setUploadingPhoto(true)
+    try {
+      const dataUrl = await resizeImage(file)
+      await api.profile.update({ avatar: dataUrl })
+      await refresh()
+    } catch {
+      setPhotoError('No se pudo subir la imagen. Intenta con otra.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
   const equippedBadges = badges
     .filter((b) => b.equipped)
     .sort((a, b) => new Date(a.equipped_at) - new Date(b.equipped_at))
@@ -75,14 +125,34 @@ export default function Profile() {
       <h1 className="text-3xl font-display font-bold text-ink mb-6">Mi Perfil</h1>
       <div className="bg-white rounded-xl border border-ink/10 p-6">
         <div className="flex items-center gap-4 mb-4">
-          <div className={`w-16 h-16 rounded-full bg-coral/15 border border-coral/30 flex items-center justify-center text-2xl font-display font-semibold text-coral shrink-0 ${user.avatar_glow ? 'avatar-glow' : ''}`}>
-            {user.full_name?.[0]?.toUpperCase() || '?'}
+          <div className="relative shrink-0">
+            <AvatarCircle
+              name={user.full_name}
+              image={user.avatar}
+              glow={user.avatar_glow}
+              className="w-16 h-16 bg-coral/15 border border-coral/30"
+              textClassName="text-2xl font-display font-semibold text-coral"
+            />
+            {photoUnlocked && (
+              <button
+                type="button"
+                onClick={choosePhoto}
+                disabled={uploadingPhoto}
+                title="Cambiar foto de perfil"
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blueprint hover:bg-coral transition-colors text-white flex items-center justify-center border-2 border-white"
+              >
+                <Camera className="w-3 h-3" />
+              </button>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={onPhotoSelected} className="hidden" />
           </div>
           <div>
             <div className={`font-medium ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>{user.full_name}</div>
             <div className="text-sm font-mono-lab text-ink/40">{user.xp} XP · Nivel {user.level}</div>
           </div>
         </div>
+        {photoError && <p className="text-red-500 text-xs -mt-2 mb-3">{photoError}</p>}
+        {uploadingPhoto && <p className="text-ink/40 text-xs -mt-2 mb-3">Subiendo foto...</p>}
 
         {equippedBadges.length > 0 && (
           <div className="mb-4 pt-1">

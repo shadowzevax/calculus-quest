@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Trophy } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
+import { AvatarCircle } from '@/components/ui/avatar-circle'
 
 export default function Ranking() {
   const { user } = useAuth()
@@ -20,9 +21,13 @@ export default function Ranking() {
         {rows.map((r, i) => (
           <div key={r.id} className={`flex items-center gap-4 px-5 py-3.5 ${r.id === user?.id ? 'bg-coral/5' : ''}`}>
             <span className="w-6 text-center font-display font-bold text-ink/30 shrink-0">{i + 1}</span>
-            <div className={`w-9 h-9 rounded-full bg-blueprint/10 flex items-center justify-center text-sm font-display font-semibold text-blueprint shrink-0 ${r.avatar_glow ? 'avatar-glow' : ''}`}>
-              {r.full_name?.[0]?.toUpperCase() || '?'}
-            </div>
+            <AvatarCircle
+              name={r.full_name}
+              image={r.avatar}
+              glow={r.avatar_glow}
+              className="w-9 h-9 bg-blueprint/10"
+              textClassName="text-sm font-display font-semibold text-blueprint"
+            />
             <div className="flex-1 min-w-0">
               <div className={`font-medium ${r.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>{r.full_name}</div>
               {r.equipped_badge_images?.length > 0 && (
