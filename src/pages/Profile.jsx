@@ -35,6 +35,7 @@ export default function Profile() {
   const isAdmin = user?.role === 'admin'
   const rainbowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 14 && b.earned)
   const darkBubbleUnlocked = isAdmin || badges.some((b) => b.requirement_value === 13 && b.earned)
+  const avatarGlowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 12 && b.earned)
   const equippedBadges = badges
     .filter((b) => b.equipped)
     .sort((a, b) => new Date(a.equipped_at) - new Date(b.equipped_at))
@@ -74,7 +75,7 @@ export default function Profile() {
       <h1 className="text-3xl font-display font-bold text-ink mb-6">Mi Perfil</h1>
       <div className="bg-white rounded-xl border border-ink/10 p-6">
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-16 h-16 rounded-full bg-coral/15 border border-coral/30 flex items-center justify-center text-2xl font-display font-semibold text-coral shrink-0">
+          <div className={`w-16 h-16 rounded-full bg-coral/15 border border-coral/30 flex items-center justify-center text-2xl font-display font-semibold text-coral shrink-0 ${user.avatar_glow ? 'avatar-glow' : ''}`}>
             {user.full_name?.[0]?.toUpperCase() || '?'}
           </div>
           <div>
@@ -137,6 +138,19 @@ export default function Profile() {
           ))}
           {badges.length === 0 && <p className="text-ink/35 text-sm col-span-full">Cargando insignias...</p>}
         </div>
+
+        {avatarGlowUnlocked && (
+          <div className="mt-4 pt-4 border-t border-ink/10 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-ink">Aro iluminado en la foto de perfil</p>
+              <p className="text-xs text-ink/40">Desbloqueado al llegar a la misión 12. Se ve en tu foto en todos lados, incluido el ranking.</p>
+            </div>
+            <Switch
+              checked={!!user.avatar_glow}
+              onCheckedChange={(checked) => applyStyle({ avatar_glow: checked })}
+            />
+          </div>
+        )}
 
         {darkBubbleUnlocked && (
           <div className="mt-4 pt-4 border-t border-ink/10 flex items-center justify-between">

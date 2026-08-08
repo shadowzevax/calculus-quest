@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (!user) return;
 
   const rows = await sql`
-    SELECT u.id, u.full_name, u.avatar, u.xp, u.level, u.name_rainbow,
+    SELECT u.id, u.full_name, u.avatar, u.xp, u.level, u.name_rainbow, u.avatar_glow,
            COALESCE(eb.images, '{}') AS equipped_badge_images
     FROM users u
     LEFT JOIN LATERAL (

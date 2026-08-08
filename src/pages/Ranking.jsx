@@ -20,7 +20,7 @@ export default function Ranking() {
         {rows.map((r, i) => (
           <div key={r.id} className={`flex items-center gap-4 px-5 py-3.5 ${r.id === user?.id ? 'bg-coral/5' : ''}`}>
             <span className="w-6 text-center font-display font-bold text-ink/30">{i + 1}</span>
-            <div className="w-9 h-9 rounded-full bg-blueprint/10 flex items-center justify-center text-sm font-display font-semibold text-blueprint">
+            <div className={`w-9 h-9 rounded-full bg-blueprint/10 flex items-center justify-center text-sm font-display font-semibold text-blueprint shrink-0 ${r.avatar_glow ? 'avatar-glow' : ''}`}>
               {r.full_name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1 min-w-0">

@@ -7,25 +7,26 @@ export default async function handler(req, res) {
   if (!user) return;
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { full_name, bio, avatar, current_password, new_password, name_rainbow, dark_bubble } = req.body || {};
+  const { full_name, bio, avatar, current_password, new_password, name_rainbow, dark_bubble, avatar_glow } = req.body || {};
 
-  // El nombre arcoiris y la burbuja oscura son recompensas cosmeticas por progreso:
-  // solo se activan tras alcanzar la insignia correspondiente.
+  // El nombre arcoiris, la burbuja oscura y el aro del avatar son recompensas cosmeticas por
+  // progreso: solo se activan tras alcanzar la insignia correspondiente.
   // (Equipar/desequipar insignias vive en api/badges.js, ahora que se pueden llevar varias a la vez.)
   const isTeacher = user.role === 'admin';
-  if (!isTeacher && name_rainbow) {
+  const requireBadge = async (value, label) => {
     const [owned] = await sql`
       SELECT 1 FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
-      WHERE ub.user_id = ${user.id} AND b.requirement_type = 'missions_completed' AND b.requirement_value = 14
+      WHERE ub.user_id = ${user.id} AND b.requirement_type = 'missions_completed' AND b.requirement_value = ${value}
     `;
-    if (!owned) return res.status(403).json({ error: 'El nombre arcoíris aún no ha sido desbloqueado' });
-  }
-  if (!isTeacher && dark_bubble) {
-    const [owned] = await sql`
-      SELECT 1 FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
-      WHERE ub.user_id = ${user.id} AND b.requirement_type = 'missions_completed' AND b.requirement_value = 13
-    `;
-    if (!owned) return res.status(403).json({ error: 'La burbuja oscura aún no ha sido desbloqueada' });
+    if (!owned) throw new Error(`${label} aún no ha sido desbloqueado`);
+  };
+
+  try {
+    if (!isTeacher && avatar_glow) await requireBadge(12, 'El aro del avatar');
+    if (!isTeacher && dark_bubble) await requireBadge(13, 'La burbuja oscura');
+    if (!isTeacher && name_rainbow) await requireBadge(14, 'El nombre arcoíris');
+  } catch (e) {
+    return res.status(403).json({ error: e.message });
   }
 
   // Cambio de contraseña: se pide la actual para confirmar que es el
@@ -48,9 +49,10 @@ export default async function handler(req, res) {
       bio = COALESCE(${bio}, bio),
       avatar = COALESCE(${avatar}, avatar),
       name_rainbow = COALESCE(${name_rainbow}, name_rainbow),
-      dark_bubble = COALESCE(${dark_bubble}, dark_bubble)
+      dark_bubble = COALESCE(${dark_bubble}, dark_bubble),
+      avatar_glow = COALESCE(${avatar_glow}, avatar_glow)
     WHERE id = ${user.id}
-    RETURNING id, email, full_name, role, avatar, bio, xp, level, name_rainbow, dark_bubble
+    RETURNING id, email, full_name, role, avatar, bio, xp, level, name_rainbow, dark_bubble, avatar_glow
   `;
   res.status(200).json({ user: updated });
 }

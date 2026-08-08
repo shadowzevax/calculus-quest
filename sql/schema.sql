@@ -93,6 +93,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS name_rainbow BOOLEAN NOT NULL DEFAULT
 -- penultima insignia (mision 13, "Optimizador Experto"). A diferencia de las demas
 -- recompensas, esta cambia como TODOS ven los mensajes de ese usuario, no solo el.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS dark_bubble BOOLEAN NOT NULL DEFAULT false;
+-- Aro/resplandor naranja animado alrededor de la foto de perfil: se desbloquea en la
+-- mision 12 ("Domador de Derivadas"). Visible para todos en Ranking, Perfil y la barra lateral.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_glow BOOLEAN NOT NULL DEFAULT false;
 
 CREATE TABLE user_badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
