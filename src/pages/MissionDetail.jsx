@@ -31,6 +31,12 @@ export default function MissionDetail() {
   const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
+    // Reinicia el estado de la misión anterior — sin esto, al ir a "Siguiente misión" seguía
+    // mostrando el resumen/resultados de la misión que se acababa de completar.
+    setCurrent(0)
+    setShowDone(false)
+    setResults([])
+    setLoading(true)
     Promise.all([api.missions.list('misiones'), api.exercises.byMission(id)])
       .then(([missions, ex]) => {
         setMission(missions.find((m) => m.id === id))
