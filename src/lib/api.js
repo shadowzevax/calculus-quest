@@ -78,6 +78,12 @@ export const api = {
   },
   badges: {
     list: () => cachedGet('/badges'),
+    toggle: (badgeId) =>
+      request('/badges', { method: 'POST', body: JSON.stringify({ badge_id: badgeId }) }).then((r) => {
+        invalidate('/badges');
+        invalidate('/ranking');
+        return r;
+      }),
   },
   users: {
     list: () => cachedGet('/users'),

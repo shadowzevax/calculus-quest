@@ -85,11 +85,8 @@ CREATE TABLE user_progress (
   UNIQUE (user_id, mission_id)
 );
 
--- Recompensa cosmética: insignia equipada (solo su ícono, sin cambio de color),
--- visible para otros estudiantes en el ranking y el chat.
-ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge_id UUID REFERENCES badges(id);
 -- Nombre arcoiris animado: la única forma de cambiar el color del nombre, recompensa
--- maxima que solo se puede activar tras ganar la insignia "Maestro de Funciones"
+-- maxima que solo se puede activar tras ganar la insignia "Leyenda de FuncionLab"
 -- (completar las 14 misiones, incluida la ultima).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name_rainbow BOOLEAN NOT NULL DEFAULT false;
 
@@ -99,6 +96,9 @@ CREATE TABLE user_badges (
   badge_id UUID REFERENCES badges(id) ON DELETE CASCADE,
   earned_date TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Insignia "equipada" (su ícono se muestra junto al nombre en ranking/chat): se pueden
+-- llevar puestas 0, algunas o las 8 a la vez, en el orden en que se equiparon.
+ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS equipped_at TIMESTAMPTZ;
 
 CREATE TABLE exercise_attempts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

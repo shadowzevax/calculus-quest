@@ -14,15 +14,29 @@ export default function Profile() {
   useEffect(() => { api.badges.list().then(setBadges).catch(() => {}) }, [])
 
   // Actualiza la interfaz al instante (sin esperar la respuesta del servidor) y revierte
-  // si la petición falla, para que activar el switch/insignia se sienta inmediato.
+  // si la petición falla, para que el switch/insignia se sientan inmediatos.
   const applyStyle = (data) => {
     const previous = user
     setUser((u) => ({ ...u, ...data }))
     api.profile.update(data).catch(() => setUser(previous))
   }
 
+  // Equipar/desequipar una insignia: se pueden llevar 0, algunas o todas a la vez.
+  const toggleBadge = (badge) => {
+    const wasEquipped = badge.equipped
+    setBadges((list) => list.map((b) => (
+      b.id === badge.id ? { ...b, equipped: !wasEquipped, equipped_at: wasEquipped ? null : new Date().toISOString() } : b
+    )))
+    api.badges.toggle(badge.id).catch(() => {
+      setBadges((list) => list.map((b) => (b.id === badge.id ? { ...b, equipped: wasEquipped, equipped_at: badge.equipped_at } : b)))
+    })
+  }
+
   const isAdmin = user?.role === 'admin'
-  const rainbowUnlocked = isAdmin || badges.some((b) => b.requirement_type === 'missions_completed' && b.requirement_value === 14 && b.earned)
+  const rainbowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 14 && b.earned)
+  const equippedBadges = badges
+    .filter((b) => b.equipped)
+    .sort((a, b) => new Date(a.equipped_at) - new Date(b.equipped_at))
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -58,24 +72,28 @@ export default function Profile() {
       <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">CUENTA</div>
       <h1 className="text-3xl font-display font-bold text-ink mb-6">Mi Perfil</h1>
       <div className="bg-white rounded-xl border border-ink/10 p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-coral/15 border border-coral/30 flex items-center justify-center text-2xl font-display font-semibold text-coral">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-16 h-16 rounded-full bg-coral/15 border border-coral/30 flex items-center justify-center text-2xl font-display font-semibold text-coral shrink-0">
             {user.full_name?.[0]?.toUpperCase() || '?'}
           </div>
           <div>
-            <div className={`font-medium flex items-center gap-1.5 ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>
-              {user.full_name}
-              {user.equipped_badge_id && badges.find((b) => b.id === user.equipped_badge_id) && (
-                <img
-                  src={badges.find((b) => b.id === user.equipped_badge_id).image}
-                  alt=""
-                  className="w-5 h-5 rounded-full object-cover shrink-0"
-                />
-              )}
-            </div>
+            <div className={`font-medium ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>{user.full_name}</div>
             <div className="text-sm font-mono-lab text-ink/40">{user.xp} XP · Nivel {user.level}</div>
           </div>
         </div>
+
+        {equippedBadges.length > 0 && (
+          <div className="mb-4 pt-1">
+            <div className="grid grid-cols-4 gap-2 max-w-[280px]">
+              {equippedBadges.map((b) => (
+                <div key={b.id} className="w-14 h-14 rounded-full overflow-hidden bg-ink/5 ring-2 ring-coral/50" title={b.name}>
+                  <img src={b.image} alt={b.name} className="w-full h-full object-cover scale-110" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <form onSubmit={save} className="space-y-3">
           <div>
             <label className="text-sm text-ink/50">Nombre completo</label>
@@ -92,33 +110,30 @@ export default function Profile() {
 
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
         <h2 className="text-lg font-display font-semibold text-ink mb-1">Insignias y logros</h2>
-        <p className="text-sm text-ink/40 mb-4">Se ganan al completar misiones. Equipa una para mostrar su ícono junto a tu nombre en el ranking y el chat.</p>
+        <p className="text-sm text-ink/40 mb-4">Se ganan al completar misiones. Toca las que quieras equipar — puedes llevar ninguna, algunas o todas a la vez.</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {badges.map((b) => {
-            const isEquipped = user.equipped_badge_id === b.id
-            return (
-              <button
-                key={b.id}
-                type="button"
-                disabled={!b.earned}
-                onClick={() => applyStyle({ equipped_badge_id: b.id })}
-                className={`text-center border rounded-xl p-3 transition-colors ${
-                  b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 cursor-not-allowed'
-                } ${isEquipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
-              >
-                <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center">
-                  {b.earned ? (
-                    <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Lock className="w-5 h-5 text-ink/25" />
-                  )}
-                </div>
-                <span className={`text-xs font-medium ${b.earned ? 'text-ink' : 'text-ink/35'}`}>{b.name}</span>
-                <p className="text-[11px] text-ink/35 mt-0.5">{b.description}</p>
-                {isEquipped && <p className="text-[10px] font-mono-lab text-coral mt-1">EQUIPADA</p>}
-              </button>
-            )
-          })}
+          {badges.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              disabled={!b.earned}
+              onClick={() => toggleBadge(b)}
+              className={`text-center border rounded-xl p-3 transition-colors ${
+                b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 cursor-not-allowed'
+              } ${b.equipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
+            >
+              <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center">
+                {b.earned ? (
+                  <img src={b.image} alt={b.name} className="w-full h-full object-cover scale-110" />
+                ) : (
+                  <Lock className="w-5 h-5 text-ink/25" />
+                )}
+              </div>
+              <span className={`text-xs font-medium ${b.earned ? 'text-ink' : 'text-ink/35'}`}>{b.name}</span>
+              <p className="text-[11px] text-ink/35 mt-0.5">{b.description}</p>
+              {b.equipped && <p className="text-[10px] font-mono-lab text-coral mt-1">EQUIPADA</p>}
+            </button>
+          ))}
           {badges.length === 0 && <p className="text-ink/35 text-sm col-span-full">Cargando insignias...</p>}
         </div>
 

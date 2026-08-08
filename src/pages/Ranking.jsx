@@ -23,10 +23,14 @@ export default function Ranking() {
             <div className="w-9 h-9 rounded-full bg-blueprint/10 flex items-center justify-center text-sm font-display font-semibold text-blueprint">
               {r.full_name?.[0]?.toUpperCase() || '?'}
             </div>
-            <div className="flex-1">
-              <div className={`font-medium flex items-center gap-1.5 ${r.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>
+            <div className="flex-1 min-w-0">
+              <div className={`font-medium flex items-center gap-1.5 flex-wrap ${r.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>
                 {r.full_name}
-                {r.badge_image && <img src={r.badge_image} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />}
+                {r.equipped_badge_images?.map((img, idx) => (
+                  <span key={idx} className="w-4 h-4 rounded-full overflow-hidden shrink-0 inline-block">
+                    <img src={img} alt="" className="w-full h-full object-cover scale-110" />
+                  </span>
+                ))}
               </div>
               <div className="text-[11px] font-mono-lab text-ink/35">NIVEL {r.level}</div>
             </div>

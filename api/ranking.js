@@ -7,9 +7,13 @@ export default async function handler(req, res) {
 
   const rows = await sql`
     SELECT u.id, u.full_name, u.avatar, u.xp, u.level, u.name_rainbow,
-           b.image AS badge_image, b.name AS badge_name
+           COALESCE(eb.images, '{}') AS equipped_badge_images
     FROM users u
-    LEFT JOIN badges b ON b.id = u.equipped_badge_id
+    LEFT JOIN LATERAL (
+      SELECT array_agg(b.image ORDER BY ub.equipped_at) AS images
+      FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
+      WHERE ub.user_id = u.id AND ub.equipped_at IS NOT NULL
+    ) eb ON true
     WHERE u.role = 'user'
     ORDER BY u.xp DESC LIMIT 50
   `;

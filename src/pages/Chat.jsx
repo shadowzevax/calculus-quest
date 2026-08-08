@@ -82,10 +82,18 @@ export default function Chat() {
               <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
                 m.user_id === user?.id ? 'bg-coral text-white' : 'bg-ink/5 text-ink'
               }`}>
-                <div className="text-[10px] font-mono-lab opacity-60 mb-0.5 flex items-center gap-1">
+                {m.equipped_badge_images?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {m.equipped_badge_images.map((img, idx) => (
+                      <span key={idx} className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-white/40 inline-block">
+                        <img src={img} alt="" className="w-full h-full object-cover scale-110" />
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="text-[10px] font-mono-lab opacity-60 mb-0.5">
                   <span className={m.name_rainbow ? 'name-rainbow' : ''}>{m.author_name}</span>
-                  {m.badge_image && <img src={m.badge_image} alt="" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />}
-                  {m.role === 'admin' && '· Docente'}
+                  {m.role === 'admin' && ' · Docente'}
                 </div>
                 {m.content}
               </div>
