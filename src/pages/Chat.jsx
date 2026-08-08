@@ -80,7 +80,7 @@ export default function Chat() {
           {messages.map((m) => (
             <div key={m.id} className={`flex ${m.user_id === user?.id ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
-                m.user_id === user?.id ? 'bg-coral text-white' : 'bg-ink/5 text-ink'
+                m.user_id === user?.id ? 'bg-ink text-white' : 'bg-ink/5 text-ink'
               }`}>
                 {m.equipped_badge_images?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1">
