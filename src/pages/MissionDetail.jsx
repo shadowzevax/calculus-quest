@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Zap } from 'lucide-react'
+import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Zap, TrendingUp } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercise'
@@ -31,7 +31,8 @@ function speedBonusBudget(exercise) {
 export default function MissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { refresh } = useAuth()
+  const { user, refresh } = useAuth()
+  const [rankInfo, setRankInfo] = useState(null) // {position, xp} — se actualiza en vivo
   const [mission, setMission] = useState(null)
   const [allMissions, setAllMissions] = useState([])
   const [exercises, setExercises] = useState([])
@@ -71,6 +72,23 @@ export default function MissionDetail() {
     return () => clearInterval(interval)
   }, [current, retryKey, exercises, mission])
 
+  // Posición en el ranking y XP total, en vivo — para darle más emoción mientras
+  // resuelve, mostrando qué tan cerca (o lejos) está de subir un puesto.
+  useEffect(() => {
+    if (!user || user.role === 'admin') return
+    let cancelled = false
+    const poll = () => {
+      api.ranking.list().then((rows) => {
+        if (cancelled) return
+        const idx = rows.findIndex((r) => r.id === user.id)
+        if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
+      }).catch(() => {})
+    }
+    poll()
+    const interval = setInterval(poll, 12000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [user])
+
   if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misión...</p>
   if (!mission) return <p className="text-red-500 text-sm">Misión no encontrada.</p>
 
@@ -94,6 +112,12 @@ export default function MissionDetail() {
         // El XP/nivel del usuario vive en el AuthContext (se usa en Dashboard, la barra
         // lateral, etc.) — sin este refresh, se quedaba desactualizado hasta el próximo login.
         await refresh()
+        // progress.submit ya invalida el cache de /ranking; se relee de una vez para que
+        // la posición en vivo se sienta inmediata en vez de esperar al próximo poll.
+        api.ranking.list().then((rows) => {
+          const idx = rows.findIndex((r) => r.id === user.id)
+          if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
+        }).catch(() => {})
       } catch {}
     }
     setResults((r) => [...r, { exercise, isCorrect, bonus }])
@@ -111,15 +135,42 @@ export default function MissionDetail() {
     setRetryKey((k) => k + 1)
   }
 
+  const showTimer = !mission.is_collaborative && !showDone && exercise && secondsLeft > 0
+
   return (
     <div className="max-w-4xl mx-auto">
       <Link to="/missions" className="text-sm text-ink/50 hover:text-coral flex items-center gap-1 mb-4 transition-colors">
         <ChevronLeft className="w-4 h-4" /> Volver a Misiones
       </Link>
 
-      <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-1">MISIÓN</div>
-      <h1 className="text-2xl font-display font-bold text-ink">{mission.title}</h1>
-      <p className="text-ink/50 mt-1 mb-6">{mission.story || mission.description}</p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-1">MISIÓN</div>
+          <h1 className="text-2xl font-display font-bold text-ink">{mission.title}</h1>
+          <p className="text-ink/50 mt-1">{mission.story || mission.description}</p>
+        </div>
+
+        {rankInfo && (
+          <div className="shrink-0 bg-white border-2 border-blueprint/15 rounded-2xl px-5 py-4 text-center min-w-[150px]">
+            {showTimer && (
+              <div className="mb-3 pb-3 border-b border-ink/10">
+                <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1">
+                  Bono si respondes rápido
+                </div>
+                <div className="text-3xl font-display font-bold text-gold flex items-center justify-center gap-1.5">
+                  <Zap className="w-6 h-6" />
+                  {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
+                </div>
+              </div>
+            )}
+            <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
+              <TrendingUp className="w-3 h-3" /> Tu posición
+            </div>
+            <div className="text-3xl font-display font-bold text-coral">#{rankInfo.position}</div>
+            <div className="text-xs font-mono-lab text-ink/50 mt-0.5">{rankInfo.xp} XP total</div>
+          </div>
+        )}
+      </div>
 
       {mission.is_collaborative ? (
         <div className="bg-white rounded-xl border border-ink/10 p-8">
@@ -137,14 +188,7 @@ export default function MissionDetail() {
         <div className="bg-white rounded-xl border border-ink/10 p-8">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-mono-lab text-ink/40">EJERCICIO {current + 1} / {exercises.length}</span>
-            <div className="flex items-center gap-3">
-              {secondsLeft > 0 && (
-                <span className="text-xs font-mono-lab text-gold flex items-center gap-1" title={`Responde bien antes de que se acabe el tiempo y ganas +${BONUS_XP} XP extra`}>
-                  <Zap className="w-3.5 h-3.5" /> {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
-                </span>
-              )}
-              <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
-            </div>
+            <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
           </div>
           {Component ? (
             <Component key={`${exercise.id}-${retryKey}`} exercise={exercise} onComplete={handleComplete} />
