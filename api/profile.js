@@ -33,8 +33,10 @@ export default async function handler(req, res) {
     if (!done) throw new Error(`${label} aún no ha sido desbloqueada`);
   };
 
+  const removingAvatar = avatar === ''; // cadena vacía = "quitar foto", null/undefined = "sin cambios"
+
   try {
-    if (!isTeacher && avatar) {
+    if (!isTeacher && avatar && !removingAvatar) {
       await requireMissionOrder(11, 'La foto de perfil personalizada');
       if (avatar.length > MAX_AVATAR_LENGTH) throw new Error('La imagen es demasiado grande');
     }
@@ -59,13 +61,14 @@ export default async function handler(req, res) {
     await sql`UPDATE users SET password_hash = ${password_hash} WHERE id = ${user.id}`;
   }
 
-  // Al reemplazar la foto, el UPDATE sobrescribe directamente el valor anterior en la misma
-  // columna — no queda ningún archivo viejo guardado en ningún lado que haya que borrar aparte.
+  // Al reemplazar (o quitar) la foto, el UPDATE sobrescribe directamente el valor anterior en
+  // la misma columna — no queda ningún archivo viejo guardado en ningún lado que haya que
+  // borrar aparte.
   const [updated] = await sql`
     UPDATE users SET
       full_name = COALESCE(${full_name}, full_name),
       bio = COALESCE(${bio}, bio),
-      avatar = COALESCE(${avatar}, avatar),
+      avatar = CASE WHEN ${removingAvatar} THEN NULL ELSE COALESCE(${avatar}, avatar) END,
       name_rainbow = COALESCE(${name_rainbow}, name_rainbow),
       dark_bubble = COALESCE(${dark_bubble}, dark_bubble),
       avatar_glow = COALESCE(${avatar_glow}, avatar_glow)

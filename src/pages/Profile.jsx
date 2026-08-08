@@ -86,6 +86,20 @@ export default function Profile() {
       setUploadingPhoto(false)
     }
   }
+
+  const removePhoto = async () => {
+    setPhotoError('')
+    setUploadingPhoto(true)
+    try {
+      await api.profile.update({ avatar: '' })
+      await refresh()
+    } catch {
+      setPhotoError('No se pudo quitar la foto.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   const equippedBadges = badges
     .filter((b) => b.equipped)
     .sort((a, b) => new Date(a.equipped_at) - new Date(b.equipped_at))
@@ -149,6 +163,16 @@ export default function Profile() {
           <div>
             <div className={`font-medium ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>{user.full_name}</div>
             <div className="text-sm font-mono-lab text-ink/40">{user.xp} XP · Nivel {user.level}</div>
+            {user.avatar && (
+              <button
+                type="button"
+                onClick={removePhoto}
+                disabled={uploadingPhoto}
+                className="text-xs text-ink/35 hover:text-red-500 transition-colors mt-0.5"
+              >
+                Quitar foto
+              </button>
+            )}
           </div>
         </div>
         {photoError && <p className="text-red-500 text-xs -mt-2 mb-3">{photoError}</p>}
