@@ -85,7 +85,7 @@ export default function MissionDetail() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl mx-auto">
       <Link to="/missions" className="text-sm text-ink/50 hover:text-coral flex items-center gap-1 mb-4 transition-colors">
         <ChevronLeft className="w-4 h-4" /> Volver a Misiones
       </Link>
@@ -101,7 +101,7 @@ export default function MissionDetail() {
       )}
 
       {!showDone && exercise && (
-        <div className="bg-white rounded-xl border border-ink/10 p-6">
+        <div className="bg-white rounded-xl border border-ink/10 p-8">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-mono-lab text-ink/40">EJERCICIO {current + 1} / {exercises.length}</span>
             <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
