@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight } from 'lucide-react'
+import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Zap } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercise'
@@ -18,6 +18,16 @@ const EXERCISE_COMPONENTS = {
   matching: MatchingExercise,
 }
 
+const BONUS_XP = 5
+
+// Cuanto dura la ventana de "bono de velocidad": base + un poco mas por cada
+// sub-pregunta/par que tenga el ejercicio (los que tienen varias preguntas
+// necesitan mas tiempo real que uno de una sola pregunta).
+function speedBonusBudget(exercise) {
+  const subItems = exercise?.metadata?.questions?.length || exercise?.metadata?.pairs?.length || 1
+  return 20 + subItems * 15
+}
+
 export default function MissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -28,8 +38,10 @@ export default function MissionDetail() {
   const [current, setCurrent] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showDone, setShowDone] = useState(false)
-  const [results, setResults] = useState([]) // [{exercise, isCorrect}] de este intento
+  const [results, setResults] = useState([]) // [{exercise, isCorrect, bonus}] de este intento
   const [retryKey, setRetryKey] = useState(0)
+  const [secondsLeft, setSecondsLeft] = useState(0)
+  const exerciseStartRef = useRef(0)
 
   useEffect(() => {
     // Reinicia el estado de la misión anterior — sin esto, al ir a "Siguiente misión" seguía
@@ -47,30 +59,44 @@ export default function MissionDetail() {
       .finally(() => setLoading(false))
   }, [id])
 
+  // Cronómetro del ejercicio actual: reinicia cada vez que cambia de ejercicio o se
+  // reintenta la misión. Es solo un bono de XP por rapidez, nunca un castigo — si se
+  // acaba el tiempo simplemente no hay bono, se puede seguir respondiendo igual.
+  useEffect(() => {
+    const ex = exercises[current]
+    if (!ex || mission?.is_collaborative) return
+    exerciseStartRef.current = Date.now()
+    setSecondsLeft(speedBonusBudget(ex))
+    const interval = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(interval)
+  }, [current, retryKey, exercises, mission])
+
   if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misión...</p>
   if (!mission) return <p className="text-red-500 text-sm">Misión no encontrada.</p>
 
   const exercise = exercises[current]
   const Component = exercise ? EXERCISE_COMPONENTS[exercise.type] : null
   const allCorrect = results.length > 0 && results.every((r) => r.isCorrect)
-  const earnedXp = results.filter((r) => r.isCorrect).reduce((sum, r) => sum + (r.exercise.xp_value || 0), 0)
+  const earnedXp = results.filter((r) => r.isCorrect).reduce((sum, r) => sum + (r.exercise.xp_value || 0) + (r.bonus || 0), 0)
   const nextMission = allMissions.find((m) => m.order === mission.order + 1)
 
   const handleComplete = async ({ isCorrect }) => {
+    const withinBudget = Date.now() - exerciseStartRef.current <= speedBonusBudget(exercise) * 1000
+    const bonus = isCorrect && withinBudget ? BONUS_XP : 0
     if (isCorrect) {
       try {
         await api.progress.submit({
           exercise_id: exercise.id,
           answer_given: 'completed',
           is_correct: true,
-          xp_earned: exercise.xp_value || 10,
+          xp_earned: (exercise.xp_value || 10) + bonus,
         })
         // El XP/nivel del usuario vive en el AuthContext (se usa en Dashboard, la barra
         // lateral, etc.) — sin este refresh, se quedaba desactualizado hasta el próximo login.
         await refresh()
       } catch {}
     }
-    setResults((r) => [...r, { exercise, isCorrect }])
+    setResults((r) => [...r, { exercise, isCorrect, bonus }])
     if (current < exercises.length - 1) {
       setCurrent(current + 1)
     } else {
@@ -111,7 +137,14 @@ export default function MissionDetail() {
         <div className="bg-white rounded-xl border border-ink/10 p-8">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-mono-lab text-ink/40">EJERCICIO {current + 1} / {exercises.length}</span>
-            <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
+            <div className="flex items-center gap-3">
+              {secondsLeft > 0 && (
+                <span className="text-xs font-mono-lab text-gold flex items-center gap-1" title={`Responde bien antes de que se acabe el tiempo y ganas +${BONUS_XP} XP extra`}>
+                  <Zap className="w-3.5 h-3.5" /> {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
+                </span>
+              )}
+              <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
+            </div>
           </div>
           {Component ? (
             <Component key={`${exercise.id}-${retryKey}`} exercise={exercise} onComplete={handleComplete} />
@@ -145,9 +178,14 @@ export default function MissionDetail() {
                     <XCircle className="w-4 h-4 text-red-500 shrink-0" />
                   )}
                   <span className="text-ink/70">Ejercicio {i + 1}</span>
+                  {r.isCorrect && r.bonus > 0 && (
+                    <span className="text-[11px] font-mono-lab text-gold flex items-center gap-0.5" title="Bono por responder rápido">
+                      <Zap className="w-3 h-3" /> +{r.bonus}
+                    </span>
+                  )}
                 </div>
                 <span className={`font-mono-lab text-xs font-medium ${r.isCorrect ? 'text-teal' : 'text-red-500'}`}>
-                  {r.isCorrect ? `+${r.exercise.xp_value} XP` : 'Incorrecto'}
+                  {r.isCorrect ? `+${r.exercise.xp_value + (r.bonus || 0)} XP` : 'Incorrecto'}
                 </span>
               </div>
             ))}
