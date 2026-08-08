@@ -89,6 +89,10 @@ CREATE TABLE user_progress (
 -- maxima que solo se puede activar tras ganar la insignia "Leyenda de FuncionLab"
 -- (completar las 14 misiones, incluida la ultima).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name_rainbow BOOLEAN NOT NULL DEFAULT false;
+-- Burbuja de chat oscura (en vez del naranja por defecto): se desbloquea en la
+-- penultima insignia (mision 13, "Optimizador Experto"). A diferencia de las demas
+-- recompensas, esta cambia como TODOS ven los mensajes de ese usuario, no solo el.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dark_bubble BOOLEAN NOT NULL DEFAULT false;
 
 CREATE TABLE user_badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

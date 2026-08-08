@@ -34,6 +34,7 @@ export default function Profile() {
 
   const isAdmin = user?.role === 'admin'
   const rainbowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 14 && b.earned)
+  const darkBubbleUnlocked = isAdmin || badges.some((b) => b.requirement_value === 13 && b.earned)
   const equippedBadges = badges
     .filter((b) => b.equipped)
     .sort((a, b) => new Date(a.equipped_at) - new Date(b.equipped_at))
@@ -136,6 +137,19 @@ export default function Profile() {
           ))}
           {badges.length === 0 && <p className="text-ink/35 text-sm col-span-full">Cargando insignias...</p>}
         </div>
+
+        {darkBubbleUnlocked && (
+          <div className="mt-4 pt-4 border-t border-ink/10 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-ink">Burbuja oscura en el Chat</p>
+              <p className="text-xs text-ink/40">Desbloqueada al llegar a la misión 13. Cambia el color de tus mensajes para todos los que los vean, no solo para ti.</p>
+            </div>
+            <Switch
+              checked={!!user.dark_bubble}
+              onCheckedChange={(checked) => applyStyle({ dark_bubble: checked })}
+            />
+          </div>
+        )}
 
         {rainbowUnlocked && (
           <div className="mt-4 pt-4 border-t border-ink/10 flex items-center justify-between">
