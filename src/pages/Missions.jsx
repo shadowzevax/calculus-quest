@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Icons from 'lucide-react'
+import { HelpCircle } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
@@ -13,6 +14,26 @@ const difficultyStyle = {
   experto: 'bg-blueprint/10 text-blueprint',
 }
 
+// Recompensas "especiales" que además de la insignia desbloquean una función cosmética
+// (además del ícono de la insignia, se muestra una vista previa real del efecto).
+const SPECIAL_REWARDS = {
+  12: {
+    label: 'Aro iluminado',
+    desc: 'Un resplandor animado naranja alrededor de tu foto de perfil, visible para todos en el Perfil, el Ranking y el Chat.',
+    preview: <span className="w-4 h-4 rounded-full bg-ink/10 avatar-glow inline-block" />,
+  },
+  13: {
+    label: 'Burbuja oscura',
+    desc: 'Tus mensajes en el Chat se ven con fondo oscuro en vez del naranja normal — y así los ve todo el mundo, no solo tú.',
+    preview: <span className="w-6 h-3.5 rounded bg-ink inline-block" />,
+  },
+  14: {
+    label: 'Nombre arcoíris',
+    desc: 'Tu nombre se muestra con un degradado de colores animado en todos lados: Perfil, Ranking y Chat.',
+    preview: <span className="name-rainbow font-bold text-xs">Aa</span>,
+  },
+}
+
 export default function Missions() {
   const { user } = useAuth()
   const [missions, setMissions] = useState([])
@@ -20,6 +41,7 @@ export default function Missions() {
   const [badges, setBadges] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [openInfo, setOpenInfo] = useState(null)
   const isAdmin = user?.role === 'admin'
   const navigate = useNavigate()
 
@@ -106,15 +128,39 @@ export default function Missions() {
                   </div>
                 )}
                 {rewards.length > 0 && (
-                  <div className="mt-2.5 pt-2.5 border-t border-ink/5 space-y-1">
+                  <div className="mt-2.5 pt-2.5 border-t border-ink/5 space-y-1.5">
                     <p className="text-[10px] font-mono-lab text-ink/35 tracking-wide">RECOMPENSA AL COMPLETAR</p>
-                    {rewards.map((b) => (
-                      <div key={b.id} className="flex items-center gap-1.5 text-xs">
-                        <img src={b.image} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-                        <span className="text-ink/60">{b.name}</span>
-                        {b.requirement_value === 14 && <span className="name-rainbow font-medium">· nombre arcoíris</span>}
-                      </div>
-                    ))}
+                    {rewards.map((b) => {
+                      const special = SPECIAL_REWARDS[b.requirement_value]
+                      const infoKey = `${m.id}-${b.id}`
+                      const isOpen = openInfo === infoKey
+                      return (
+                        <div key={b.id}>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <img src={b.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                            <span className="text-ink/70">{b.name}</span>
+                            {special && (
+                              <>
+                                <span className="text-ink/25">+</span>
+                                {special.preview}
+                                <span className="text-ink/70">{special.label}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenInfo(isOpen ? null : infoKey)}
+                                  className="text-ink/35 hover:text-coral transition-colors"
+                                  aria-label={`Qué es ${special.label}`}
+                                >
+                                  <HelpCircle className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                          {isOpen && special && (
+                            <p className="text-[11px] text-ink/50 mt-1 pl-6 pr-1">{special.desc}</p>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
                 <button
