@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import * as Icons from 'lucide-react'
 import { MessageSquare, Send, Trash2, Ban } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
@@ -85,10 +84,7 @@ export default function Chat() {
               }`}>
                 <div className="text-[10px] font-mono-lab opacity-60 mb-0.5 flex items-center gap-1">
                   <span className={m.name_rainbow ? 'name-rainbow' : ''}>{m.author_name}</span>
-                  {m.badge_icon && (() => {
-                    const Icon = Icons[m.badge_icon] || Icons.Award
-                    return <Icon className="w-3 h-3" style={{ color: m.badge_color }} />
-                  })()}
+                  {m.badge_image && <img src={m.badge_image} alt="" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />}
                   {m.role === 'admin' && '· Docente'}
                 </div>
                 {m.content}

@@ -37,15 +37,10 @@ export default function Missions() {
   const completedCount = progress.filter((p) => p.progress_percentage >= 100).length
   const pendingBadges = badges.filter((b) => !b.earned)
 
-  // Insignias que esta misión en particular podría desbloquear si se completa ahora.
-  const rewardsFor = (mission, pct) => {
+  // Insignia que esta misión en particular podría desbloquear si se completa ahora.
+  const rewardsFor = (pct) => {
     if (!user || isAdmin || pct >= 100) return []
-    return pendingBadges.filter((b) => {
-      if (b.requirement_type === 'missions_completed') return completedCount + 1 === b.requirement_value
-      if (b.requirement_type === 'xp_reached') return user.xp < b.requirement_value && user.xp + mission.xp_reward >= b.requirement_value
-      if (b.requirement_type === 'perfect_mission') return true
-      return false
-    })
+    return pendingBadges.filter((b) => completedCount + 1 === b.requirement_value)
   }
 
   if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
@@ -66,7 +61,7 @@ export default function Missions() {
           const locked = !isAdmin && m.order > 1 && !progress.some(
             (pr) => pr.mission_id !== m.id && pr.progress_percentage >= 100
           )
-          const rewards = locked ? [] : rewardsFor(m, pct)
+          const rewards = locked ? [] : rewardsFor(pct)
 
           return (
             <div
@@ -113,16 +108,13 @@ export default function Missions() {
                 {rewards.length > 0 && (
                   <div className="mt-2.5 pt-2.5 border-t border-ink/5 space-y-1">
                     <p className="text-[10px] font-mono-lab text-ink/35 tracking-wide">RECOMPENSA AL COMPLETAR</p>
-                    {rewards.map((b) => {
-                      const RewardIcon = Icons[b.icon] || Icons.Award
-                      return (
-                        <div key={b.id} className="flex items-center gap-1.5 text-xs">
-                          <RewardIcon className="w-3.5 h-3.5 shrink-0" style={{ color: b.color }} />
-                          <span className="text-ink/60">{b.name}</span>
-                          <span className="font-medium" style={{ color: b.color }}>· nombre a color</span>
-                        </div>
-                      )
-                    })}
+                    {rewards.map((b) => (
+                      <div key={b.id} className="flex items-center gap-1.5 text-xs">
+                        <img src={b.image} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                        <span className="text-ink/60">{b.name}</span>
+                        {b.requirement_value === 14 && <span className="name-rainbow font-medium">· nombre arcoíris</span>}
+                      </div>
+                    ))}
                   </div>
                 )}
                 <button

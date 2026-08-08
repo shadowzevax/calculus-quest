@@ -67,15 +67,7 @@ export default async function handler(req, res) {
       `;
     }
 
-    let newBadges = [];
-    if (is_correct) {
-      const [prog] = await sql`
-        SELECT status FROM user_progress WHERE user_id = ${user.id} AND mission_id = ${exercise.mission_id}
-      `;
-      newBadges = await checkAndAwardBadges(user.id, {
-        justCompletedMissionId: prog?.status === 'completed' ? exercise.mission_id : null,
-      });
-    }
+    const newBadges = is_correct ? await checkAndAwardBadges(user.id) : [];
 
     return res.status(200).json({ ok: true, new_badges: newBadges });
   }

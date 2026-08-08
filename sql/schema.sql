@@ -58,12 +58,16 @@ CREATE TABLE badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
-  icon TEXT DEFAULT 'Award',
-  color TEXT DEFAULT '#F4A261',
+  icon TEXT DEFAULT 'Award', -- ya no se usa (quedó de una version anterior con iconos de Lucide)
+  color TEXT DEFAULT '#F4A261', -- ya no se usa
   requirement_type TEXT NOT NULL,
   requirement_value INTEGER,
   rarity TEXT DEFAULT 'comun'
 );
+-- Imagen real de la insignia (SVG/WebP diseñados a mano), servida desde /public/badges/.
+-- Las 8 insignias actuales se reparten cada 2 misiones (2, 4, 6... hasta la 14, la última,
+-- que además desbloquea el nombre arcoíris) — ver api/_badges.js.
+ALTER TABLE badges ADD COLUMN IF NOT EXISTS image TEXT;
 
 CREATE TABLE user_progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

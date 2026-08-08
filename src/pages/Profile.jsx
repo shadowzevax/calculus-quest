@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import * as Icons from 'lucide-react'
 import { Lock } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
@@ -66,11 +65,13 @@ export default function Profile() {
           <div>
             <div className={`font-medium flex items-center gap-1.5 ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>
               {user.full_name}
-              {user.equipped_badge_id && badges.find((b) => b.id === user.equipped_badge_id) && (() => {
-                const b = badges.find((b) => b.id === user.equipped_badge_id)
-                const Icon = Icons[b.icon] || Icons.Award
-                return <Icon className="w-4 h-4" style={{ color: b.color }} />
-              })()}
+              {user.equipped_badge_id && badges.find((b) => b.id === user.equipped_badge_id) && (
+                <img
+                  src={badges.find((b) => b.id === user.equipped_badge_id).image}
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover shrink-0"
+                />
+              )}
             </div>
             <div className="text-sm font-mono-lab text-ink/40">{user.xp} XP · Nivel {user.level}</div>
           </div>
@@ -92,9 +93,8 @@ export default function Profile() {
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
         <h2 className="text-lg font-display font-semibold text-ink mb-1">Insignias y logros</h2>
         <p className="text-sm text-ink/40 mb-4">Se ganan al completar misiones. Equipa una para mostrar su ícono junto a tu nombre en el ranking y el chat.</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {badges.map((b) => {
-            const Icon = Icons[b.icon] || Icons.Award
             const isEquipped = user.equipped_badge_id === b.id
             return (
               <button
@@ -102,15 +102,19 @@ export default function Profile() {
                 type="button"
                 disabled={!b.earned}
                 onClick={() => applyStyle({ equipped_badge_id: b.id })}
-                className={`text-left border rounded-lg p-3 transition-colors ${
-                  b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 opacity-40 cursor-not-allowed'
+                className={`text-center border rounded-xl p-3 transition-colors ${
+                  b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 cursor-not-allowed'
                 } ${isEquipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  {b.earned ? <Icon className="w-4 h-4" style={{ color: b.color }} /> : <Lock className="w-3.5 h-3.5 text-ink/30" />}
-                  <span className="text-sm font-medium text-ink">{b.name}</span>
+                <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center">
+                  {b.earned ? (
+                    <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-ink/25" />
+                  )}
                 </div>
-                <p className="text-xs text-ink/40">{b.description}</p>
+                <span className={`text-xs font-medium ${b.earned ? 'text-ink' : 'text-ink/35'}`}>{b.name}</span>
+                <p className="text-[11px] text-ink/35 mt-0.5">{b.description}</p>
                 {isEquipped && <p className="text-[10px] font-mono-lab text-coral mt-1">EQUIPADA</p>}
               </button>
             )
