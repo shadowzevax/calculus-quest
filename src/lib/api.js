@@ -104,6 +104,7 @@ export const api = {
   },
   rooms: {
     state: (roomId) => request(`/rooms?room_id=${roomId}`),
+    myActiveRoom: (missionId) => request(`/rooms?mission_id=${missionId}`),
     create: (missionId) => request('/rooms?action=create', { method: 'POST', body: JSON.stringify({ mission_id: missionId }) }),
     join: (code) => request('/rooms?action=join', { method: 'POST', body: JSON.stringify({ code }) }),
     start: (roomId) => request('/rooms?action=start', { method: 'POST', body: JSON.stringify({ room_id: roomId }) }),

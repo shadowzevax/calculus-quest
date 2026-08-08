@@ -50,7 +50,19 @@ export default function EscapeRoomGame({ mission }) {
     }
   }
 
-  useEffect(() => stopPolling, [])
+  // Al entrar a la misión, si el usuario ya estaba en una sala activa (por ejemplo,
+  // recargó la página a mitad de partida) se reconecta solo, en vez de dejarlo varado
+  // en la pantalla de "crear/unirse" sin poder volver a lo que ya tenía en curso.
+  useEffect(() => {
+    api.rooms.myActiveRoom(mission.id).then((state) => {
+      if (state) {
+        setRoom(state)
+        startPolling(state.id)
+      }
+    }).catch(() => {})
+    return stopPolling
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mission.id])
 
   // Arma y baraja el tablero de memoria en cuanto la sala entra a 'cards' — una sola
   // vez por partida (si ya hay cartas armadas no se vuelve a barajar en cada sondeo).

@@ -98,7 +98,23 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const roomId = req.query.room_id;
-    if (!roomId) return res.status(400).json({ error: 'room_id requerido' });
+
+    if (!roomId) {
+      // Sin room_id: buscar si el usuario ya está en alguna sala activa de esta misión
+      // — así, si recarga la página a mitad de partida, no queda varado en la pantalla
+      // de "crear/unirse" sin poder volver a su sala.
+      const missionId = req.query.mission_id;
+      if (!missionId) return res.status(400).json({ error: 'room_id o mission_id requerido' });
+      const [active] = await sql`
+        SELECT er.id FROM escape_rooms er
+        JOIN escape_room_members erm ON erm.room_id = er.id
+        WHERE er.mission_id = ${missionId} AND erm.user_id = ${user.id}
+        ORDER BY er.created_at DESC LIMIT 1
+      `;
+      if (!active) return res.status(200).json(null);
+      return res.status(200).json(await getRoomState(active.id, user.id));
+    }
+
     const isMember = await sql`SELECT 1 FROM escape_room_members WHERE room_id = ${roomId} AND user_id = ${user.id}`;
     if (isMember.length === 0) return res.status(403).json({ error: 'No perteneces a esta sala' });
     const state = await getRoomState(roomId, user.id);
@@ -144,10 +160,13 @@ export default async function handler(req, res) {
 
     const [room] = await sql`SELECT * FROM escape_rooms WHERE code = ${code.toUpperCase()}`;
     if (!room) return res.status(404).json({ error: 'Sala no encontrada' });
-    if (room.status !== 'lobby') return res.status(400).json({ error: 'Esa sala ya inició o terminó' });
 
+    // Quien YA es miembro puede volver a "unirse" en cualquier estado — es como se
+    // reconecta si recargó la página a mitad de partida. Solo a la gente nueva se le
+    // exige que la sala siga en lobby (no tendría sentido sumarse a mitad de juego).
     const already = await sql`SELECT 1 FROM escape_room_members WHERE room_id = ${room.id} AND user_id = ${user.id}`;
     if (already.length === 0) {
+      if (room.status !== 'lobby') return res.status(400).json({ error: 'Esa sala ya inició o terminó' });
       const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM escape_room_members WHERE room_id = ${room.id}`;
       if (count >= room.max_members) return res.status(400).json({ error: 'La sala está llena' });
       const [{ max_order }] = await sql`SELECT COALESCE(MAX(join_order), 0)::int AS max_order FROM escape_room_members WHERE room_id = ${room.id}`;
