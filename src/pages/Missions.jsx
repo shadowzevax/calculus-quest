@@ -56,15 +56,10 @@ export default function Missions() {
       .finally(() => setLoading(false))
   }, [user])
 
-  const pendingBadges = badges.filter((b) => !b.earned)
-
-  // Insignia que esta misión en particular (según su número de orden) podría desbloquear
-  // si se completa ahora. Se compara contra el "order" de la misión, no contra un conteo
-  // global — así cada tarjeta muestra únicamente SU propia recompensa, nunca la de otra.
-  const rewardsFor = (mission, pct) => {
-    if (!user || isAdmin || pct >= 100) return []
-    return pendingBadges.filter((b) => mission.order === b.requirement_value)
-  }
+  // Insignia que otorga esta misión en particular, según su número de orden. Es información
+  // de catálogo (qué recompensa da cada misión), así que se muestra siempre — sin importar si
+  // ya se ganó, si está bloqueada, o si quien mira es docente — para que sirva de referencia.
+  const rewardsFor = (mission) => badges.filter((b) => b.requirement_value === mission.order)
 
   if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
 
@@ -88,7 +83,7 @@ export default function Missions() {
             const prevMission = missions.find((mm) => mm.order === m.order - 1)
             return prevMission && pr.mission_id === prevMission.id && pr.progress_percentage >= 100
           })
-          const rewards = locked ? [] : rewardsFor(m, pct)
+          const rewards = rewardsFor(m)
 
           return (
             <div
