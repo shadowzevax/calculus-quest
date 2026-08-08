@@ -67,11 +67,32 @@ export default function MatchingExercise({ exercise, onComplete }) {
 
   const handleLeftClick = (i) => {
     if (submitted) return
+    if (connections[i] !== undefined) {
+      // Ya tenia pareja: se quita para poder elegir de nuevo.
+      setConnections((prev) => {
+        const next = { ...prev }
+        delete next[i]
+        return next
+      })
+    }
     setSelectedLeft(i)
   }
 
   const handleRightClick = (rightPairIndex) => {
-    if (submitted || selectedLeft === null || usedRightIndexes.has(rightPairIndex)) return
+    if (submitted) return
+    const connectedLeftIndex = Object.entries(connections).find(([, v]) => v === rightPairIndex)?.[0]
+    if (connectedLeftIndex !== undefined) {
+      // Ya tenia pareja: se quita, y si habia un elemento izquierdo en espera lo conecta aqui.
+      setConnections((prev) => {
+        const next = { ...prev }
+        delete next[connectedLeftIndex]
+        if (selectedLeft !== null) next[selectedLeft] = rightPairIndex
+        return next
+      })
+      setSelectedLeft(null)
+      return
+    }
+    if (selectedLeft === null) return
     setConnections((prev) => ({ ...prev, [selectedLeft]: rightPairIndex }))
     setSelectedLeft(null)
   }
@@ -131,7 +152,7 @@ export default function MatchingExercise({ exercise, onComplete }) {
                 key={r.pairIndex}
                 ref={(el) => { rightRefs.current[r.pairIndex] = el }}
                 onClick={() => handleRightClick(r.pairIndex)}
-                disabled={usedRightIndexes.has(r.pairIndex) && Object.values(connections).indexOf(r.pairIndex) === -1}
+                disabled={submitted}
                 className={`w-full text-left border rounded-lg px-3 py-2 text-sm font-mono-lab transition-colors bg-white ${
                   usedRightIndexes.has(r.pairIndex) ? 'text-ink/70' : 'border-ink/10'
                 }`}
