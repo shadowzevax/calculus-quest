@@ -168,7 +168,7 @@ export default function Profile() {
                 type="button"
                 onClick={removePhoto}
                 disabled={uploadingPhoto}
-                className="text-xs text-ink/35 hover:text-red-500 transition-colors mt-0.5"
+                className="text-xs text-red-500 hover:text-red-600 transition-colors mt-0.5"
               >
                 Quitar foto
               </button>
