@@ -77,10 +77,16 @@ export default function Chat() {
 
       <div className="bg-white rounded-xl border border-ink/10 flex flex-col h-[420px]">
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.map((m) => (
-            <div key={m.id} className={`flex ${m.user_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+          {messages.map((m) => {
+            const isMine = m.user_id === user?.id
+            const avatar = (
+              <div className={`w-7 h-7 rounded-full bg-blueprint/10 flex items-center justify-center text-xs font-display font-semibold text-blueprint shrink-0 ${m.avatar_glow ? 'avatar-glow' : ''}`}>
+                {m.author_name?.[0]?.toUpperCase() || '?'}
+              </div>
+            )
+            const bubble = (
               <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
-                m.dark_bubble ? 'bg-ink text-white' : m.user_id === user?.id ? 'bg-coral text-white' : 'bg-ink/5 text-ink'
+                m.dark_bubble ? 'bg-ink text-white' : isMine ? 'bg-coral text-white' : 'bg-ink/5 text-ink'
               }`}>
                 {m.equipped_badge_images?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1">
@@ -99,8 +105,13 @@ export default function Chat() {
                 </div>
                 {m.content}
               </div>
-            </div>
-          ))}
+            )
+            return (
+              <div key={m.id} className={`flex items-end gap-1.5 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                {isMine ? <>{avatar}{bubble}</> : <>{bubble}{avatar}</>}
+              </div>
+            )
+          })}
           {messages.length === 0 && <p className="text-ink/35 text-sm font-mono-lab">Aún no hay mensajes. ¡Sé el primero en escribir!</p>}
           <div ref={bottomRef} />
         </div>

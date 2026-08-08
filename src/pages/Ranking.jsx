@@ -19,22 +19,26 @@ export default function Ranking() {
       <div className="bg-white rounded-xl border border-ink/10 divide-y divide-ink/5">
         {rows.map((r, i) => (
           <div key={r.id} className={`flex items-center gap-4 px-5 py-3.5 ${r.id === user?.id ? 'bg-coral/5' : ''}`}>
-            <span className="w-6 text-center font-display font-bold text-ink/30">{i + 1}</span>
+            <span className="w-6 text-center font-display font-bold text-ink/30 shrink-0">{i + 1}</span>
             <div className={`w-9 h-9 rounded-full bg-blueprint/10 flex items-center justify-center text-sm font-display font-semibold text-blueprint shrink-0 ${r.avatar_glow ? 'avatar-glow' : ''}`}>
               {r.full_name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <div className={`font-medium flex items-center gap-1.5 flex-wrap ${r.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>
-                {r.full_name}
-                {r.equipped_badge_images?.map((img, idx) => (
-                  <span key={idx} className="w-4 h-4 rounded-full overflow-hidden shrink-0 inline-block">
-                    <img src={img} alt="" className="w-full h-full object-cover scale-110" />
-                  </span>
-                ))}
-              </div>
+              <div className={`font-medium ${r.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>{r.full_name}</div>
+              {r.equipped_badge_images?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {r.equipped_badge_images.map((img, idx) => (
+                    <span key={idx} className="w-7 h-7 rounded-full overflow-hidden shrink-0 inline-block ring-1 ring-ink/10">
+                      <img src={img} alt="" className="w-full h-full object-cover scale-110" />
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-mono-lab font-semibold text-coral">{r.xp} XP</div>
               <div className="text-[11px] font-mono-lab text-ink/35">NIVEL {r.level}</div>
             </div>
-            <div className="font-mono-lab font-semibold text-coral">{r.xp} XP</div>
           </div>
         ))}
         {rows.length === 0 && <p className="p-5 text-ink/35 text-sm">Aún no hay estudiantes en el ranking.</p>}
