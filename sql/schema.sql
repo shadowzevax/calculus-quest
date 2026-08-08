@@ -181,6 +181,14 @@ CREATE TABLE escape_room_members (
   joined_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (room_id, user_id)
 );
+-- Tiempo (ms) de este miembro en el "Sistema 6" (memoria de cartas), la fase extra
+-- individual-pero-sincronizada que juega el equipo despues de terminar los 5 acertijos.
+ALTER TABLE escape_room_members ADD COLUMN IF NOT EXISTS cards_time_ms INTEGER;
+
+-- Mejor tiempo (ms) que ha logrado el usuario en el Sistema 6, en cualquier sala.
+-- Solo se usa para desempatar el ranking (mismo XP -> gana quien tenga mejor tiempo aqui);
+-- no otorga XP ni insignia por si solo.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS speed_challenge_ms INTEGER;
 
 CREATE INDEX idx_exercises_mission ON exercises(mission_id);
 CREATE INDEX idx_exercises_parent ON exercises(parent_exercise_id);

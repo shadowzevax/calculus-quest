@@ -111,5 +111,8 @@ export const api = {
     leave: (roomId) => request('/rooms?action=leave', { method: 'POST', body: JSON.stringify({ room_id: roomId }) }),
     answer: (roomId, selectedIndex) =>
       request('/rooms?action=answer', { method: 'POST', body: JSON.stringify({ room_id: roomId, selected_index: selectedIndex }) }),
+    startCards: (roomId) => request('/rooms?action=start_cards', { method: 'POST', body: JSON.stringify({ room_id: roomId }) }),
+    submitCardsTime: (roomId, timeMs) =>
+      request('/rooms?action=submit_cards_time', { method: 'POST', body: JSON.stringify({ room_id: roomId, time_ms: timeMs }) }),
   },
 };

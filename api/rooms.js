@@ -5,6 +5,28 @@ import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
 import { checkAndAwardBadges } from './_badges.js';
 
+// "Sistema 6": fase extra de memoria/cartas que juega TODO el equipo a la vez, tras
+// terminar los 5 acertijos — no da XP ni insignia, solo sirve para desempatar el
+// ranking por tiempo cuando varios estudiantes llegan al mismo XP máximo. Tematica
+// consistente con la mision (aplicaciones de derivadas).
+const CARD_PAIRS = [
+  ["f'(x) = 0", 'Punto crítico'],
+  ["f''(x) > 0", 'Cóncava hacia arriba'],
+  ["f''(x) < 0", 'Cóncava hacia abajo'],
+  ["f'(x) > 0", 'Función creciente'],
+  ["f'(x) < 0", 'Función decreciente'],
+  ["f'(x) no existe", 'Posible punto anguloso'],
+]
+
+// Aplana los pares en cartas individuales con su pairId, listas para que el
+// frontend las baraje y arme el tablero de memoria.
+function buildCards() {
+  return CARD_PAIRS.flatMap(([a, b], pairId) => [
+    { cardId: pairId * 2, pairId, text: a },
+    { cardId: pairId * 2 + 1, pairId, text: b },
+  ])
+}
+
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O/1/I para evitar confusion
   let code = '';
@@ -31,7 +53,7 @@ async function getRoomState(roomId, callerId) {
   if (!room) return null;
 
   const members = await sql`
-    SELECT erm.user_id, erm.join_order, u.full_name
+    SELECT erm.user_id, erm.join_order, erm.cards_time_ms, u.full_name
     FROM escape_room_members erm
     JOIN users u ON u.id = erm.user_id
     WHERE erm.room_id = ${roomId}
@@ -58,10 +80,15 @@ async function getRoomState(roomId, callerId) {
     current_puzzle_index: room.current_puzzle_index,
     total_puzzles: totalPuzzles,
     max_members: room.max_members,
-    members: members.map((m) => ({ user_id: m.user_id, full_name: m.full_name, join_order: m.join_order })),
+    members: members.map((m) => ({
+      user_id: m.user_id, full_name: m.full_name, join_order: m.join_order, cards_time_ms: m.cards_time_ms,
+    })),
     turn_user_id: turnUserId,
     my_turn: turnUserId === callerId,
     puzzle,
+    // Sistema 6 (memoria de cartas): todo el equipo juega a la vez tras terminar los 5
+    // acertijos, sin dar XP — solo sirve para desempatar el ranking por tiempo.
+    cards: (room.status === 'cards' || room.status === 'cards_done') ? buildCards() : null,
   };
 }
 
@@ -214,6 +241,42 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({ ok: true, is_correct: true, explanation: puzzle.explanation, room: await getRoomState(room_id, user.id) });
+  }
+
+  if (action === 'start_cards') {
+    if (room.host_user_id !== user.id) return res.status(403).json({ error: 'Solo quien creó la sala puede iniciar el Sistema 6' });
+    if (room.status !== 'done') return res.status(400).json({ error: 'Primero deben terminar los 5 sistemas' });
+    await sql`UPDATE escape_rooms SET status = 'cards' WHERE id = ${room_id}`;
+    return res.status(200).json(await getRoomState(room_id, user.id));
+  }
+
+  if (action === 'submit_cards_time') {
+    if (room.status !== 'cards') return res.status(400).json({ error: 'El Sistema 6 no está activo' });
+    const { time_ms } = req.body || {};
+    if (!time_ms || time_ms <= 0) return res.status(400).json({ error: 'time_ms inválido' });
+
+    // Solo se guarda la primera vez que este jugador termina en esta sala — no se
+    // puede volver a jugar dentro de la misma partida para "mejorar" el tiempo.
+    await sql`
+      UPDATE escape_room_members SET cards_time_ms = ${Math.round(time_ms)}
+      WHERE room_id = ${room_id} AND user_id = ${user.id} AND cards_time_ms IS NULL
+    `;
+
+    const members = await sql`SELECT user_id, cards_time_ms FROM escape_room_members WHERE room_id = ${room_id}`;
+    const allDone = members.length > 0 && members.every((m) => m.cards_time_ms !== null);
+
+    if (allDone) {
+      await sql`UPDATE escape_rooms SET status = 'cards_done' WHERE id = ${room_id}`;
+      for (const m of members) {
+        // Se conserva el MEJOR tiempo historico del usuario (de cualquier sala), no solo el ultimo.
+        await sql`
+          UPDATE users SET speed_challenge_ms = LEAST(COALESCE(speed_challenge_ms, ${m.cards_time_ms}), ${m.cards_time_ms})
+          WHERE id = ${m.user_id}
+        `;
+      }
+    }
+
+    return res.status(200).json(await getRoomState(room_id, user.id));
   }
 
   return res.status(400).json({ error: 'Acción no reconocida' });

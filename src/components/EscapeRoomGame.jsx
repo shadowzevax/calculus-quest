@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Users, Copy, LogOut, Play, X, CheckCircle2, XCircle, Trophy } from 'lucide-react'
+import { Users, Copy, LogOut, Play, X, CheckCircle2, XCircle, Trophy, Zap } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import MathText from '@/lib/mathText'
@@ -16,6 +16,22 @@ export default function EscapeRoomGame({ mission }) {
   const [busy, setBusy] = useState(false)
   const pollRef = useRef(null)
 
+  // Estado del tablero de memoria del Sistema 6 (es local a cada jugador — cada quien
+  // baraja y juega su propio tablero, solo el tiempo total se manda al servidor).
+  const [cardBoard, setCardBoard] = useState([])
+  const [flipped, setFlipped] = useState([])
+  const [matchedPairs, setMatchedPairs] = useState(new Set())
+  const [cardsSubmitted, setCardsSubmitted] = useState(false)
+  const cardsStartRef = useRef(0)
+
+  const resetCardsState = () => {
+    setCardBoard([])
+    setFlipped([])
+    setMatchedPairs(new Set())
+    setCardsSubmitted(false)
+    cardsStartRef.current = 0
+  }
+
   const stopPolling = () => {
     if (pollRef.current) clearInterval(pollRef.current)
     pollRef.current = null
@@ -25,10 +41,9 @@ export default function EscapeRoomGame({ mission }) {
     try {
       const state = await api.rooms.state(roomId)
       setRoom(state)
-      if (state.status === 'done') {
-        stopPolling()
-        await refresh()
-      }
+      // No se deja de sondear al llegar a "done" — la sala puede seguir avanzando al
+      // Sistema 6 si el anfitrión lo inicia, y hay que enterarse aunque no sea el host.
+      if (state.status === 'done' || state.status === 'cards_done') await refresh()
     } catch {
       setRoom(null)
       stopPolling()
@@ -36,6 +51,15 @@ export default function EscapeRoomGame({ mission }) {
   }
 
   useEffect(() => stopPolling, [])
+
+  // Arma y baraja el tablero de memoria en cuanto la sala entra a 'cards' — una sola
+  // vez por partida (si ya hay cartas armadas no se vuelve a barajar en cada sondeo).
+  useEffect(() => {
+    if (room?.status === 'cards' && room.cards && cardBoard.length === 0) {
+      setCardBoard([...room.cards].sort(() => Math.random() - 0.5))
+      cardsStartRef.current = Date.now()
+    }
+  }, [room?.status, room?.cards, cardBoard.length])
 
   const startPolling = (roomId) => {
     stopPolling()
@@ -88,6 +112,7 @@ export default function EscapeRoomGame({ mission }) {
     stopPolling()
     await api.rooms.cancel(room.id).catch(() => {})
     setRoom(null)
+    resetCardsState()
   }
 
   const handleLeave = async () => {
@@ -96,6 +121,57 @@ export default function EscapeRoomGame({ mission }) {
     setRoom(null)
     setSelected(null)
     setFeedback(null)
+    resetCardsState()
+  }
+
+  const handleStartCards = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const state = await api.rooms.startCards(room.id)
+      setRoom(state)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Voltea dos cartas; si combinan quedan reveladas, si no se voltean de nuevo.
+  // Al completar todas las parejas se manda el tiempo total al servidor.
+  const handleCardClick = (index) => {
+    if (cardsSubmitted || flipped.length === 2) return
+    if (flipped.includes(index) || matchedPairs.has(cardBoard[index].pairId)) return
+
+    const next = [...flipped, index]
+    setFlipped(next)
+    if (next.length < 2) return
+
+    const [i1, i2] = next
+    if (cardBoard[i1].pairId === cardBoard[i2].pairId) {
+      setTimeout(() => {
+        setMatchedPairs((prev) => {
+          const updated = new Set(prev)
+          updated.add(cardBoard[i1].pairId)
+          if (updated.size === cardBoard.length / 2) finishCards()
+          return updated
+        })
+        setFlipped([])
+      }, 400)
+    } else {
+      setTimeout(() => setFlipped([]), 800)
+    }
+  }
+
+  const finishCards = async () => {
+    const elapsed = Date.now() - cardsStartRef.current
+    setCardsSubmitted(true)
+    try {
+      const state = await api.rooms.submitCardsTime(room.id, elapsed)
+      setRoom(state)
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   const handleAnswer = async () => {
@@ -237,6 +313,114 @@ export default function EscapeRoomGame({ mission }) {
             <div key={m.user_id} className="flex items-center gap-2 bg-teal/5 rounded-lg px-3 py-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-teal shrink-0" />
               <span className="text-ink/70">{m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}</span>
+            </div>
+          ))}
+        </div>
+        {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+        <div className="flex items-center justify-center gap-3 mt-6">
+          {isHost && (
+            <button
+              onClick={handleStartCards}
+              disabled={busy}
+              className="bg-gold hover:bg-gold/80 transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2 disabled:opacity-30"
+            >
+              <Zap className="w-4 h-4" /> Jugar Sistema 6 (desempate)
+            </button>
+          )}
+          <button
+            onClick={handleLeave}
+            className="border border-ink/15 hover:bg-ink/5 transition-colors text-ink/70 rounded-lg px-5 py-2.5 text-sm font-medium"
+          >
+            Salir de la sala
+          </button>
+        </div>
+        <p className="text-xs text-ink/35 mt-3">
+          El Sistema 6 es opcional: un desafío de memoria individual (todo el equipo juega a la vez) que
+          no da XP, solo sirve para desempatar el ranking si varios llegan al mismo puntaje.
+        </p>
+      </div>
+    )
+  }
+
+  // Sistema 6: memoria de cartas — todo el equipo juega su propio tablero a la vez.
+  if (room.status === 'cards') {
+    const totalPairs = (room.cards?.length || 0) / 2
+    return (
+      <div>
+        <p className="text-xs font-mono-lab text-ink/35 mb-3">
+          SISTEMA 6 · DESAFÍO DE VELOCIDAD (no da XP, solo desempata el ranking)
+        </p>
+
+        {!cardsSubmitted ? (
+          <>
+            <p className="text-sm text-ink/60 mb-4">
+              Encuentra las {totalPairs} parejas lo más rápido posible. Tu equipo juega su propio
+              tablero al mismo tiempo que vos.
+            </p>
+            {cardBoard.length === 0 ? (
+              <p className="text-ink/40 text-sm">Preparando tablero…</p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2 max-w-md">
+                {cardBoard.map((card, i) => {
+                  const isRevealed = flipped.includes(i) || matchedPairs.has(card.pairId)
+                  const isMatched = matchedPairs.has(card.pairId)
+                  return (
+                    <button
+                      key={card.cardId}
+                      onClick={() => handleCardClick(i)}
+                      disabled={isMatched}
+                      className={`aspect-square rounded-lg border text-[11px] font-mono-lab p-1.5 flex items-center justify-center text-center transition-colors ${
+                        isMatched
+                          ? 'bg-teal/10 border-teal/30 text-teal'
+                          : isRevealed
+                            ? 'bg-white border-coral text-ink'
+                            : 'bg-blueprint/10 border-blueprint/20 text-blueprint/30 hover:border-blueprint/40'
+                      }`}
+                    >
+                      {isRevealed ? <MathText text={card.text} /> : '?'}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          <div>
+            <p className="text-sm text-teal font-medium mb-3 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" /> ¡Listo! Esperando a que tu equipo termine…
+            </p>
+            <div className="space-y-1.5 max-w-sm">
+              {room.members.map((m) => (
+                <div key={m.user_id} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-ink/[0.03]">
+                  <span className="text-ink/70">{m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}</span>
+                  {m.cards_time_ms !== null
+                    ? <CheckCircle2 className="w-4 h-4 text-teal" />
+                    : <span className="text-ink/30 text-xs font-mono-lab">jugando…</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+      </div>
+    )
+  }
+
+  // Sistema 6 terminado por todo el equipo: resumen de tiempos (solo por diversión).
+  if (room.status === 'cards_done') {
+    const sorted = [...room.members].filter((m) => m.cards_time_ms != null).sort((a, b) => a.cards_time_ms - b.cards_time_ms)
+    return (
+      <div className="text-center py-4">
+        <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 bg-gold/15">
+          <Zap className="w-7 h-7 text-gold" />
+        </div>
+        <h2 className="text-xl font-display font-bold text-ink">¡Sistema 6 completado!</h2>
+        <p className="text-ink/50 mt-1">Así les fue a todos en tu equipo:</p>
+        <div className="text-left mt-6 space-y-2 max-w-sm mx-auto">
+          {sorted.map((m, i) => (
+            <div key={m.user_id} className="flex items-center justify-between bg-ink/[0.03] rounded-lg px-3 py-2 text-sm">
+              <span className="text-ink/70">#{i + 1} {m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}</span>
+              <span className="font-mono-lab text-xs text-ink/50">{(m.cards_time_ms / 1000).toFixed(1)}s</span>
             </div>
           ))}
         </div>
