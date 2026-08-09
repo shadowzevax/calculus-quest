@@ -95,7 +95,12 @@ export default function AvatarPicker({ user, onSaved }) {
     return pieces.filter((p) => p.category === cat)
   }
 
-  const byColorCategory = (key) => pieces.filter((p) => p.category === key)
+  // Los colores tienen nombres tipo "Piel 3", "Color de pelo 7" — se muestran en ese orden
+  // numérico (no en el orden en que la base de datos los reparte entre misiones), para que la
+  // grilla sea predecible y fácil de recorrer.
+  const byColorCategory = (key) => pieces
+    .filter((p) => p.category === key)
+    .sort((a, b) => (parseInt(a.label.match(/\d+/)?.[0] || 0, 10) - parseInt(b.label.match(/\d+/)?.[0] || 0, 10)))
 
   const chooseColor = (key, piece) => {
     if (!piece.unlocked) return

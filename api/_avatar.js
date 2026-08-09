@@ -14,13 +14,15 @@ export async function checkAndUnlockAvatarPieces(userId) {
   // especifico de genero — solo lo unisex, hasta que elija en Mi Perfil.
   const gender = avatar_gender || 'unisex';
 
+  // Cada bono de velocidad ganado desbloquea directamente una pieza (o varias, si comparten
+  // tier) — ya no hay que acumular 5 bonos para recibir algo.
   const candidates = await sql`
     SELECT * FROM avatar_pieces
     WHERE (gender = 'unisex' OR gender = ${gender})
       AND (
         (unlock_type = 'mission' AND unlock_mission_order <= ${missionsCompleted})
         OR (unlock_type = 'finale' AND unlock_mission_order <= ${missionsCompleted})
-        OR (unlock_type = 'speed' AND speed_tier <= ${Math.floor(speed_bonus_count / 5)})
+        OR (unlock_type = 'speed' AND speed_tier <= ${speed_bonus_count})
       )
   `;
 

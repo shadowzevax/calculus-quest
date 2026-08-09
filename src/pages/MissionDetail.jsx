@@ -32,12 +32,31 @@ const EXERCISE_COMPONENTS = {
 
 const BONUS_XP = 5
 
-// Cuanto dura la ventana de "bono de velocidad": base + un poco mas por cada
-// sub-pregunta/par que tenga el ejercicio (los que tienen varias preguntas
-// necesitan mas tiempo real que uno de una sola pregunta).
-function speedBonusBudget(exercise) {
-  const subItems = exercise?.metadata?.questions?.length || exercise?.metadata?.pairs?.length || 1
-  return 20 + subItems * 15
+// Cuanto dura la ventana de "bono de velocidad": varia segun el tipo de ejercicio (no es lo
+// mismo elegir una opcion que escribir una respuesta abierta, que exige calcular en papel) y
+// segun la dificultad de la mision (una derivada necesita mas tiempo que una suma), mas un
+// poco extra por cada sub-pregunta/par que tenga el ejercicio.
+const BASE_SECONDS_BY_TYPE = {
+  multiple_choice: 20, // solo hay que leer y reconocer la opción correcta
+  true_false: 15, // la decisión más rápida de todas
+  fill_blank: 35, // exige calcular/despejar antes de poder escribir la respuesta
+  matching: 25, // hay que leer varios elementos y relacionarlos, pero no calcular desde cero
+}
+const SECONDS_BY_DIFFICULTY = {
+  facil: 0,
+  intermedio: 10,
+  dificil: 20,
+  experto: 30,
+}
+function speedBonusBudget(exercise, mission) {
+  const subItems = exercise?.metadata?.questions?.length
+    || exercise?.metadata?.problems?.length
+    || exercise?.metadata?.statements?.length
+    || exercise?.metadata?.pairs?.length
+    || 1
+  const base = BASE_SECONDS_BY_TYPE[exercise?.type] ?? 20
+  const extra = SECONDS_BY_DIFFICULTY[mission?.difficulty] ?? 0
+  return base + extra + subItems * 12
 }
 
 export default function MissionDetail() {
@@ -92,7 +111,7 @@ export default function MissionDetail() {
     exerciseStartRef.current = Date.now()
     pausedMsRef.current = 0
     pauseStartRef.current = 0
-    setSecondsLeft(speedBonusBudget(ex))
+    setSecondsLeft(speedBonusBudget(ex, mission))
     setTimerPaused(false)
     const interval = setInterval(() => {
       setSecondsLeft((s) => (timerPausedRef.current ? s : Math.max(0, s - 1)))
@@ -151,7 +170,7 @@ export default function MissionDetail() {
 
   const handleComplete = async ({ isCorrect }) => {
     const elapsedMs = Date.now() - exerciseStartRef.current - pausedMsRef.current
-    const withinBudget = elapsedMs <= speedBonusBudget(exercise) * 1000
+    const withinBudget = elapsedMs <= speedBonusBudget(exercise, mission) * 1000
     const bonus = isCorrect && withinBudget ? BONUS_XP : 0
     if (isCorrect) {
       try {
@@ -192,7 +211,6 @@ export default function MissionDetail() {
   // al agotarse el tiempo) — solo cambia a gris para indicar que ya no se puede ganar el bono.
   const timerActive = !mission.is_collaborative && !showDone && !!exercise
   const timeExpired = secondsLeft <= 0
-  const speedProgress = speedBonusCount % 5
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -222,15 +240,22 @@ export default function MissionDetail() {
               <div className={`text-[11px] font-mono-lab mt-1.5 ${timeExpired ? 'text-ink/25' : timerPaused ? 'text-teal' : 'text-coral'}`}>
                 {timeExpired ? 'Tiempo agotado' : timerPaused ? 'Pausado — respuesta enviada' : `+${BONUS_XP} XP extra`}
               </div>
-              <div className={`text-[10px] mt-1 ${timeExpired ? 'text-ink/20' : 'text-ink/35'}`}>
-                {speedProgress}/5 bonos para tu próxima pieza de avatar
-              </div>
               {nextSpeedPiece && (
-                <div className="flex items-center justify-center gap-1.5 mt-2 pt-2 border-t border-ink/10">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-gold/30 shrink-0">
-                    <img src={avatarPieceThumb(nextSpeedPiece)} alt={nextSpeedPiece.label} className="w-full h-full object-cover grayscale opacity-60" />
+                <>
+                  <div className={`text-[10px] mt-1 ${timeExpired ? 'text-ink/20' : 'text-ink/35'}`}>
+                    Este bono te da directamente esta pieza:
                   </div>
-                  <span className="text-[10px] text-ink/40 text-left">{nextSpeedPiece.label}</span>
+                  <div className="flex items-center justify-center gap-1.5 mt-2 pt-2 border-t border-ink/10">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-gold/30 shrink-0">
+                      <img src={avatarPieceThumb(nextSpeedPiece)} alt={nextSpeedPiece.label} className="w-full h-full object-cover grayscale opacity-60" />
+                    </div>
+                    <span className="text-[10px] text-ink/40 text-left">{nextSpeedPiece.label}</span>
+                  </div>
+                </>
+              )}
+              {!nextSpeedPiece && speedBonusCount > 0 && (
+                <div className={`text-[10px] mt-1 ${timeExpired ? 'text-ink/20' : 'text-ink/35'}`}>
+                  Ya tienes todas las piezas de bono de velocidad
                 </div>
               )}
             </div>
