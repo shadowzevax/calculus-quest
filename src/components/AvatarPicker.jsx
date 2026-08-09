@@ -60,15 +60,25 @@ export default function AvatarPicker({ user, onSaved }) {
       setPieces(r.pieces)
       setSpeedBonusCount(r.speed_bonus_count || 0)
       setGender(r.avatar_gender || null)
-      if (r.config) {
-        setConfig(r.config)
-      } else if (r.avatar_gender) {
+      if (!r.config && r.avatar_gender) {
         // Cuenta vieja de antes de este sistema: ya tiene género elegido pero nunca se le
         // guardó un avatar_config — se le asigna el mismo por defecto que a una cuenta nueva
         // y se guarda, para que también reciba el color inicial desbloqueado.
         const fallback = defaultConfigFor(r.avatar_gender)
         setConfig(fallback)
         api.profile.update({ avatar_config: fallback }).catch(() => {})
+        return
+      }
+      if (r.config) {
+        // Cuentas guardadas antes de que ojos/cejas/boca existieran como piezas propias no
+        // tienen esas claves en su avatar_config — sin ellas ningún tile de esas pestañas se
+        // ve marcado como seleccionado. Se completan con los valores por defecto y se guarda,
+        // para que la selección se vea bien de una vez y no en cada visita.
+        const defaults = defaultConfigFor(r.avatar_gender)
+        const missing = Object.keys(defaults).some((k) => r.config[k] === undefined)
+        const merged = missing ? { ...defaults, ...r.config } : r.config
+        setConfig(merged)
+        if (missing) api.profile.update({ avatar_config: merged }).catch(() => {})
       }
     }).catch(() => {})
   }
@@ -99,19 +109,32 @@ export default function AvatarPicker({ user, onSaved }) {
     }
   }, [config, user.full_name])
 
-  // El peinado por defecto de cada género (el mismo que trae el avatar inicial) va primero en
-  // la grilla, para que sea lo primero que se vea al abrir la pestaña "Peinado".
-  const FIRST_HAIR_VALUE = gender === 'female' ? 'bob' : 'shortFlat'
+  // El valor por defecto de cada categoría (el mismo que trae el avatar inicial) va primero en
+  // su grilla, para que sea lo primero que se vea al abrir esa pestaña.
+  const FIRST_VALUE = {
+    hair: gender === 'female' ? 'bob' : 'shortFlat',
+    eyes: 'default',
+    eyebrows: 'default',
+    mouth: 'smile',
+  }
+  const sortFirst = (list, cat) => {
+    const first = FIRST_VALUE[cat]
+    if (!first) return list
+    return [...list].sort((a, b) => (a.value === first ? -1 : b.value === first ? 1 : 0))
+  }
 
   const byCategory = (cat) => {
-    if (cat === 'hair') {
-      return pieces
-        .filter((p) => p.category === 'top' && p.subcategory === 'hair')
-        .sort((a, b) => (a.value === FIRST_HAIR_VALUE ? -1 : b.value === FIRST_HAIR_VALUE ? 1 : 0))
-    }
+    if (cat === 'hair') return sortFirst(pieces.filter((p) => p.category === 'top' && p.subcategory === 'hair'), 'hair')
     if (cat === 'hat') return pieces.filter((p) => p.category === 'top' && p.subcategory === cat)
+    if (cat === 'eyes' || cat === 'eyebrows' || cat === 'mouth') return sortFirst(pieces.filter((p) => p.category === cat), cat)
     return pieces.filter((p) => p.category === cat)
   }
+
+  // config.top guarda EITHER un peinado O un gorro (DiceBear los junta en un solo campo) — en
+  // la pestaña Gorro, "Ninguno" debe verse seleccionado siempre que el valor actual sea un
+  // peinado (o esté vacío), no solo cuando está vacío a secas.
+  const hatValues = new Set(pieces.filter((p) => p.category === 'top' && p.subcategory === 'hat').map((p) => p.value))
+  const noHatSelected = !config.top || !hatValues.has(config.top)
 
   // Los colores tienen nombres tipo "Piel 3", "Color de pelo 7" — se muestran en ese orden
   // numérico (no en el orden en que la base de datos los reparte entre misiones), para que la
@@ -250,7 +273,7 @@ export default function AvatarPicker({ user, onSaved }) {
             type="button"
             onClick={() => setConfig((c) => ({ ...c, [configKey(tab)]: '' }))}
             className={`aspect-square rounded-lg border text-[10px] font-mono-lab text-ink/40 ${
-              !config[configKey(tab)] ? 'border-coral ring-2 ring-coral/40' : 'border-ink/10 hover:border-coral/40'
+              (tab === 'hat' ? noHatSelected : !config[configKey(tab)]) ? 'border-coral ring-2 ring-coral/40' : 'border-ink/10 hover:border-coral/40'
             }`}
           >
             Ninguno
