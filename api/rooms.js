@@ -4,6 +4,7 @@
 import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
 import { checkAndAwardBadges } from './_badges.js';
+import { checkAndUnlockAvatarPieces } from './_avatar.js';
 
 // "Sistema 6": fase extra de memoria/cartas que juega TODO el equipo a la vez, tras
 // terminar los 5 acertijos — no da XP ni insignia, solo sirve para desempatar el
@@ -254,6 +255,7 @@ export default async function handler(req, res) {
             completed_date = now()
         `;
         await checkAndAwardBadges(m.user_id);
+        await checkAndUnlockAvatarPieces(m.user_id);
       }
     } else {
       await sql`UPDATE escape_rooms SET current_puzzle_index = ${newIndex} WHERE id = ${room_id}`;

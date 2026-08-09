@@ -84,6 +84,7 @@ export default function Chat() {
               <AvatarCircle
                 name={m.author_name}
                 image={m.avatar}
+                avatarConfig={m.avatar_config}
                 glow={m.avatar_glow}
                 className="w-7 h-7 bg-blueprint/10"
                 textClassName="text-xs font-display font-semibold text-blueprint"

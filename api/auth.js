@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const [user] = await sql`
       INSERT INTO users (email, password_hash, full_name, role)
       VALUES (${email}, ${password_hash}, ${full_name || email.split('@')[0]}, 'user')
-      RETURNING id, email, full_name, role, xp, level, avatar
+      RETURNING id, email, full_name, role, xp, level, avatar, avatar_config
     `;
     const token = signToken(user);
     setAuthCookie(res, token);
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     const authUser = getUserFromRequest(req);
     if (!authUser) return res.status(401).json({ error: 'No autenticado' });
     const [user] = await sql`
-      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, name_rainbow, dark_bubble, avatar_glow
+      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, name_rainbow, dark_bubble, avatar_glow, avatar_config
       FROM users WHERE id = ${authUser.id}
     `;
     if (!user) return res.status(401).json({ error: 'No autenticado' });

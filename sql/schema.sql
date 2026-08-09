@@ -190,6 +190,33 @@ ALTER TABLE escape_room_members ADD COLUMN IF NOT EXISTS cards_time_ms INTEGER;
 -- no otorga XP ni insignia por si solo.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS speed_challenge_ms INTEGER;
 
+-- Avatar armable (estilo Avataaars via DiceBear, generado 100% en el navegador). El estudiante
+-- desbloquea piezas (peinado, ropa, accesorios, vello facial, estampado) al completar misiones,
+-- al terminar la mision cooperativa (set "Leyenda", exclusivo), o acumulando bonos de velocidad.
+CREATE TABLE avatar_pieces (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category TEXT NOT NULL, -- top | accessories | facialHair | clothing | clothingGraphic
+  value TEXT NOT NULL, -- valor real que espera la libreria DiceBear/Avataaars
+  label TEXT NOT NULL, -- nombre en español para mostrar en el armario
+  unlock_type TEXT NOT NULL DEFAULT 'starter', -- starter | mission | finale | speed
+  unlock_mission_order INTEGER, -- para 'mission'/'finale': que misión la desbloquea
+  speed_tier INTEGER, -- para 'speed': cuantos bonos de velocidad acumulados (x5) hacen falta
+  UNIQUE (category, value)
+);
+
+CREATE TABLE user_avatar_pieces (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  piece_id UUID NOT NULL REFERENCES avatar_pieces(id) ON DELETE CASCADE,
+  unlocked_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, piece_id)
+);
+
+-- Configuracion actual del avatar armado (que pieza tiene puesta en cada categoria + colores).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_config JSONB;
+-- Cuantas veces ha ganado el bono de velocidad en total (across todas las misiones individuales) —
+-- determina cuando se desbloquean las piezas de avatar tipo 'speed' (cada 5 bonos, ver _avatar.js).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS speed_bonus_count INTEGER NOT NULL DEFAULT 0;
+
 CREATE INDEX idx_exercises_mission ON exercises(mission_id);
 CREATE INDEX idx_exercises_parent ON exercises(parent_exercise_id);
 CREATE INDEX idx_progress_user ON user_progress(user_id);

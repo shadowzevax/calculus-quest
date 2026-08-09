@@ -75,6 +75,7 @@ export const api = {
         invalidate('/ranking');
         return r;
       }),
+    avatarCatalog: () => request('/profile'),
   },
   badges: {
     list: () => cachedGet('/badges'),

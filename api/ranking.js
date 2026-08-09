@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   // tiempo en el Sistema 6 (desafio de memoria de la mision cooperativa) — no otorga XP
   // ni insignia, solo ordena el ranking. Quien nunca lo jugó queda detrás en el empate.
   const rows = await sql`
-    SELECT u.id, u.full_name, u.avatar, u.xp, u.level, u.name_rainbow, u.avatar_glow,
+    SELECT u.id, u.full_name, u.avatar, u.avatar_config, u.xp, u.level, u.name_rainbow, u.avatar_glow,
            COALESCE(eb.images, '{}') AS equipped_badge_images
     FROM users u
     LEFT JOIN LATERAL (

@@ -3,6 +3,7 @@
 import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
 import { checkAndAwardBadges } from './_badges.js';
+import { checkAndUnlockAvatarPieces, incrementSpeedBonusCount } from './_avatar.js';
 
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
@@ -35,6 +36,9 @@ export default async function handler(req, res) {
 
       if (firstTime && xp_earned) {
         await sql`UPDATE users SET xp = xp + ${xp_earned} WHERE id = ${user.id}`;
+        // El bono de velocidad va incluido en xp_earned (base + 5) — si supera el valor base
+        // del ejercicio, esta vez sí lo gano, y cuenta para desbloquear piezas del avatar.
+        if (xp_earned > (exercise.xp_value || 0)) await incrementSpeedBonusCount(user.id);
       }
 
       const [mission] = await sql`SELECT * FROM missions WHERE id = ${exercise.mission_id}`;
@@ -68,8 +72,9 @@ export default async function handler(req, res) {
     }
 
     const newBadges = is_correct ? await checkAndAwardBadges(user.id) : [];
+    const newAvatarPieces = is_correct ? await checkAndUnlockAvatarPieces(user.id) : [];
 
-    return res.status(200).json({ ok: true, new_badges: newBadges });
+    return res.status(200).json({ ok: true, new_badges: newBadges, new_avatar_pieces: newAvatarPieces });
   }
 
   res.status(405).json({ error: 'Method not allowed' });

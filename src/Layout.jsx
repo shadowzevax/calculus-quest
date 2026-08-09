@@ -101,6 +101,7 @@ export default function Layout({ children }) {
               <AvatarCircle
                 name={user.full_name}
                 image={user.avatar}
+                avatarConfig={user.avatar_config}
                 glow={user.avatar_glow}
                 className="w-9 h-9 bg-coral/20 border border-coral/40"
                 textClassName="text-sm font-display font-semibold text-coral"

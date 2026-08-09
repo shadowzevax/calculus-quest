@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import { Switch } from '@/components/ui/switch'
 import { AvatarCircle } from '@/components/ui/avatar-circle'
+import AvatarPicker from '@/components/AvatarPicker'
 
 // Redimensiona y comprime la imagen en el navegador antes de subirla, para no acumular
 // fotos pesadas en la base de datos (se guarda como un JPEG chico, máx. ~320px de lado).
@@ -143,6 +144,7 @@ export default function Profile() {
             <AvatarCircle
               name={user.full_name}
               image={user.avatar}
+              avatarConfig={user.avatar_config}
               glow={user.avatar_glow}
               className="w-16 h-16 bg-coral/15 border border-coral/30"
               textClassName="text-2xl font-display font-semibold text-coral"
@@ -202,6 +204,11 @@ export default function Profile() {
           <button type="submit" className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">Guardar cambios</button>
           {saved && <span className="text-teal text-sm ml-3">Guardado ✓</span>}
         </form>
+      </div>
+
+      <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
+        <h2 className="text-lg font-display font-semibold text-ink mb-4">Mi avatar</h2>
+        <AvatarPicker user={user} onSaved={refresh} />
       </div>
 
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">

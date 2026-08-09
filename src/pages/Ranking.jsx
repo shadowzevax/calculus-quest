@@ -24,6 +24,7 @@ export default function Ranking() {
             <AvatarCircle
               name={r.full_name}
               image={r.avatar}
+              avatarConfig={r.avatar_config}
               glow={r.avatar_glow}
               className="w-9 h-9 bg-blueprint/10"
               textClassName="text-sm font-display font-semibold text-blueprint"
