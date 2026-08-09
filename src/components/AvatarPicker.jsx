@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Lock, Zap, Check } from 'lucide-react'
+import { Lock, Zap } from 'lucide-react'
 import { api } from '@/lib/api'
 import { buildAvatarDataUri } from '@/lib/avatarBuilder'
 
@@ -99,8 +99,17 @@ export default function AvatarPicker({ user, onSaved }) {
     }
   }, [config, user.full_name])
 
+  // El peinado por defecto de cada género (el mismo que trae el avatar inicial) va primero en
+  // la grilla, para que sea lo primero que se vea al abrir la pestaña "Peinado".
+  const FIRST_HAIR_VALUE = gender === 'female' ? 'bob' : 'shortFlat'
+
   const byCategory = (cat) => {
-    if (cat === 'hair' || cat === 'hat') return pieces.filter((p) => p.category === 'top' && p.subcategory === cat)
+    if (cat === 'hair') {
+      return pieces
+        .filter((p) => p.category === 'top' && p.subcategory === 'hair')
+        .sort((a, b) => (a.value === FIRST_HAIR_VALUE ? -1 : b.value === FIRST_HAIR_VALUE ? 1 : 0))
+    }
+    if (cat === 'hat') return pieces.filter((p) => p.category === 'top' && p.subcategory === cat)
     return pieces.filter((p) => p.category === cat)
   }
 
@@ -232,11 +241,6 @@ export default function AvatarPicker({ user, onSaved }) {
                   <Lock className="w-4 h-4 text-ink/50 absolute drop-shadow" />
                 )}
               </span>
-              {piece.unlocked && piece.unlock_type !== 'starter' && (
-                <span className="absolute -bottom-1 -right-1 bg-teal rounded-full p-0.5 ring-2 ring-white">
-                  <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                </span>
-              )}
             </button>
           )
         })}
@@ -275,11 +279,6 @@ export default function AvatarPicker({ user, onSaved }) {
                     style={{ backgroundColor: `#${piece.value}` }}
                   >
                     {!piece.unlocked && <Lock className="w-2.5 h-2.5 text-white drop-shadow" />}
-                    {piece.unlocked && piece.unlock_type !== 'starter' && (
-                      <span className="absolute -bottom-0.5 -right-0.5 bg-teal rounded-full p-0.5">
-                        <Check className="w-2 h-2 text-white" strokeWidth={3} />
-                      </span>
-                    )}
                   </button>
                 )
               })}
