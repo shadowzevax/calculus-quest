@@ -20,22 +20,28 @@ export function isColorPiece(piece) {
 
 export function avatarPieceThumb(piece, gender) {
   const key = piece.category === 'top' ? 'top' : piece.category
-  return buildAvatarDataUri({ ...baseFor(gender), [key]: piece.value, seed: piece.id })
+  const base = baseFor(gender)
+  // El estampado de la ropa solo se dibuja en DiceBear cuando la prenda es "graphicShirt" —
+  // con cualquier otra prenda de base, el estampado queda invisible aunque se le pase un valor.
+  if (piece.category === 'clothingGraphic') base.clothing = 'graphicShirt'
+  return buildAvatarDataUri({ ...base, [key]: piece.value, seed: piece.id })
 }
 
 // El peinado es la única categoría donde tiene sentido ver el muñeco completo (es lo que más
 // cambia la silueta). Para todo lo demás (gorro, ropa, accesorio, ojos, cejas, boca, estampado)
 // se recorta/hace zoom sobre la región aproximada de esa pieza en el SVG de Avataaars (viewBox
-// 280x280), para que se vea "solo el objeto" en vez del avatar entero.
+// 280x280), para que se vea "solo el objeto" en vez del avatar entero. Estos valores se
+// calibraron comparando por diferencia de píxeles el render base contra el render con cada
+// pieza agregada (bounding box real de lo que cambia en el SVG), no a ojo.
 const CROP_REGIONS = {
-  hat: { x: 0.5, y: 0.16, zoom: 3.0 },
-  accessories: { x: 0.5, y: 0.42, zoom: 2.6 },
-  facialHair: { x: 0.5, y: 0.56, zoom: 2.4 },
-  eyes: { x: 0.5, y: 0.4, zoom: 2.9 },
-  eyebrows: { x: 0.5, y: 0.34, zoom: 3.2 },
-  mouth: { x: 0.5, y: 0.53, zoom: 3.2 },
-  clothing: { x: 0.5, y: 0.82, zoom: 1.7 },
-  clothingGraphic: { x: 0.5, y: 0.75, zoom: 2.8 },
+  hat: { x: 0.5, y: 0.25, zoom: 1.35 },
+  accessories: { x: 0.5, y: 0.4, zoom: 1.8 },
+  facialHair: { x: 0.5, y: 0.56, zoom: 1.8 },
+  eyes: { x: 0.5, y: 0.39, zoom: 2.2 },
+  eyebrows: { x: 0.5, y: 0.34, zoom: 2.0 },
+  mouth: { x: 0.5, y: 0.55, zoom: 2.6 },
+  clothing: { x: 0.5, y: 0.83, zoom: 1.22 },
+  clothingGraphic: { x: 0.49, y: 0.89, zoom: 3.0 },
 }
 
 // Devuelve el estilo inline para el <img> dentro de un contenedor con overflow-hidden de
