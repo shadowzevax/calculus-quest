@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Lock, Camera } from 'lucide-react'
+import { Lock, Camera, Check } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import { Switch } from '@/components/ui/switch'
@@ -227,11 +227,17 @@ export default function Profile() {
                 b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 cursor-not-allowed'
               } ${b.equipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
             >
-              <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center">
-                {b.earned ? (
-                  <img src={b.image} alt={b.name} className="w-full h-full object-cover scale-110" />
-                ) : (
-                  <Lock className="w-5 h-5 text-ink/25" />
+              <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center relative">
+                <img
+                  src={b.image}
+                  alt={b.name}
+                  className={`w-full h-full object-cover scale-110 ${!b.earned ? 'grayscale opacity-30' : ''}`}
+                />
+                {!b.earned && <Lock className="w-5 h-5 text-ink/50 absolute drop-shadow" />}
+                {b.earned && (
+                  <span className="absolute bottom-0 right-0 bg-teal rounded-full p-0.5">
+                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  </span>
                 )}
               </div>
               <span className={`text-xs font-medium ${b.earned ? 'text-ink' : 'text-ink/35'}`}>{b.name}</span>

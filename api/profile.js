@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
+import { grantStarterColors } from './_avatar.js';
 
 const MAX_AVATAR_LENGTH = 400_000; // ~300KB de imagen en base64, ya redimensionada en el navegador
 
@@ -60,6 +61,16 @@ export default async function handler(req, res) {
 
   const removingAvatar = avatar === ''; // cadena vacía = "quitar foto", null/undefined = "sin cambios"
 
+  // Si esta es la primera vez que el usuario elige género (viene de "Elegir avatar" en Mi
+  // Perfil), el color con el que arranca su avatar por defecto se desbloquea para él —
+  // los demás colores quedan bloqueados como cualquier otra pieza.
+  let grantColorsAfter = null;
+  if (!isTeacher && avatar_gender && avatar_config) {
+    const [{ avatar_gender: currentGender }] = await sql`SELECT avatar_gender FROM users WHERE id = ${user.id}`;
+    if (!currentGender) grantColorsAfter = avatar_config;
+  }
+  if (grantColorsAfter) await grantStarterColors(user.id, grantColorsAfter);
+
   try {
     if (!isTeacher && avatar && !removingAvatar) {
       await requireMissionOrder(11, 'La foto de perfil personalizada');
@@ -69,11 +80,11 @@ export default async function handler(req, res) {
     if (!isTeacher && dark_bubble) await requireBadge(13, 'La burbuja oscura');
     if (!isTeacher && name_rainbow) await requireBadge(14, 'El nombre arcoíris');
 
-    // Cada pieza que se quiera equipar (menos los colores, que son libres) debe estar
+    // Cada pieza que se quiera equipar, incluidos ojos/cejas/boca/colores, debe estar
     // realmente desbloqueada — se revalida en el servidor para que no baste con mandar
     // el PATCH a mano y "equipar" algo que todavía no se ganó.
     if (!isTeacher && avatar_config) {
-      const pieceKeys = ['top', 'accessories', 'facialHair', 'clothing', 'clothingGraphic'];
+      const pieceKeys = ['top', 'accessories', 'facialHair', 'clothing', 'clothingGraphic', 'eyes', 'eyebrows', 'mouth', 'skinColor', 'hairColor', 'clothesColor'];
       for (const key of pieceKeys) {
         const value = avatar_config[key];
         if (!value) continue;

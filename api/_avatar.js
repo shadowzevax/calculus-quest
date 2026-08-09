@@ -34,3 +34,20 @@ export async function checkAndUnlockAvatarPieces(userId) {
 export async function incrementSpeedBonusCount(userId) {
   await sql`UPDATE users SET speed_bonus_count = speed_bonus_count + 1 WHERE id = ${userId}`;
 }
+
+// Desbloquea unicamente el color (piel/pelo/ropa) que ya trae el avatar elegido por el
+// usuario al registrarse o al elegir genero por primera vez. Los demas colores quedan
+// bloqueados como cualquier otra pieza, para ganarse por mision/cronometro.
+export async function grantStarterColors(userId, { skinColor, hairColor, clothesColor }) {
+  const values = [skinColor, hairColor, clothesColor].filter(Boolean);
+  if (values.length === 0) return;
+  const pieces = await sql`
+    SELECT id FROM avatar_pieces
+    WHERE (category = 'skinColor' AND value = ${skinColor})
+       OR (category = 'hairColor' AND value = ${hairColor})
+       OR (category = 'clothesColor' AND value = ${clothesColor})
+  `;
+  for (const piece of pieces) {
+    await sql`INSERT INTO user_avatar_pieces (user_id, piece_id) VALUES (${userId}, ${piece.id}) ON CONFLICT DO NOTHING`;
+  }
+}

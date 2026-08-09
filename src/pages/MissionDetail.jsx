@@ -8,6 +8,18 @@ import FillBlankExercise from '@/components/exercises/FillBlankExercise'
 import TrueFalseExercise from '@/components/exercises/TrueFalseExercise'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import EscapeRoomGame from '@/components/EscapeRoomGame'
+import { buildAvatarDataUri } from '@/lib/avatarBuilder'
+
+// Config base neutral para renderizar la miniatura de una sola pieza de avatar (igual que en
+// Missions.jsx: solo cambia la pieza que se quiere mostrar, el resto queda por defecto).
+const AVATAR_PREVIEW_BASE = {
+  top: 'shortFlat', clothing: 'shirtCrewNeck', skinColor: 'edb98a', hairColor: '2c1b18',
+  clothesColor: '65c9ff', eyes: 'default', eyebrows: 'default', mouth: 'smile',
+}
+function avatarPieceThumb(piece) {
+  const key = piece.category === 'top' ? 'top' : piece.category
+  return buildAvatarDataUri({ ...AVATAR_PREVIEW_BASE, [key]: piece.value, seed: piece.id })
+}
 
 // Cada ejercicio tiene un `type`; este mapa elige qué componente lo renderiza
 // (evita un if/else gigante). Nuevo tipo = nuevo componente + una línea aquí.
@@ -43,6 +55,7 @@ export default function MissionDetail() {
   const [retryKey, setRetryKey] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [speedBonusCount, setSpeedBonusCount] = useState(0)
+  const [nextSpeedPiece, setNextSpeedPiece] = useState(null)
   const exerciseStartRef = useRef(0)
 
   useEffect(() => {
@@ -77,7 +90,13 @@ export default function MissionDetail() {
   // se muestra junto al cronómetro para que se entienda para qué sirve.
   useEffect(() => {
     if (!user) return
-    api.profile.avatarCatalog().then((r) => setSpeedBonusCount(r.speed_bonus_count || 0)).catch(() => {})
+    api.profile.avatarCatalog().then((r) => {
+      setSpeedBonusCount(r.speed_bonus_count || 0)
+      const nextSpeed = (r.pieces || [])
+        .filter((p) => p.unlock_type === 'speed' && !p.unlocked)
+        .sort((a, b) => a.speed_tier - b.speed_tier)[0]
+      setNextSpeedPiece(nextSpeed || null)
+    }).catch(() => {})
   }, [user])
 
   // Posición en el ranking y XP total, en vivo — para darle más emoción mientras
@@ -181,6 +200,14 @@ export default function MissionDetail() {
               <div className={`text-[10px] mt-1 ${timeExpired ? 'text-ink/20' : 'text-ink/35'}`}>
                 {speedProgress}/5 bonos para tu próxima pieza de avatar
               </div>
+              {nextSpeedPiece && (
+                <div className="flex items-center justify-center gap-1.5 mt-2 pt-2 border-t border-ink/10">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-gold/30 shrink-0">
+                    <img src={avatarPieceThumb(nextSpeedPiece)} alt={nextSpeedPiece.label} className="w-full h-full object-cover grayscale opacity-60" />
+                  </div>
+                  <span className="text-[10px] text-ink/40 text-left">{nextSpeedPiece.label}</span>
+                </div>
+              )}
             </div>
           )}
 

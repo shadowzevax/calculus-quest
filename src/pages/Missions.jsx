@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Icons from 'lucide-react'
-import { HelpCircle, Camera } from 'lucide-react'
+import { HelpCircle, Camera, Lock, Check } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
@@ -193,7 +193,15 @@ export default function Missions() {
                       return (
                         <div key={b.id}>
                           <div className="flex items-center gap-1.5 text-xs">
-                            <img src={b.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                            <span className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 bg-ink/5">
+                              <img src={b.image} alt="" className={`w-5 h-5 object-cover ${!b.earned ? 'grayscale opacity-30' : ''}`} />
+                              {!b.earned && <Lock className="w-2.5 h-2.5 text-ink/50 absolute inset-0 m-auto" />}
+                              {b.earned && (
+                                <span className="absolute bottom-0 right-0 bg-teal rounded-full p-[1px]">
+                                  <Check className="w-1.5 h-1.5 text-white" strokeWidth={4} />
+                                </span>
+                              )}
+                            </span>
                             <span className="text-ink/70">{b.name}</span>
                             {special && (
                               <>
@@ -229,9 +237,19 @@ export default function Missions() {
                             <div
                               key={piece.id}
                               title={piece.label}
-                              className="w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-ink/10 shrink-0"
+                              className="relative w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-ink/10 shrink-0"
                             >
-                              <img src={avatarPieceThumb(piece)} alt={piece.label} className="w-full h-full object-cover" />
+                              <img
+                                src={avatarPieceThumb(piece)}
+                                alt={piece.label}
+                                className={`w-full h-full object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
+                              />
+                              {!piece.unlocked && <Lock className="w-3 h-3 text-ink/50 absolute inset-0 m-auto" />}
+                              {piece.unlocked && (
+                                <span className="absolute bottom-0 right-0 bg-teal rounded-full p-[1px]">
+                                  <Check className="w-2 h-2 text-white" strokeWidth={4} />
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>

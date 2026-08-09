@@ -3,6 +3,7 @@
 import bcrypt from 'bcryptjs';
 import { sql } from './_db.js';
 import { signToken, setAuthCookie, clearAuthCookie, getUserFromRequest } from './_auth.js';
+import { grantStarterColors } from './_avatar.js';
 
 export default async function handler(req, res) {
   const action = req.query.action;
@@ -25,14 +26,22 @@ export default async function handler(req, res) {
       const starterClothing = await sql`SELECT value FROM avatar_pieces WHERE unlock_type = 'starter' AND category = 'clothing'`;
       const validTop = new Set(starterTop.map((r) => r.value));
       const validClothing = new Set(starterClothing.map((r) => r.value));
+      const [skinRows, hairRows, clothesRows] = await Promise.all([
+        sql`SELECT value FROM avatar_pieces WHERE category = 'skinColor'`,
+        sql`SELECT value FROM avatar_pieces WHERE category = 'hairColor'`,
+        sql`SELECT value FROM avatar_pieces WHERE category = 'clothesColor'`,
+      ]);
+      const validSkin = new Set(skinRows.map((r) => r.value));
+      const validHair = new Set(hairRows.map((r) => r.value));
+      const validClothes = new Set(clothesRows.map((r) => r.value));
       if (avatar_config && validTop.has(avatar_config.top) && validClothing.has(avatar_config.clothing)) {
         gender = avatar_gender;
         config = {
           top: avatar_config.top,
           clothing: avatar_config.clothing,
-          skinColor: /^[a-fA-F0-9]{6}$/.test(avatar_config.skinColor || '') ? avatar_config.skinColor : 'edb98a',
-          hairColor: /^[a-fA-F0-9]{6}$/.test(avatar_config.hairColor || '') ? avatar_config.hairColor : '2c1b18',
-          clothesColor: /^[a-fA-F0-9]{6}$/.test(avatar_config.clothesColor || '') ? avatar_config.clothesColor : (avatar_gender === 'male' ? '5199e4' : 'ff488e'),
+          skinColor: validSkin.has(avatar_config.skinColor) ? avatar_config.skinColor : 'edb98a',
+          hairColor: validHair.has(avatar_config.hairColor) ? avatar_config.hairColor : '2c1b18',
+          clothesColor: validClothes.has(avatar_config.clothesColor) ? avatar_config.clothesColor : (avatar_gender === 'male' ? '5199e4' : 'ff488e'),
           eyes: 'default', eyebrows: 'default', mouth: 'smile',
         };
       }
@@ -45,6 +54,9 @@ export default async function handler(req, res) {
       VALUES (${email}, ${password_hash}, ${full_name || email.split('@')[0]}, 'user', ${gender}, ${config ? JSON.stringify(config) : null}::jsonb)
       RETURNING id, email, full_name, role, xp, level, avatar, avatar_config, avatar_gender
     `;
+    if (config) {
+      await grantStarterColors(user.id, config);
+    }
     const token = signToken(user);
     setAuthCookie(res, token);
     return res.status(201).json({ user });

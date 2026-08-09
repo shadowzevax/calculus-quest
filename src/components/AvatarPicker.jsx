@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Lock, Zap } from 'lucide-react'
+import { Lock, Zap, Check } from 'lucide-react'
 import { api } from '@/lib/api'
 import { buildAvatarDataUri } from '@/lib/avatarBuilder'
 
@@ -18,28 +18,13 @@ const CATEGORY_LABELS = {
 // solo para la interfaz (el usuario pidio que no aparecieran mezcladas), pero las dos
 // escriben en config.top porque asi lo espera la libreria.
 const TAB_CONFIG_KEY = { hair: 'top', hat: 'top' }
-const CATEGORIES = ['hair', 'hat', 'clothing', 'accessories', 'facialHair', 'clothingGraphic']
-// Ojos/cejas/boca no se desbloquean por progreso (no hay suficiente variedad "emocionante" para
-// repartir como recompensa) — quedan libres desde el inicio, igual que los colores.
-const FREE_CATEGORIES = ['eyes', 'eyebrows', 'mouth']
-const FREE_VALUES = {
-  eyes: ['default', 'happy', 'side', 'squint', 'wink', 'surprised', 'closed', 'cry', 'eyeRoll', 'hearts', 'winkWacky', 'xDizzy'],
-  eyebrows: ['default', 'defaultNatural', 'raisedExcited', 'raisedExcitedNatural', 'sadConcerned', 'sadConcernedNatural', 'upDown', 'upDownNatural', 'angry', 'angryNatural', 'flatNatural', 'frownNatural', 'unibrowNatural'],
-  mouth: ['smile', 'default', 'twinkle', 'serious', 'disbelief', 'concerned', 'sad', 'eating', 'grimace', 'screamOpen', 'tongue', 'vomit'],
-}
-const FREE_LABELS = {
-  default: 'Normal', happy: 'Felices', side: 'De lado', squint: 'Entrecerrados', wink: 'Guiño', surprised: 'Sorprendidos',
-  closed: 'Cerrados', cry: 'Llorando', eyeRoll: 'En blanco', hearts: 'Enamorados', winkWacky: 'Guiño loco', xDizzy: 'Mareados',
-  defaultNatural: 'Normal', raisedExcited: 'Emocionadas', raisedExcitedNatural: 'Emocionadas', sadConcerned: 'Preocupadas',
-  sadConcernedNatural: 'Preocupadas', upDown: 'Asimétricas', upDownNatural: 'Asimétricas', angry: 'Enojadas', angryNatural: 'Enojadas',
-  flatNatural: 'Rectas', frownNatural: 'Fruncidas', unibrowNatural: 'Unidas',
-  smile: 'Sonriendo', twinkle: 'Pícara', serious: 'Seria', disbelief: 'Incrédula', concerned: 'Preocupada', sad: 'Triste',
-  eating: 'Comiendo', grimace: 'Mueca', screamOpen: 'Grito', tongue: 'Lengua afuera', vomit: 'De asco',
-}
+const CATEGORIES = ['hair', 'hat', 'clothing', 'accessories', 'facialHair', 'clothingGraphic', 'eyes', 'eyebrows', 'mouth']
 
-const SKIN_COLORS = ['614335', 'd08b5b', 'ae5d29', 'edb98a', 'ffdbb4', 'fd9841', 'f8d25c']
-const HAIR_COLORS = ['a55728', '2c1b18', 'b58143', 'd6b370', '724133', '4a312c', 'f59797', 'ecdcbf', 'c93305', 'e8e1e1']
-const CLOTHES_COLORS = ['262e33', '65c9ff', '5199e4', '25557c', 'e6e6e6', '929598', '3c4f5c', 'a7ffc4', 'ffafb9', 'ff488e', 'ff5c5c', 'ffffff']
+const COLOR_CATEGORIES = [
+  { key: 'skinColor', label: 'COLOR DE PIEL' },
+  { key: 'hairColor', label: 'COLOR DE PELO' },
+  { key: 'clothesColor', label: 'COLOR DE ROPA' },
+]
 
 const DEFAULT_CONFIG = {
   top: 'shortFlat', clothing: 'shirtCrewNeck', accessories: '', facialHair: '', clothingGraphic: '',
@@ -106,11 +91,15 @@ export default function AvatarPicker({ user, onSaved }) {
   }, [config, user.full_name])
 
   const byCategory = (cat) => {
-    if (FREE_CATEGORIES.includes(cat)) {
-      return FREE_VALUES[cat].map((value) => ({ id: `${cat}-${value}`, category: cat, value, label: FREE_LABELS[value] || value, unlocked: true }))
-    }
     if (cat === 'hair' || cat === 'hat') return pieces.filter((p) => p.category === 'top' && p.subcategory === cat)
     return pieces.filter((p) => p.category === cat)
+  }
+
+  const byColorCategory = (key) => pieces.filter((p) => p.category === key)
+
+  const chooseColor = (key, piece) => {
+    if (!piece.unlocked) return
+    setConfig((c) => ({ ...c, [key]: piece.value }))
   }
 
   const configKey = (cat) => TAB_CONFIG_KEY[cat] || cat
@@ -183,7 +172,7 @@ export default function AvatarPicker({ user, onSaved }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {[...CATEGORIES, ...FREE_CATEGORIES]
+        {CATEGORIES
           .filter((c) => c !== 'clothingGraphic' || showGraphicTab)
           .filter((c) => c !== 'facialHair' || showFacialHairTab)
           .map((cat) => (
@@ -205,7 +194,7 @@ export default function AvatarPicker({ user, onSaved }) {
           const key = configKey(tab)
           const isSelected = config[key] === piece.value
           const hint = unlockHint(piece)
-          const thumb = piece.unlocked ? buildAvatarDataUri({ ...config, [key]: piece.value, seed: user.full_name }) : null
+          const thumb = buildAvatarDataUri({ ...config, [key]: piece.value, seed: user.full_name })
           return (
             <button
               key={piece.id}
@@ -215,12 +204,22 @@ export default function AvatarPicker({ user, onSaved }) {
               title={piece.unlocked ? piece.label : `${piece.label} — ${hint}`}
               className={`aspect-square rounded-lg border overflow-hidden flex items-center justify-center relative ${
                 isSelected ? 'border-coral ring-2 ring-coral/40' : 'border-ink/10'
-              } ${!piece.unlocked ? 'bg-ink/5' : 'bg-white hover:border-coral/40'}`}
+              } ${!piece.unlocked ? 'bg-ink/5 cursor-not-allowed' : 'bg-white hover:border-coral/40'}`}
             >
-              {piece.unlocked ? (
-                thumb && <img src={thumb} alt={piece.label} className="w-full h-full object-cover" />
-              ) : (
-                <Lock className="w-4 h-4 text-ink/25" />
+              {thumb && (
+                <img
+                  src={thumb}
+                  alt={piece.label}
+                  className={`w-full h-full object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
+                />
+              )}
+              {!piece.unlocked && (
+                <Lock className="w-4 h-4 text-ink/50 absolute drop-shadow" />
+              )}
+              {piece.unlocked && piece.unlock_type !== 'starter' && (
+                <span className="absolute bottom-0.5 right-0.5 bg-teal rounded-full p-0.5">
+                  <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                </span>
               )}
             </button>
           )
@@ -240,36 +239,37 @@ export default function AvatarPicker({ user, onSaved }) {
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4 mb-4">
-        <div>
-          <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE PIEL</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {SKIN_COLORS.map((c) => (
-              <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, skinColor: c }))}
-                className={`w-6 h-6 rounded-full border-2 ${config.skinColor === c ? 'border-coral' : 'border-transparent'}`}
-                style={{ backgroundColor: `#${c}` }} />
-            ))}
+        {COLOR_CATEGORIES.map(({ key, label }) => (
+          <div key={key}>
+            <p className="text-xs font-mono-lab text-ink/40 mb-1.5">{label}</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {byColorCategory(key).map((piece) => {
+                const isSelected = config[key] === piece.value
+                const hint = unlockHint(piece)
+                return (
+                  <button
+                    key={piece.id}
+                    type="button"
+                    disabled={!piece.unlocked}
+                    onClick={() => chooseColor(key, piece)}
+                    title={piece.unlocked ? piece.label : `${piece.label} — ${hint}`}
+                    className={`relative w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                      isSelected ? 'border-coral' : 'border-transparent'
+                    } ${!piece.unlocked ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    style={{ backgroundColor: `#${piece.value}` }}
+                  >
+                    {!piece.unlocked && <Lock className="w-2.5 h-2.5 text-white drop-shadow" />}
+                    {piece.unlocked && piece.unlock_type !== 'starter' && (
+                      <span className="absolute -bottom-0.5 -right-0.5 bg-teal rounded-full p-0.5">
+                        <Check className="w-2 h-2 text-white" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-        <div>
-          <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE PELO</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {HAIR_COLORS.map((c) => (
-              <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, hairColor: c }))}
-                className={`w-6 h-6 rounded-full border-2 ${config.hairColor === c ? 'border-coral' : 'border-transparent'}`}
-                style={{ backgroundColor: `#${c}` }} />
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE ROPA</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {CLOTHES_COLORS.map((c) => (
-              <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, clothesColor: c }))}
-                className={`w-6 h-6 rounded-full border-2 ${config.clothesColor === c ? 'border-coral' : 'border-transparent'}`}
-                style={{ backgroundColor: `#${c}` }} />
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
       {error && <p className="text-red-500 text-xs mb-2">{error}</p>}
