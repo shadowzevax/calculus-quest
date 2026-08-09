@@ -135,9 +135,10 @@ export default function Profile() {
   if (!user) return null
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-4xl">
       <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">CUENTA</div>
       <h1 className="text-3xl font-display font-bold text-ink mb-6">Mi Perfil</h1>
+      <div className="grid md:grid-cols-2 gap-6 items-start">
       <div className="bg-white rounded-xl border border-ink/10 p-6">
         <div className="flex items-center gap-4 mb-4">
           <div className="relative shrink-0">
@@ -206,9 +207,10 @@ export default function Profile() {
         </form>
       </div>
 
-      <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
+      <div className="bg-white rounded-xl border border-ink/10 p-6">
         <h2 className="text-lg font-display font-semibold text-ink mb-4">Mi avatar</h2>
         <AvatarPicker user={user} onSaved={refresh} />
+      </div>
       </div>
 
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
@@ -280,7 +282,7 @@ export default function Profile() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6">
+      <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6 max-w-lg">
         <h2 className="text-lg font-display font-semibold text-ink mb-4">Cambiar contraseña</h2>
         <form onSubmit={changePassword} className="space-y-3">
           <div>
