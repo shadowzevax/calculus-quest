@@ -9,8 +9,28 @@ const CATEGORY_LABELS = {
   facialHair: 'Vello facial',
   clothing: 'Ropa',
   clothingGraphic: 'Estampado de la ropa',
+  eyes: 'Ojos',
+  eyebrows: 'Cejas',
+  mouth: 'Boca',
 }
 const CATEGORIES = ['top', 'clothing', 'accessories', 'facialHair', 'clothingGraphic']
+// Ojos/cejas/boca no se desbloquean por progreso (no hay suficiente variedad "emocionante" para
+// repartir como recompensa) — quedan libres desde el inicio, igual que los colores.
+const FREE_CATEGORIES = ['eyes', 'eyebrows', 'mouth']
+const FREE_VALUES = {
+  eyes: ['default', 'happy', 'side', 'squint', 'wink', 'surprised', 'closed', 'cry', 'eyeRoll', 'hearts', 'winkWacky', 'xDizzy'],
+  eyebrows: ['default', 'defaultNatural', 'raisedExcited', 'raisedExcitedNatural', 'sadConcerned', 'sadConcernedNatural', 'upDown', 'upDownNatural', 'angry', 'angryNatural', 'flatNatural', 'frownNatural', 'unibrowNatural'],
+  mouth: ['smile', 'default', 'twinkle', 'serious', 'disbelief', 'concerned', 'sad', 'eating', 'grimace', 'screamOpen', 'tongue', 'vomit'],
+}
+const FREE_LABELS = {
+  default: 'Normal', happy: 'Felices', side: 'De lado', squint: 'Entrecerrados', wink: 'Guiño', surprised: 'Sorprendidos',
+  closed: 'Cerrados', cry: 'Llorando', eyeRoll: 'En blanco', hearts: 'Enamorados', winkWacky: 'Guiño loco', xDizzy: 'Mareados',
+  defaultNatural: 'Normal', raisedExcited: 'Emocionadas', raisedExcitedNatural: 'Emocionadas', sadConcerned: 'Preocupadas',
+  sadConcernedNatural: 'Preocupadas', upDown: 'Asimétricas', upDownNatural: 'Asimétricas', angry: 'Enojadas', angryNatural: 'Enojadas',
+  flatNatural: 'Rectas', frownNatural: 'Fruncidas', unibrowNatural: 'Unidas',
+  smile: 'Sonriendo', twinkle: 'Pícara', serious: 'Seria', disbelief: 'Incrédula', concerned: 'Preocupada', sad: 'Triste',
+  eating: 'Comiendo', grimace: 'Mueca', screamOpen: 'Grito', tongue: 'Lengua afuera', vomit: 'De asco',
+}
 
 const SKIN_COLORS = ['614335', 'd08b5b', 'ae5d29', 'edb98a', 'ffdbb4', 'fd9841', 'f8d25c']
 const HAIR_COLORS = ['a55728', '2c1b18', 'b58143', 'd6b370', '724133', '4a312c', 'f59797', 'ecdcbf', 'c93305', 'e8e1e1']
@@ -19,6 +39,7 @@ const CLOTHES_COLORS = ['262e33', '65c9ff', '5199e4', '25557c', 'e6e6e6', '92959
 const DEFAULT_CONFIG = {
   top: 'shortFlat', clothing: 'shirtCrewNeck', accessories: '', facialHair: '', clothingGraphic: '',
   skinColor: 'edb98a', hairColor: '2c1b18', clothesColor: '65c9ff',
+  eyes: 'default', eyebrows: 'default', mouth: 'smile',
 }
 
 function unlockHint(piece) {
@@ -54,7 +75,12 @@ export default function AvatarPicker({ user, onSaved }) {
     }
   }, [config, user.full_name])
 
-  const byCategory = (cat) => pieces.filter((p) => p.category === cat)
+  const byCategory = (cat) => {
+    if (FREE_CATEGORIES.includes(cat)) {
+      return FREE_VALUES[cat].map((value) => ({ id: `${cat}-${value}`, category: cat, value, label: FREE_LABELS[value] || value, unlocked: true }))
+    }
+    return pieces.filter((p) => p.category === cat)
+  }
 
   const choose = (cat, value) => setConfig((c) => ({ ...c, [cat]: c[cat] === value ? '' : value }))
 
@@ -93,7 +119,7 @@ export default function AvatarPicker({ user, onSaved }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {CATEGORIES.filter((c) => c !== 'clothingGraphic' || showGraphicTab).map((cat) => (
+        {[...CATEGORIES, ...FREE_CATEGORIES].filter((c) => c !== 'clothingGraphic' || showGraphicTab).map((cat) => (
           <button
             key={cat}
             type="button"
