@@ -38,7 +38,13 @@ export default async function handler(req, res) {
         ap.speed_tier NULLS LAST
     `;
     return res.status(200).json({
-      pieces: pieces.map((p) => ({ ...p, unlocked: isTeacher || p.unlock_type === 'starter' || !!p.unlocked_at })),
+      // "unlocked" decide si se puede EQUIPAR la pieza (el docente puede equipar cualquier
+      // cosa para probar el catálogo) — "owned" es si realmente la ganó, sin el atajo de
+      // docente, para no confundir "puede probársela" con "ya se la ganó como recompensa".
+      pieces: pieces.map((p) => {
+        const owned = p.unlock_type === 'starter' || !!p.unlocked_at
+        return { ...p, unlocked: isTeacher || owned, owned }
+      }),
       config: avatar_config,
       speed_bonus_count,
       avatar_gender,

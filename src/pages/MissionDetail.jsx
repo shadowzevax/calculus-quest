@@ -117,8 +117,10 @@ export default function MissionDetail() {
     if (!user) return
     api.profile.avatarCatalog().then((r) => {
       setSpeedBonusCount(r.speed_bonus_count || 0)
+      // "owned" y no "unlocked": para el docente "unlocked" es siempre true (puede equipar
+      // cualquier cosa), y eso ocultaría la próxima pieza de velocidad en vez de mostrarla.
       const nextSpeed = (r.pieces || [])
-        .filter((p) => p.unlock_type === 'speed' && !p.unlocked)
+        .filter((p) => p.unlock_type === 'speed' && !p.owned)
         .sort((a, b) => a.speed_tier - b.speed_tier)[0]
       setNextSpeedPiece(nextSpeed || null)
     }).catch(() => {})
