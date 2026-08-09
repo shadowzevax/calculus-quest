@@ -78,8 +78,18 @@ export default function AvatarPicker({ user, onSaved }) {
 
   const chooseGender = async (g) => {
     setGender(g)
+    // Al elegir género se guarda de una vez un avatar por defecto (la primera pieza starter
+    // de ese género) — antes se quedaba con el config previo (a veces de otro género), y la
+    // vista previa no coincidía con nada de lo que se veía desbloqueado en la grilla.
+    const defaultConfig = {
+      top: g === 'female' ? 'bob' : 'shortFlat',
+      clothing: 'shirtCrewNeck',
+      skinColor: 'edb98a', hairColor: '2c1b18', clothesColor: g === 'female' ? 'ff488e' : '5199e4',
+      eyes: 'default', eyebrows: 'default', mouth: 'smile',
+    }
+    setConfig(defaultConfig)
     try {
-      await api.profile.update({ avatar_gender: g })
+      await api.profile.update({ avatar_gender: g, avatar_config: defaultConfig })
       loadCatalog()
       onSaved?.()
     } catch (e) {

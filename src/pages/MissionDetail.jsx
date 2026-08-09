@@ -42,6 +42,7 @@ export default function MissionDetail() {
   const [results, setResults] = useState([]) // [{exercise, isCorrect, bonus}] de este intento
   const [retryKey, setRetryKey] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(0)
+  const [speedBonusCount, setSpeedBonusCount] = useState(0)
   const exerciseStartRef = useRef(0)
 
   useEffect(() => {
@@ -71,6 +72,13 @@ export default function MissionDetail() {
     const interval = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000)
     return () => clearInterval(interval)
   }, [current, retryKey, exercises, mission])
+
+  // Cuantos bonos de velocidad lleva acumulados (cada 5 desbloquea una pieza de avatar) —
+  // se muestra junto al cronómetro para que se entienda para qué sirve.
+  useEffect(() => {
+    if (!user) return
+    api.profile.avatarCatalog().then((r) => setSpeedBonusCount(r.speed_bonus_count || 0)).catch(() => {})
+  }, [user])
 
   // Posición en el ranking y XP total, en vivo — para darle más emoción mientras
   // resuelve, mostrando qué tan cerca (o lejos) está de subir un puesto.
@@ -118,6 +126,7 @@ export default function MissionDetail() {
           const idx = rows.findIndex((r) => r.id === user.id)
           if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
         }).catch(() => {})
+        if (bonus > 0) setSpeedBonusCount((c) => c + 1)
       } catch {}
     }
     setResults((r) => [...r, { exercise, isCorrect, bonus }])
@@ -135,7 +144,11 @@ export default function MissionDetail() {
     setRetryKey((k) => k + 1)
   }
 
-  const showTimer = !mission.is_collaborative && !showDone && exercise && secondsLeft > 0
+  // El recuadro del cronómetro se queda visible toda la duración del ejercicio (no desaparece
+  // al agotarse el tiempo) — solo cambia a gris para indicar que ya no se puede ganar el bono.
+  const timerActive = !mission.is_collaborative && !showDone && !!exercise
+  const timeExpired = secondsLeft <= 0
+  const speedProgress = speedBonusCount % 5
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -143,38 +156,44 @@ export default function MissionDetail() {
         <ChevronLeft className="w-4 h-4" /> Volver a Misiones
       </Link>
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div className="flex-1 min-w-[200px]">
           <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-1">MISIÓN</div>
           <h1 className="text-2xl font-display font-bold text-ink">{mission.title}</h1>
           <p className="text-ink/50 mt-1">{mission.story || mission.description}</p>
         </div>
 
-        {(showTimer || rankInfo) && (
-          <div className="shrink-0 bg-white border-2 border-blueprint/15 rounded-2xl px-5 py-4 text-center min-w-[150px]">
-            {showTimer && (
-              <div className={rankInfo ? 'mb-3 pb-3 border-b border-ink/10' : ''}>
-                <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1">
-                  Bono si respondes rápido
-                </div>
-                <div className="text-3xl font-display font-bold text-gold flex items-center justify-center gap-1.5">
-                  <Zap className="w-6 h-6" />
-                  {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
-                </div>
-                <div className="text-[10px] text-ink/35 mt-1">También suma para piezas de avatar</div>
+        <div className="flex gap-3 ml-auto">
+          {timerActive && (
+            <div className={`shrink-0 rounded-2xl px-5 py-4 text-center min-w-[160px] border-2 ${
+              timeExpired ? 'bg-ink/[0.02] border-ink/10' : 'bg-white border-gold/30'
+            }`}>
+              <div className={`text-[10px] font-mono-lab uppercase tracking-wide mb-1 ${timeExpired ? 'text-ink/30' : 'text-ink/40'}`}>
+                Bono si respondes rápido
               </div>
-            )}
-            {rankInfo && (
-              <>
-                <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> Tu posición
-                </div>
-                <div className="text-3xl font-display font-bold text-coral">#{rankInfo.position}</div>
-                <div className="text-xs font-mono-lab text-ink/50 mt-0.5">{rankInfo.xp} XP total</div>
-              </>
-            )}
-          </div>
-        )}
+              <div className={`text-3xl font-display font-bold flex items-center justify-center gap-1.5 ${timeExpired ? 'text-ink/25' : 'text-gold'}`}>
+                <Zap className="w-6 h-6" />
+                {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
+              </div>
+              <div className={`text-[11px] font-mono-lab mt-1.5 ${timeExpired ? 'text-ink/25' : 'text-coral'}`}>
+                {timeExpired ? 'Tiempo agotado' : `+${BONUS_XP} XP extra`}
+              </div>
+              <div className={`text-[10px] mt-1 ${timeExpired ? 'text-ink/20' : 'text-ink/35'}`}>
+                {speedProgress}/5 bonos para tu próxima pieza de avatar
+              </div>
+            </div>
+          )}
+
+          {rankInfo && (
+            <div className="shrink-0 bg-white border-2 border-blueprint/15 rounded-2xl px-5 py-4 text-center min-w-[150px]">
+              <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
+                <TrendingUp className="w-3 h-3" /> Tu posición
+              </div>
+              <div className="text-3xl font-display font-bold text-coral">#{rankInfo.position}</div>
+              <div className="text-xs font-mono-lab text-ink/50 mt-0.5">{rankInfo.xp} XP total</div>
+            </div>
+          )}
+        </div>
       </div>
 
       {mission.is_collaborative ? (
