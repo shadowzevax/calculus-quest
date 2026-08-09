@@ -33,16 +33,19 @@ const SPECIAL_REWARDS = {
     label: 'Aro iluminado',
     desc: 'Un resplandor animado naranja alrededor de tu foto de perfil, visible para todos en el Perfil, el Ranking y el Chat.',
     preview: <span className="w-4 h-4 rounded-full bg-ink/10 avatar-glow inline-block" />,
+    ownedKey: 'avatar_glow',
   },
   13: {
     label: 'Burbuja oscura',
     desc: 'Tus mensajes en el Chat se ven con fondo oscuro en vez del naranja normal — y así los ve todo el mundo, no solo tú.',
     preview: <span className="w-6 h-3.5 rounded bg-ink inline-block" />,
+    ownedKey: 'dark_bubble',
   },
   14: {
     label: 'Nombre arcoíris',
     desc: 'Tu nombre se muestra con un degradado de colores animado en todos lados: Perfil, Ranking y Chat.',
     preview: <span className="name-rainbow font-bold text-xs">Aa</span>,
+    ownedKey: 'name_rainbow',
   },
 }
 
@@ -193,11 +196,13 @@ export default function Missions() {
                       return (
                         <div key={b.id}>
                           <div className="flex items-center gap-1.5 text-xs">
-                            <span className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 bg-ink/5">
-                              <img src={b.image} alt="" className={`w-5 h-5 object-cover ${!b.earned ? 'grayscale opacity-30' : ''}`} />
-                              {!b.earned && <Lock className="w-2.5 h-2.5 text-ink/50 absolute inset-0 m-auto" />}
+                            <span className="relative w-5 h-5 shrink-0 inline-block">
+                              <span className="relative block w-5 h-5 rounded-full overflow-hidden bg-ink/5">
+                                <img src={b.image} alt="" className={`w-5 h-5 object-cover ${!b.earned ? 'grayscale opacity-30' : ''}`} />
+                                {!b.earned && <Lock className="w-2.5 h-2.5 text-ink/50 absolute inset-0 m-auto" />}
+                              </span>
                               {b.earned && (
-                                <span className="absolute bottom-0 right-0 bg-teal rounded-full p-[1px]">
+                                <span className="absolute -bottom-0.5 -right-0.5 bg-teal rounded-full p-[1px] ring-2 ring-white">
                                   <Check className="w-1.5 h-1.5 text-white" strokeWidth={4} />
                                 </span>
                               )}
@@ -206,7 +211,17 @@ export default function Missions() {
                             {special && (
                               <>
                                 <span className="text-ink/25">+</span>
-                                {special.preview}
+                                <span className="relative inline-flex items-center justify-center">
+                                  <span className={!(isAdmin || user?.[special.ownedKey]) ? 'grayscale opacity-30' : ''}>
+                                    {special.preview}
+                                  </span>
+                                  {!(isAdmin || user?.[special.ownedKey]) && <Lock className="w-2.5 h-2.5 text-ink/50 absolute" />}
+                                  {(isAdmin || user?.[special.ownedKey]) && (
+                                    <span className="absolute -bottom-1 -right-1 bg-teal rounded-full p-[1px] ring-2 ring-white">
+                                      <Check className="w-1.5 h-1.5 text-white" strokeWidth={4} />
+                                    </span>
+                                  )}
+                                </span>
                                 <span className="text-ink/70">{special.label}</span>
                                 <button
                                   type="button"
@@ -234,19 +249,17 @@ export default function Missions() {
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {avatarRewards.map((piece) => (
-                            <div
-                              key={piece.id}
-                              title={piece.label}
-                              className="relative w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-ink/10 shrink-0"
-                            >
-                              <img
-                                src={avatarPieceThumb(piece)}
-                                alt={piece.label}
-                                className={`w-full h-full object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
-                              />
-                              {!piece.unlocked && <Lock className="w-3 h-3 text-ink/50 absolute inset-0 m-auto" />}
+                            <div key={piece.id} title={piece.label} className="relative w-8 h-8 shrink-0">
+                              <div className="relative w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-ink/10">
+                                <img
+                                  src={avatarPieceThumb(piece)}
+                                  alt={piece.label}
+                                  className={`w-full h-full object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
+                                />
+                                {!piece.unlocked && <Lock className="w-3 h-3 text-ink/50 absolute inset-0 m-auto" />}
+                              </div>
                               {piece.unlocked && (
-                                <span className="absolute bottom-0 right-0 bg-teal rounded-full p-[1px]">
+                                <span className="absolute -bottom-0.5 -right-0.5 bg-teal rounded-full p-[1px] ring-2 ring-white">
                                   <Check className="w-2 h-2 text-white" strokeWidth={4} />
                                 </span>
                               )}

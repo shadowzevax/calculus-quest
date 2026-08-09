@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import MathText from '@/lib/mathText'
 
-export default function MultipleChoiceExercise({ exercise, onComplete }) {
+export default function MultipleChoiceExercise({ exercise, onComplete, onFeedback }) {
   const questions = exercise.metadata?.questions || []
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState(null)
@@ -20,11 +20,13 @@ export default function MultipleChoiceExercise({ exercise, onComplete }) {
     const isCorrect = selected === q.correct_index
     if (isCorrect) setCorrectCount((c) => c + 1)
     setFeedback({ isCorrect, explanation: q.explanation })
+    onFeedback?.(true)
   }
 
   const next = () => {
     setSelected(null)
     setFeedback(null)
+    onFeedback?.(false)
     if (index < questions.length - 1) {
       setIndex(index + 1)
     } else {

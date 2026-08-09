@@ -227,15 +227,17 @@ export default function Profile() {
                 b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 cursor-not-allowed'
               } ${b.equipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
             >
-              <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center relative">
-                <img
-                  src={b.image}
-                  alt={b.name}
-                  className={`w-full h-full object-cover scale-110 ${!b.earned ? 'grayscale opacity-30' : ''}`}
-                />
-                {!b.earned && <Lock className="w-5 h-5 text-ink/50 absolute drop-shadow" />}
+              <div className="w-16 h-16 mx-auto mb-2 relative">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center relative">
+                  <img
+                    src={b.image}
+                    alt={b.name}
+                    className={`w-full h-full object-cover scale-110 ${!b.earned ? 'grayscale opacity-30' : ''}`}
+                  />
+                  {!b.earned && <Lock className="w-5 h-5 text-ink/50 absolute drop-shadow" />}
+                </div>
                 {b.earned && (
-                  <span className="absolute bottom-0 right-0 bg-teal rounded-full p-0.5">
+                  <span className="absolute bottom-0 right-0 bg-teal rounded-full p-0.5 ring-2 ring-white">
                     <Check className="w-3 h-3 text-white" strokeWidth={3} />
                   </span>
                 )}

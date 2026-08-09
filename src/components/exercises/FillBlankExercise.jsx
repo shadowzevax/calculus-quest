@@ -7,7 +7,7 @@ function normalize(str) {
   return String(str).trim().toLowerCase().replace(/\s+/g, '')
 }
 
-export default function FillBlankExercise({ exercise, onComplete }) {
+export default function FillBlankExercise({ exercise, onComplete, onFeedback }) {
   const problems = exercise.metadata?.problems || []
   const [index, setIndex] = useState(0)
   const [value, setValue] = useState('')
@@ -32,11 +32,13 @@ export default function FillBlankExercise({ exercise, onComplete }) {
     }
     if (isCorrect) setCorrectCount((c) => c + 1)
     setFeedback({ isCorrect, explanation: p.explanation })
+    onFeedback?.(true)
   }
 
   const next = () => {
     setValue('')
     setFeedback(null)
+    onFeedback?.(false)
     if (index < problems.length - 1) {
       setIndex(index + 1)
     } else {

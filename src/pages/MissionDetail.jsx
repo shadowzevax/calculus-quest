@@ -54,9 +54,12 @@ export default function MissionDetail() {
   const [results, setResults] = useState([]) // [{exercise, isCorrect, bonus}] de este intento
   const [retryKey, setRetryKey] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(0)
+  const [timerPaused, setTimerPaused] = useState(false)
   const [speedBonusCount, setSpeedBonusCount] = useState(0)
   const [nextSpeedPiece, setNextSpeedPiece] = useState(null)
   const exerciseStartRef = useRef(0)
+  const pausedMsRef = useRef(0)
+  const pauseStartRef = useRef(0)
 
   useEffect(() => {
     // Reinicia el estado de la misión anterior — sin esto, al ir a "Siguiente misión" seguía
@@ -77,12 +80,23 @@ export default function MissionDetail() {
   // Cronómetro del ejercicio actual: reinicia cada vez que cambia de ejercicio o se
   // reintenta la misión. Es solo un bono de XP por rapidez, nunca un castigo — si se
   // acaba el tiempo simplemente no hay bono, se puede seguir respondiendo igual.
+  // El cronómetro se congela mientras se muestra la retroalimentación de una sub-pregunta
+  // (ejercicios con varias preguntas) — ese tiempo de lectura no debe seguir corriendo en
+  // contra del estudiante, que ya respondió y solo está esperando para pasar a la siguiente.
+  const timerPausedRef = useRef(false)
+  useEffect(() => { timerPausedRef.current = timerPaused }, [timerPaused])
+
   useEffect(() => {
     const ex = exercises[current]
     if (!ex || mission?.is_collaborative) return
     exerciseStartRef.current = Date.now()
+    pausedMsRef.current = 0
+    pauseStartRef.current = 0
     setSecondsLeft(speedBonusBudget(ex))
-    const interval = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000)
+    setTimerPaused(false)
+    const interval = setInterval(() => {
+      setSecondsLeft((s) => (timerPausedRef.current ? s : Math.max(0, s - 1)))
+    }, 1000)
     return () => clearInterval(interval)
   }, [current, retryKey, exercises, mission])
 
@@ -125,8 +139,19 @@ export default function MissionDetail() {
   const earnedXp = results.filter((r) => r.isCorrect).reduce((sum, r) => sum + (r.exercise.xp_value || 0) + (r.bonus || 0), 0)
   const nextMission = allMissions.find((m) => m.order === mission.order + 1)
 
+  const handleFeedback = (isPaused) => {
+    if (isPaused && !pauseStartRef.current) {
+      pauseStartRef.current = Date.now()
+    } else if (!isPaused && pauseStartRef.current) {
+      pausedMsRef.current += Date.now() - pauseStartRef.current
+      pauseStartRef.current = 0
+    }
+    setTimerPaused(isPaused)
+  }
+
   const handleComplete = async ({ isCorrect }) => {
-    const withinBudget = Date.now() - exerciseStartRef.current <= speedBonusBudget(exercise) * 1000
+    const elapsedMs = Date.now() - exerciseStartRef.current - pausedMsRef.current
+    const withinBudget = elapsedMs <= speedBonusBudget(exercise) * 1000
     const bonus = isCorrect && withinBudget ? BONUS_XP : 0
     if (isCorrect) {
       try {
@@ -182,7 +207,7 @@ export default function MissionDetail() {
           <p className="text-ink/50 mt-1">{mission.story || mission.description}</p>
         </div>
 
-        <div className="flex gap-3 ml-auto">
+        <div className="flex gap-3 ml-auto items-start">
           {timerActive && (
             <div className={`shrink-0 rounded-2xl px-5 py-4 text-center min-w-[160px] border-2 ${
               timeExpired ? 'bg-ink/[0.02] border-ink/10' : 'bg-white border-gold/30'
@@ -190,12 +215,12 @@ export default function MissionDetail() {
               <div className={`text-[10px] font-mono-lab uppercase tracking-wide mb-1 ${timeExpired ? 'text-ink/30' : 'text-ink/40'}`}>
                 Bono si respondes rápido
               </div>
-              <div className={`text-3xl font-display font-bold flex items-center justify-center gap-1.5 ${timeExpired ? 'text-ink/25' : 'text-gold'}`}>
-                <Zap className="w-6 h-6" />
+              <div className={`text-3xl font-display font-bold flex items-center justify-center gap-1.5 ${timeExpired ? 'text-ink/25' : timerPaused ? 'text-teal' : 'text-gold'}`}>
+                {timerPaused && !timeExpired ? <CheckCircle2 className="w-6 h-6" /> : <Zap className="w-6 h-6" />}
                 {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
               </div>
-              <div className={`text-[11px] font-mono-lab mt-1.5 ${timeExpired ? 'text-ink/25' : 'text-coral'}`}>
-                {timeExpired ? 'Tiempo agotado' : `+${BONUS_XP} XP extra`}
+              <div className={`text-[11px] font-mono-lab mt-1.5 ${timeExpired ? 'text-ink/25' : timerPaused ? 'text-teal' : 'text-coral'}`}>
+                {timeExpired ? 'Tiempo agotado' : timerPaused ? 'Pausado — respuesta enviada' : `+${BONUS_XP} XP extra`}
               </div>
               <div className={`text-[10px] mt-1 ${timeExpired ? 'text-ink/20' : 'text-ink/35'}`}>
                 {speedProgress}/5 bonos para tu próxima pieza de avatar
@@ -242,7 +267,7 @@ export default function MissionDetail() {
             <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
           </div>
           {Component ? (
-            <Component key={`${exercise.id}-${retryKey}`} exercise={exercise} onComplete={handleComplete} />
+            <Component key={`${exercise.id}-${retryKey}`} exercise={exercise} onComplete={handleComplete} onFeedback={handleFeedback} />
           ) : (
             <p className="text-red-500 text-sm">Tipo de ejercicio no soportado: {exercise.type}</p>
           )}

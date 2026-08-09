@@ -202,22 +202,24 @@ export default function AvatarPicker({ user, onSaved }) {
               disabled={!piece.unlocked}
               onClick={() => choose(tab, piece.value)}
               title={piece.unlocked ? piece.label : `${piece.label} — ${hint}`}
-              className={`aspect-square rounded-lg border overflow-hidden flex items-center justify-center relative ${
+              className={`aspect-square rounded-lg border flex items-center justify-center relative ${
                 isSelected ? 'border-coral ring-2 ring-coral/40' : 'border-ink/10'
               } ${!piece.unlocked ? 'bg-ink/5 cursor-not-allowed' : 'bg-white hover:border-coral/40'}`}
             >
-              {thumb && (
-                <img
-                  src={thumb}
-                  alt={piece.label}
-                  className={`w-full h-full object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
-                />
-              )}
-              {!piece.unlocked && (
-                <Lock className="w-4 h-4 text-ink/50 absolute drop-shadow" />
-              )}
+              <span className="absolute inset-0 rounded-lg overflow-hidden flex items-center justify-center">
+                {thumb && (
+                  <img
+                    src={thumb}
+                    alt={piece.label}
+                    className={`w-full h-full object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
+                  />
+                )}
+                {!piece.unlocked && (
+                  <Lock className="w-4 h-4 text-ink/50 absolute drop-shadow" />
+                )}
+              </span>
               {piece.unlocked && piece.unlock_type !== 'starter' && (
-                <span className="absolute bottom-0.5 right-0.5 bg-teal rounded-full p-0.5">
+                <span className="absolute -bottom-1 -right-1 bg-teal rounded-full p-0.5 ring-2 ring-white">
                   <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
                 </span>
               )}
