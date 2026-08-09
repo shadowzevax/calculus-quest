@@ -6,18 +6,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
 import { MissionsGridSkeleton } from '@/components/Skeleton'
-import { buildAvatarDataUri } from '@/lib/avatarBuilder'
-
-// Config base neutral para renderizar la miniatura de una sola pieza de avatar (el resto
-// del muñeco queda con valores por defecto, solo cambia lo que se quiere mostrar).
-const AVATAR_PREVIEW_BASE = {
-  top: 'shortFlat', clothing: 'shirtCrewNeck', skinColor: 'edb98a', hairColor: '2c1b18',
-  clothesColor: '65c9ff', eyes: 'default', eyebrows: 'default', mouth: 'smile',
-}
-function avatarPieceThumb(piece) {
-  const key = piece.category === 'top' ? 'top' : piece.category
-  return buildAvatarDataUri({ ...AVATAR_PREVIEW_BASE, [key]: piece.value, seed: piece.id })
-}
+import { avatarPieceThumb, pieceCropStyle, isColorPiece } from '@/lib/avatarPiecePreview'
 
 const difficultyStyle = {
   facil: 'bg-teal/10 text-teal',
@@ -253,23 +242,34 @@ export default function Missions() {
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {avatarRewards.map((piece) => (
-                            <div key={piece.id} title={piece.label} className="relative w-8 h-8 shrink-0">
-                              <div className="relative w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-ink/10">
-                                <img
-                                  src={avatarPieceThumb(piece)}
-                                  alt={piece.label}
-                                  className={`w-full h-full object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
-                                />
-                                {!piece.unlocked && <Lock className="w-3 h-3 text-ink/50 absolute inset-0 m-auto" />}
+                          {avatarRewards.map((piece) => {
+                            const crop = pieceCropStyle(piece)
+                            return (
+                              <div key={piece.id} title={piece.label} className="relative w-8 h-8 shrink-0">
+                                <div className="relative w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-ink/10">
+                                  {isColorPiece(piece) ? (
+                                    <div
+                                      className={`w-full h-full ${!piece.unlocked ? 'opacity-30' : ''}`}
+                                      style={{ backgroundColor: `#${piece.value}` }}
+                                    />
+                                  ) : (
+                                    <img
+                                      src={avatarPieceThumb(piece, user?.avatar_gender)}
+                                      alt={piece.label}
+                                      style={crop || undefined}
+                                      className={`${crop ? '' : 'w-full h-full'} object-cover ${!piece.unlocked ? 'grayscale opacity-30' : ''}`}
+                                    />
+                                  )}
+                                  {!piece.unlocked && <Lock className="w-3 h-3 text-ink/50 absolute inset-0 m-auto drop-shadow" />}
+                                </div>
+                                {piece.unlocked && (
+                                  <span className="absolute -bottom-0.5 -right-0.5 bg-teal rounded-full p-[1px] ring-2 ring-white">
+                                    <Check className="w-2 h-2 text-white" strokeWidth={4} />
+                                  </span>
+                                )}
                               </div>
-                              {piece.unlocked && (
-                                <span className="absolute -bottom-0.5 -right-0.5 bg-teal rounded-full p-[1px] ring-2 ring-white">
-                                  <Check className="w-2 h-2 text-white" strokeWidth={4} />
-                                </span>
-                              )}
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}

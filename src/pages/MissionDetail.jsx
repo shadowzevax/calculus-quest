@@ -8,18 +8,7 @@ import FillBlankExercise from '@/components/exercises/FillBlankExercise'
 import TrueFalseExercise from '@/components/exercises/TrueFalseExercise'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import EscapeRoomGame from '@/components/EscapeRoomGame'
-import { buildAvatarDataUri } from '@/lib/avatarBuilder'
-
-// Config base neutral para renderizar la miniatura de una sola pieza de avatar (igual que en
-// Missions.jsx: solo cambia la pieza que se quiere mostrar, el resto queda por defecto).
-const AVATAR_PREVIEW_BASE = {
-  top: 'shortFlat', clothing: 'shirtCrewNeck', skinColor: 'edb98a', hairColor: '2c1b18',
-  clothesColor: '65c9ff', eyes: 'default', eyebrows: 'default', mouth: 'smile',
-}
-function avatarPieceThumb(piece) {
-  const key = piece.category === 'top' ? 'top' : piece.category
-  return buildAvatarDataUri({ ...AVATAR_PREVIEW_BASE, [key]: piece.value, seed: piece.id })
-}
+import { avatarPieceThumb, pieceCropStyle, isColorPiece } from '@/lib/avatarPiecePreview'
 
 // Cada ejercicio tiene un `type`; este mapa elige qué componente lo renderiza
 // (evita un if/else gigante). Nuevo tipo = nuevo componente + una línea aquí.
@@ -249,8 +238,17 @@ export default function MissionDetail() {
                     {speedBonusCount % SPEED_BONUS_GROUP}/{SPEED_BONUS_GROUP} bonos para esta pieza:
                   </div>
                   <div className="flex items-center justify-center gap-1.5 mt-2 pt-2 border-t border-ink/10">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-gold/30 shrink-0">
-                      <img src={avatarPieceThumb(nextSpeedPiece)} alt={nextSpeedPiece.label} className="w-full h-full object-cover grayscale opacity-60" />
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-gold/30 shrink-0">
+                      {isColorPiece(nextSpeedPiece) ? (
+                        <div className="w-full h-full opacity-60" style={{ backgroundColor: `#${nextSpeedPiece.value}` }} />
+                      ) : (
+                        <img
+                          src={avatarPieceThumb(nextSpeedPiece, user?.avatar_gender)}
+                          alt={nextSpeedPiece.label}
+                          style={pieceCropStyle(nextSpeedPiece) || undefined}
+                          className={`${pieceCropStyle(nextSpeedPiece) ? '' : 'w-full h-full'} object-cover grayscale opacity-60`}
+                        />
+                      )}
                     </div>
                     <span className="text-[10px] text-ink/40 text-left">{nextSpeedPiece.label}</span>
                   </div>

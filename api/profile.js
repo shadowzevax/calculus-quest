@@ -15,12 +15,27 @@ export default async function handler(req, res) {
     const isTeacher = user.role === 'admin';
     const [{ avatar_config, speed_bonus_count, avatar_gender }] = await sql`SELECT avatar_config, speed_bonus_count, avatar_gender FROM users WHERE id = ${user.id}`;
     const gender = avatar_gender || 'unisex';
+    // El orden debe reflejar que tan pronto se consigue cada pieza en la practica: starter
+    // (ya la tiene) primero, luego las de mision en orden de mision, luego las de bono de
+    // velocidad en orden de tier, y las de la mision cooperativa (finale) al final. Antes se
+    // ordenaba solo por unlock_mission_order con NULLS FIRST, lo que hacia que las piezas de
+    // velocidad (sin numero de mision) aparecieran justo despues de las starter — antes que
+    // piezas de mision 1, 3, etc. — aunque tardan mucho mas en conseguirse en la practica.
     const pieces = await sql`
       SELECT ap.*, uap.unlocked_at
       FROM avatar_pieces ap
       LEFT JOIN user_avatar_pieces uap ON uap.piece_id = ap.id AND uap.user_id = ${user.id}
       WHERE ap.gender = 'unisex' OR ap.gender = ${gender}
-      ORDER BY ap.category, ap.unlock_mission_order NULLS FIRST, ap.speed_tier NULLS FIRST
+      ORDER BY ap.category,
+        CASE ap.unlock_type
+          WHEN 'starter' THEN 0
+          WHEN 'mission' THEN 1
+          WHEN 'speed' THEN 2
+          WHEN 'finale' THEN 3
+          ELSE 4
+        END,
+        ap.unlock_mission_order NULLS LAST,
+        ap.speed_tier NULLS LAST
     `;
     return res.status(200).json({
       pieces: pieces.map((p) => ({ ...p, unlocked: isTeacher || p.unlock_type === 'starter' || !!p.unlocked_at })),
