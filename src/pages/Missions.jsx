@@ -88,10 +88,15 @@ export default function Missions() {
   // ya se ganó, si está bloqueada, o si quien mira es docente — para que sirva de referencia.
   const rewardsFor = (mission) => badges.filter((b) => b.requirement_value === mission.order)
   // Piezas de avatar que se desbloquean en esta misión (ya vienen filtradas por el genero de
-  // avatar que eligio el usuario, desde el propio backend).
+  // avatar que eligio el usuario, desde el propio backend). Se excluyen las que ya están
+  // desbloqueadas — sobre todo colores: el color inicial del avatar (el que ya trae desde que
+  // se registró) vive en el catálogo asignado a alguna misión al azar, pero para quien ya lo
+  // tiene no tiene sentido mostrarlo como si fuera algo nuevo por ganar en esa misión.
   const avatarPiecesFor = (mission) => avatarPieces.filter((p) =>
-    (p.unlock_type === 'mission' && p.unlock_mission_order === mission.order) ||
-    (p.unlock_type === 'finale' && mission.order === 14)
+    !p.unlocked && (
+      (p.unlock_type === 'mission' && p.unlock_mission_order === mission.order) ||
+      (p.unlock_type === 'finale' && mission.order === 14)
+    )
   )
 
   if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
