@@ -2,6 +2,10 @@
 // mision (progress.js y rooms.js) y despues de ganar un bono de velocidad (progress.js).
 import { sql } from './_db.js';
 
+// Cuantos bonos de velocidad hay que acumular para desbloquear la siguiente pieza de avatar
+// (objeto avatar = cualquier cosa de la librería: peinado, gorro, ropa, accesorio, color, etc).
+export const SPEED_BONUS_GROUP = 3;
+
 export async function checkAndUnlockAvatarPieces(userId) {
   const alreadyUnlocked = await sql`SELECT piece_id FROM user_avatar_pieces WHERE user_id = ${userId}`;
   const unlockedIds = new Set(alreadyUnlocked.map((r) => r.piece_id));
@@ -14,15 +18,16 @@ export async function checkAndUnlockAvatarPieces(userId) {
   // especifico de genero — solo lo unisex, hasta que elija en Mi Perfil.
   const gender = avatar_gender || 'unisex';
 
-  // Cada bono de velocidad ganado desbloquea directamente una pieza (o varias, si comparten
-  // tier) — ya no hay que acumular 5 bonos para recibir algo.
+  // Cada SPEED_BONUS_GROUP bonos de velocidad acumulados desbloquea la siguiente pieza (o
+  // varias, si comparten tier) — igual que las misiones, es un premio por acumular progreso,
+  // no algo que se gane en un solo intento.
   const candidates = await sql`
     SELECT * FROM avatar_pieces
     WHERE (gender = 'unisex' OR gender = ${gender})
       AND (
         (unlock_type = 'mission' AND unlock_mission_order <= ${missionsCompleted})
         OR (unlock_type = 'finale' AND unlock_mission_order <= ${missionsCompleted})
-        OR (unlock_type = 'speed' AND speed_tier <= ${speed_bonus_count})
+        OR (unlock_type = 'speed' AND speed_tier <= ${Math.floor(speed_bonus_count / SPEED_BONUS_GROUP)})
       )
   `;
 

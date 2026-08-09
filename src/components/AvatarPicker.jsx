@@ -26,17 +26,22 @@ const COLOR_CATEGORIES = [
   { key: 'clothesColor', label: 'COLOR DE ROPA' },
 ]
 
-const DEFAULT_CONFIG = {
-  top: 'shortFlat', clothing: 'shirtCrewNeck', accessories: '', facialHair: '', clothingGraphic: '',
-  skinColor: 'edb98a', hairColor: '2c1b18', clothesColor: '65c9ff',
-  eyes: 'default', eyebrows: 'default', mouth: 'smile',
+// El avatar por defecto de cada género — el mismo que se ofrece al elegir género por primera
+// vez, tanto en el registro como en "Elegir avatar" de Mi Perfil.
+function defaultConfigFor(gender) {
+  return {
+    top: gender === 'female' ? 'bob' : 'shortFlat',
+    clothing: 'shirtCrewNeck', accessories: '', facialHair: '', clothingGraphic: '',
+    skinColor: 'edb98a', hairColor: '2c1b18', clothesColor: gender === 'female' ? 'ff488e' : '5199e4',
+    eyes: 'default', eyebrows: 'default', mouth: 'smile',
+  }
 }
 
 function unlockHint(piece) {
   if (piece.unlock_type === 'starter') return null
   if (piece.unlock_type === 'mission') return `Se desbloquea al completar la misión ${piece.unlock_mission_order}`
   if (piece.unlock_type === 'finale') return 'Se desbloquea al completar la misión cooperativa (Escape Room)'
-  if (piece.unlock_type === 'speed') return `Se desbloquea tras ganar el bono de velocidad ${piece.speed_tier * 5} veces`
+  if (piece.unlock_type === 'speed') return `Se desbloquea tras ganar el bono de velocidad ${piece.speed_tier * 3} veces`
   return null
 }
 
@@ -44,7 +49,7 @@ export default function AvatarPicker({ user, onSaved }) {
   const [pieces, setPieces] = useState([])
   const [speedBonusCount, setSpeedBonusCount] = useState(0)
   const [gender, setGender] = useState(user.avatar_gender || null)
-  const [config, setConfig] = useState(user.avatar_config || DEFAULT_CONFIG)
+  const [config, setConfig] = useState(user.avatar_config || defaultConfigFor(user.avatar_gender))
   const [tab, setTab] = useState('hair')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -55,7 +60,16 @@ export default function AvatarPicker({ user, onSaved }) {
       setPieces(r.pieces)
       setSpeedBonusCount(r.speed_bonus_count || 0)
       setGender(r.avatar_gender || null)
-      if (r.config) setConfig(r.config)
+      if (r.config) {
+        setConfig(r.config)
+      } else if (r.avatar_gender) {
+        // Cuenta vieja de antes de este sistema: ya tiene género elegido pero nunca se le
+        // guardó un avatar_config — se le asigna el mismo por defecto que a una cuenta nueva
+        // y se guarda, para que también reciba el color inicial desbloqueado.
+        const fallback = defaultConfigFor(r.avatar_gender)
+        setConfig(fallback)
+        api.profile.update({ avatar_config: fallback }).catch(() => {})
+      }
     }).catch(() => {})
   }
 
@@ -66,12 +80,7 @@ export default function AvatarPicker({ user, onSaved }) {
     // Al elegir género se guarda de una vez un avatar por defecto (la primera pieza starter
     // de ese género) — antes se quedaba con el config previo (a veces de otro género), y la
     // vista previa no coincidía con nada de lo que se veía desbloqueado en la grilla.
-    const defaultConfig = {
-      top: g === 'female' ? 'bob' : 'shortFlat',
-      clothing: 'shirtCrewNeck',
-      skinColor: 'edb98a', hairColor: '2c1b18', clothesColor: g === 'female' ? 'ff488e' : '5199e4',
-      eyes: 'default', eyebrows: 'default', mouth: 'smile',
-    }
+    const defaultConfig = defaultConfigFor(g)
     setConfig(defaultConfig)
     try {
       await api.profile.update({ avatar_gender: g, avatar_config: defaultConfig })

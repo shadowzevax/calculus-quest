@@ -61,15 +61,19 @@ export default async function handler(req, res) {
 
   const removingAvatar = avatar === ''; // cadena vacía = "quitar foto", null/undefined = "sin cambios"
 
-  // Si esta es la primera vez que el usuario elige género (viene de "Elegir avatar" en Mi
-  // Perfil), el color con el que arranca su avatar por defecto se desbloquea para él —
-  // los demás colores quedan bloqueados como cualquier otra pieza.
-  let grantColorsAfter = null;
-  if (!isTeacher && avatar_gender && avatar_config) {
-    const [{ avatar_gender: currentGender }] = await sql`SELECT avatar_gender FROM users WHERE id = ${user.id}`;
-    if (!currentGender) grantColorsAfter = avatar_config;
+  // Mientras el usuario no tenga ningún color desbloqueado todavía (cuenta nueva, o cuenta
+  // vieja de antes de que los colores se gatearan), el color con el que se guarda su avatar
+  // por defecto se desbloquea para él — los demás colores quedan bloqueados como cualquier
+  // otra pieza. No se limita a "la primera vez que elige género" para que las cuentas viejas
+  // también se autocorrijan la próxima vez que guarden su avatar.
+  if (!isTeacher && avatar_config) {
+    const [{ count: ownedColors }] = await sql`
+      SELECT COUNT(*)::int AS count FROM user_avatar_pieces uap
+      JOIN avatar_pieces ap ON ap.id = uap.piece_id
+      WHERE uap.user_id = ${user.id} AND ap.category IN ('skinColor', 'hairColor', 'clothesColor')
+    `;
+    if (ownedColors === 0) await grantStarterColors(user.id, avatar_config);
   }
-  if (grantColorsAfter) await grantStarterColors(user.id, grantColorsAfter);
 
   try {
     if (!isTeacher && avatar && !removingAvatar) {

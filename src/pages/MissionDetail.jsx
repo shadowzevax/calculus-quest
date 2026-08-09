@@ -31,6 +31,9 @@ const EXERCISE_COMPONENTS = {
 }
 
 const BONUS_XP = 5
+// Debe coincidir con SPEED_BONUS_GROUP en api/_avatar.js — cuantos bonos de velocidad hay que
+// acumular para desbloquear la siguiente pieza de avatar (peinado, gorro, ropa, color, etc).
+const SPEED_BONUS_GROUP = 3
 
 // Cuanto dura la ventana de "bono de velocidad": varia segun el tipo de ejercicio (no es lo
 // mismo elegir una opcion que escribir una respuesta abierta, que exige calcular en papel) y
@@ -243,7 +246,7 @@ export default function MissionDetail() {
               {nextSpeedPiece && (
                 <>
                   <div className={`text-[10px] mt-1 ${timeExpired ? 'text-ink/20' : 'text-ink/35'}`}>
-                    Este bono te da directamente esta pieza:
+                    {speedBonusCount % SPEED_BONUS_GROUP}/{SPEED_BONUS_GROUP} bonos para esta pieza:
                   </div>
                   <div className="flex items-center justify-center gap-1.5 mt-2 pt-2 border-t border-ink/10">
                     <div className="w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-gold/30 shrink-0">
