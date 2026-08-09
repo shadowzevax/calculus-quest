@@ -1,7 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
 import MiniCurve from '@/components/MiniCurve'
+import { buildAvatarDataUri } from '@/lib/avatarBuilder'
+
+const PRESETS = [
+  { id: 'm1', gender: 'male', top: 'shortFlat', clothing: 'shirtCrewNeck', clothesColor: '5199e4', skinColor: 'edb98a', hairColor: '2c1b18' },
+  { id: 'm2', gender: 'male', top: 'shortRound', clothing: 'hoodie', clothesColor: '25557c', skinColor: 'd08b5b', hairColor: '4a312c' },
+  { id: 'f1', gender: 'female', top: 'bob', clothing: 'shirtCrewNeck', clothesColor: 'ff488e', skinColor: 'edb98a', hairColor: '2c1b18' },
+  { id: 'f2', gender: 'female', top: 'bun', clothing: 'hoodie', clothesColor: 'ffafb9', skinColor: 'd08b5b', hairColor: '724133' },
+]
 
 export default function Login() {
   const { login, register } = useAuth()
@@ -10,18 +18,33 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [presetId, setPresetId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const previews = useMemo(
+    () => PRESETS.map((p) => ({ ...p, uri: buildAvatarDataUri({ ...p, eyes: 'default', eyebrows: 'default', mouth: 'smile', seed: p.id }) })),
+    []
+  )
 
   const submit = async (e) => {
     e.preventDefault()
     setError('')
+    if (mode === 'register' && !presetId) {
+      setError('Elige un avatar para empezar.')
+      return
+    }
     setLoading(true)
     try {
       if (mode === 'login') {
         await login(email, password)
       } else {
-        await register({ email, password, full_name: fullName })
+        const preset = PRESETS.find((p) => p.id === presetId)
+        await register({
+          email, password, full_name: fullName,
+          avatar_gender: preset.gender,
+          avatar_config: { top: preset.top, clothing: preset.clothing, clothesColor: preset.clothesColor, skinColor: preset.skinColor, hairColor: preset.hairColor },
+        })
       }
       navigate('/')
     } catch (err) {
@@ -52,12 +75,31 @@ export default function Login() {
 
       <form onSubmit={submit} className="space-y-3">
         {mode === 'register' && (
-          <input
-            className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
-            placeholder="Nombre completo"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
+          <>
+            <input
+              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
+              placeholder="Nombre completo"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+            <div>
+              <p className="text-sm text-ink/50 mb-2">Elige tu avatar (podrás personalizarlo más adelante)</p>
+              <div className="grid grid-cols-4 gap-2">
+                {previews.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPresetId(p.id)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                      presetId === p.id ? 'border-coral' : 'border-transparent hover:border-ink/15'
+                    }`}
+                  >
+                    <img src={p.uri} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
         <input
           className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"

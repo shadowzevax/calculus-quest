@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Icons from 'lucide-react'
-import { HelpCircle, Camera } from 'lucide-react'
+import { HelpCircle, Camera, Shirt } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
@@ -49,6 +49,7 @@ export default function Missions() {
   const [missions, setMissions] = useState([])
   const [progress, setProgress] = useState([])
   const [badges, setBadges] = useState([])
+  const [avatarPieces, setAvatarPieces] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [openInfo, setOpenInfo] = useState(null)
@@ -60,16 +61,23 @@ export default function Missions() {
       api.missions.list('misiones'),
       user ? api.progress.list().catch(() => []) : Promise.resolve([]),
       user ? api.badges.list().catch(() => []) : Promise.resolve([]),
+      user && !isAdmin ? api.profile.avatarCatalog().then((r) => r.pieces).catch(() => []) : Promise.resolve([]),
     ])
-      .then(([m, p, b]) => { setMissions(m); setProgress(p); setBadges(b) })
+      .then(([m, p, b, ap]) => { setMissions(m); setProgress(p); setBadges(b); setAvatarPieces(ap) })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [user])
+  }, [user, isAdmin])
 
   // Insignia que otorga esta misión en particular, según su número de orden. Es información
   // de catálogo (qué recompensa da cada misión), así que se muestra siempre — sin importar si
   // ya se ganó, si está bloqueada, o si quien mira es docente — para que sirva de referencia.
   const rewardsFor = (mission) => badges.filter((b) => b.requirement_value === mission.order)
+  // Piezas de avatar que se desbloquean en esta misión (ya vienen filtradas por el genero de
+  // avatar que eligio el usuario, desde el propio backend).
+  const avatarPiecesFor = (mission) => avatarPieces.filter((p) =>
+    (p.unlock_type === 'mission' && p.unlock_mission_order === mission.order) ||
+    (p.unlock_type === 'finale' && mission.order === 14)
+  )
 
   if (error) return <p className="text-red-500 text-sm">Error: {error}</p>
 
@@ -94,6 +102,7 @@ export default function Missions() {
             return prevMission && pr.mission_id === prevMission.id && pr.progress_percentage >= 100
           })
           const rewards = rewardsFor(m)
+          const avatarRewards = avatarPiecesFor(m)
 
           return (
             <div
@@ -140,7 +149,7 @@ export default function Missions() {
                     <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
                   </div>
                 )}
-                {(rewards.length > 0 || STANDALONE_REWARDS[m.order]) && (
+                {(rewards.length > 0 || STANDALONE_REWARDS[m.order] || avatarRewards.length > 0) && (
                   <div className="mt-2.5 pt-2.5 border-t border-ink/5 space-y-1.5">
                     <p className="text-[10px] font-mono-lab text-ink/35 tracking-wide">RECOMPENSA AL COMPLETAR</p>
                     {STANDALONE_REWARDS[m.order] && (() => {
@@ -196,6 +205,33 @@ export default function Missions() {
                         </div>
                       )
                     })}
+                    {avatarRewards.length > 0 && (() => {
+                      const infoKey = `${m.id}-avatar`
+                      const isOpen = openInfo === infoKey
+                      return (
+                        <div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Shirt className="w-4 h-4 text-blueprint shrink-0" />
+                            <span className="text-ink/70">
+                              {avatarRewards.length === 1 ? '1 pieza para tu avatar' : `${avatarRewards.length} piezas para tu avatar`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setOpenInfo(isOpen ? null : infoKey)}
+                              className="text-ink/35 hover:text-coral transition-colors"
+                              aria-label="Qué piezas de avatar da esta misión"
+                            >
+                              <HelpCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          {isOpen && (
+                            <p className="text-[11px] text-ink/50 mt-1 pl-6 pr-1">
+                              {avatarRewards.map((p) => p.label).join(', ')} — personalizables en Mi Perfil.
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
                 <button

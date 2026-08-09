@@ -8,19 +8,42 @@ export default async function handler(req, res) {
   const action = req.query.action;
 
   if (action === 'register' && req.method === 'POST') {
-    const { email, password, full_name } = req.body || {};
+    const { email, password, full_name, avatar_gender, avatar_config } = req.body || {};
     if (!email || !password || password.length < 6) {
       return res.status(400).json({ error: 'Email y contraseña (mín. 6 caracteres) son requeridos' });
     }
     const existing = await sql`SELECT id FROM users WHERE email = ${email}`;
     if (existing.length > 0) return res.status(409).json({ error: 'Ese correo ya está registrado' });
 
+    // El avatar inicial se elige entre las piezas "starter" del genero elegido — se revalida
+    // en el servidor (no se confia en lo que mande el cliente) para que nadie pueda registrarse
+    // ya con una pieza rara sin haberla ganado.
+    let gender = null;
+    let config = null;
+    if (avatar_gender === 'male' || avatar_gender === 'female') {
+      const starterTop = await sql`SELECT value FROM avatar_pieces WHERE unlock_type = 'starter' AND category = 'top' AND gender = ${avatar_gender}`;
+      const starterClothing = await sql`SELECT value FROM avatar_pieces WHERE unlock_type = 'starter' AND category = 'clothing'`;
+      const validTop = new Set(starterTop.map((r) => r.value));
+      const validClothing = new Set(starterClothing.map((r) => r.value));
+      if (avatar_config && validTop.has(avatar_config.top) && validClothing.has(avatar_config.clothing)) {
+        gender = avatar_gender;
+        config = {
+          top: avatar_config.top,
+          clothing: avatar_config.clothing,
+          skinColor: /^[a-fA-F0-9]{6}$/.test(avatar_config.skinColor || '') ? avatar_config.skinColor : 'edb98a',
+          hairColor: /^[a-fA-F0-9]{6}$/.test(avatar_config.hairColor || '') ? avatar_config.hairColor : '2c1b18',
+          clothesColor: /^[a-fA-F0-9]{6}$/.test(avatar_config.clothesColor || '') ? avatar_config.clothesColor : (avatar_gender === 'male' ? '5199e4' : 'ff488e'),
+          eyes: 'default', eyebrows: 'default', mouth: 'smile',
+        };
+      }
+    }
+
     // bcrypt guarda un hash irreversible, nunca la contraseña real.
     const password_hash = await bcrypt.hash(password, 10);
     const [user] = await sql`
-      INSERT INTO users (email, password_hash, full_name, role)
-      VALUES (${email}, ${password_hash}, ${full_name || email.split('@')[0]}, 'user')
-      RETURNING id, email, full_name, role, xp, level, avatar, avatar_config
+      INSERT INTO users (email, password_hash, full_name, role, avatar_gender, avatar_config)
+      VALUES (${email}, ${password_hash}, ${full_name || email.split('@')[0]}, 'user', ${gender}, ${config ? JSON.stringify(config) : null}::jsonb)
+      RETURNING id, email, full_name, role, xp, level, avatar, avatar_config, avatar_gender
     `;
     const token = signToken(user);
     setAuthCookie(res, token);
@@ -53,7 +76,7 @@ export default async function handler(req, res) {
     const authUser = getUserFromRequest(req);
     if (!authUser) return res.status(401).json({ error: 'No autenticado' });
     const [user] = await sql`
-      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, name_rainbow, dark_bubble, avatar_glow, avatar_config
+      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, name_rainbow, dark_bubble, avatar_glow, avatar_config, avatar_gender
       FROM users WHERE id = ${authUser.id}
     `;
     if (!user) return res.status(401).json({ error: 'No autenticado' });

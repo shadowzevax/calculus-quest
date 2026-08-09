@@ -9,26 +9,32 @@ export default async function handler(req, res) {
   if (!user) return;
 
   if (req.method === 'GET') {
-    // Catalogo del avatar armable: todas las piezas, marcando cuales ya desbloqueo este
-    // usuario (las "starter" siempre cuentan como desbloqueadas para todos).
+    // Catalogo del avatar armable: solo las piezas unisex + las del genero elegido por el
+    // usuario, marcando cuales ya desbloqueo (las "starter" siempre cuentan como desbloqueadas).
     const isTeacher = user.role === 'admin';
+    const [{ avatar_config, speed_bonus_count, avatar_gender }] = await sql`SELECT avatar_config, speed_bonus_count, avatar_gender FROM users WHERE id = ${user.id}`;
+    const gender = avatar_gender || 'unisex';
     const pieces = await sql`
       SELECT ap.*, uap.unlocked_at
       FROM avatar_pieces ap
       LEFT JOIN user_avatar_pieces uap ON uap.piece_id = ap.id AND uap.user_id = ${user.id}
+      WHERE ap.gender = 'unisex' OR ap.gender = ${gender}
       ORDER BY ap.category, ap.unlock_mission_order NULLS FIRST, ap.speed_tier NULLS FIRST
     `;
-    const [{ avatar_config, speed_bonus_count }] = await sql`SELECT avatar_config, speed_bonus_count FROM users WHERE id = ${user.id}`;
     return res.status(200).json({
       pieces: pieces.map((p) => ({ ...p, unlocked: isTeacher || p.unlock_type === 'starter' || !!p.unlocked_at })),
       config: avatar_config,
       speed_bonus_count,
+      avatar_gender,
     });
   }
 
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { full_name, bio, avatar, current_password, new_password, name_rainbow, dark_bubble, avatar_glow, avatar_config } = req.body || {};
+  const { full_name, bio, avatar, current_password, new_password, name_rainbow, dark_bubble, avatar_glow, avatar_config, avatar_gender } = req.body || {};
+  if (avatar_gender && !['male', 'female'].includes(avatar_gender)) {
+    return res.status(400).json({ error: 'Género de avatar inválido' });
+  }
 
   // El nombre arcoiris, la burbuja oscura y el aro del avatar son recompensas cosmeticas por
   // progreso: solo se activan tras alcanzar la insignia correspondiente.
@@ -107,9 +113,10 @@ export default async function handler(req, res) {
       name_rainbow = COALESCE(${name_rainbow}, name_rainbow),
       dark_bubble = COALESCE(${dark_bubble}, dark_bubble),
       avatar_glow = COALESCE(${avatar_glow}, avatar_glow),
-      avatar_config = COALESCE(${avatar_config ? JSON.stringify(avatar_config) : null}::jsonb, avatar_config)
+      avatar_config = COALESCE(${avatar_config ? JSON.stringify(avatar_config) : null}::jsonb, avatar_config),
+      avatar_gender = COALESCE(${avatar_gender || null}, avatar_gender)
     WHERE id = ${user.id}
-    RETURNING id, email, full_name, role, avatar, bio, xp, level, name_rainbow, dark_bubble, avatar_glow, avatar_config
+    RETURNING id, email, full_name, role, avatar, bio, xp, level, name_rainbow, dark_bubble, avatar_glow, avatar_config, avatar_gender
   `;
   res.status(200).json({ user: updated });
 }

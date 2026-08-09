@@ -4,7 +4,8 @@ import { api } from '@/lib/api'
 import { buildAvatarDataUri } from '@/lib/avatarBuilder'
 
 const CATEGORY_LABELS = {
-  top: 'Peinado / gorro',
+  hair: 'Peinado',
+  hat: 'Gorro',
   accessories: 'Accesorios',
   facialHair: 'Vello facial',
   clothing: 'Ropa',
@@ -13,7 +14,11 @@ const CATEGORY_LABELS = {
   eyebrows: 'Cejas',
   mouth: 'Boca',
 }
-const CATEGORIES = ['top', 'clothing', 'accessories', 'facialHair', 'clothingGraphic']
+// "hair" y "hat" son las dos mitades de la categoria "top" de DiceBear — se separan aqui
+// solo para la interfaz (el usuario pidio que no aparecieran mezcladas), pero las dos
+// escriben en config.top porque asi lo espera la libreria.
+const TAB_CONFIG_KEY = { hair: 'top', hat: 'top' }
+const CATEGORIES = ['hair', 'hat', 'clothing', 'accessories', 'facialHair', 'clothingGraphic']
 // Ojos/cejas/boca no se desbloquean por progreso (no hay suficiente variedad "emocionante" para
 // repartir como recompensa) — quedan libres desde el inicio, igual que los colores.
 const FREE_CATEGORIES = ['eyes', 'eyebrows', 'mouth']
@@ -53,19 +58,34 @@ function unlockHint(piece) {
 export default function AvatarPicker({ user, onSaved }) {
   const [pieces, setPieces] = useState([])
   const [speedBonusCount, setSpeedBonusCount] = useState(0)
+  const [gender, setGender] = useState(user.avatar_gender || null)
   const [config, setConfig] = useState(user.avatar_config || DEFAULT_CONFIG)
-  const [tab, setTab] = useState('top')
+  const [tab, setTab] = useState('hair')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  const loadCatalog = () => {
     api.profile.avatarCatalog().then((r) => {
       setPieces(r.pieces)
       setSpeedBonusCount(r.speed_bonus_count || 0)
+      setGender(r.avatar_gender || null)
       if (r.config) setConfig(r.config)
     }).catch(() => {})
-  }, [])
+  }
+
+  useEffect(loadCatalog, [])
+
+  const chooseGender = async (g) => {
+    setGender(g)
+    try {
+      await api.profile.update({ avatar_gender: g })
+      loadCatalog()
+      onSaved?.()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
 
   const preview = useMemo(() => {
     try {
@@ -79,10 +99,16 @@ export default function AvatarPicker({ user, onSaved }) {
     if (FREE_CATEGORIES.includes(cat)) {
       return FREE_VALUES[cat].map((value) => ({ id: `${cat}-${value}`, category: cat, value, label: FREE_LABELS[value] || value, unlocked: true }))
     }
+    if (cat === 'hair' || cat === 'hat') return pieces.filter((p) => p.category === 'top' && p.subcategory === cat)
     return pieces.filter((p) => p.category === cat)
   }
 
-  const choose = (cat, value) => setConfig((c) => ({ ...c, [cat]: c[cat] === value ? '' : value }))
+  const configKey = (cat) => TAB_CONFIG_KEY[cat] || cat
+
+  const choose = (cat, value) => {
+    const key = configKey(cat)
+    setConfig((c) => ({ ...c, [key]: c[key] === value ? '' : value }))
+  }
 
   const save = async () => {
     setSaving(true)
@@ -100,6 +126,34 @@ export default function AvatarPicker({ user, onSaved }) {
   }
 
   const showGraphicTab = config.clothing === 'graphicShirt'
+  const showFacialHairTab = gender !== 'female'
+
+  if (!gender) {
+    return (
+      <div>
+        <p className="text-sm text-ink/60 mb-4">Antes de armar tu avatar, elige con cuál empezar:</p>
+        <div className="flex gap-4">
+          <button
+            type="button"
+            onClick={() => chooseGender('male')}
+            className="flex-1 border-2 border-transparent hover:border-blueprint/40 rounded-xl p-4 text-center transition-colors bg-blueprint/5"
+          >
+            <img src={buildAvatarDataUri({ top: 'shortFlat', clothing: 'shirtCrewNeck', clothesColor: '5199e4', skinColor: 'edb98a', hairColor: '2c1b18', eyes: 'default', eyebrows: 'default', mouth: 'smile', seed: 'm' })} alt="" className="w-20 h-20 mx-auto rounded-full mb-2" />
+            <span className="text-sm font-medium text-blueprint">Avatar niño</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => chooseGender('female')}
+            className="flex-1 border-2 border-transparent hover:border-coral/40 rounded-xl p-4 text-center transition-colors bg-coral/5"
+          >
+            <img src={buildAvatarDataUri({ top: 'bob', clothing: 'shirtCrewNeck', clothesColor: 'ff488e', skinColor: 'edb98a', hairColor: '2c1b18', eyes: 'default', eyebrows: 'default', mouth: 'smile', seed: 'f' })} alt="" className="w-20 h-20 mx-auto rounded-full mb-2" />
+            <span className="text-sm font-medium text-coral">Avatar niña</span>
+          </button>
+        </div>
+        {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -119,25 +173,29 @@ export default function AvatarPicker({ user, onSaved }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {[...CATEGORIES, ...FREE_CATEGORIES].filter((c) => c !== 'clothingGraphic' || showGraphicTab).map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setTab(cat)}
-            className={`text-xs font-mono-lab px-3 py-1.5 rounded-full transition-colors ${
-              tab === cat ? 'bg-blueprint text-white' : 'bg-ink/5 text-ink/50 hover:bg-ink/10'
-            }`}
-          >
-            {CATEGORY_LABELS[cat]}
-          </button>
-        ))}
+        {[...CATEGORIES, ...FREE_CATEGORIES]
+          .filter((c) => c !== 'clothingGraphic' || showGraphicTab)
+          .filter((c) => c !== 'facialHair' || showFacialHairTab)
+          .map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setTab(cat)}
+              className={`text-xs font-mono-lab px-3 py-1.5 rounded-full transition-colors ${
+                tab === cat ? 'bg-blueprint text-white' : 'bg-ink/5 text-ink/50 hover:bg-ink/10'
+              }`}
+            >
+              {CATEGORY_LABELS[cat]}
+            </button>
+          ))}
       </div>
 
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-4">
         {byCategory(tab).map((piece) => {
-          const isSelected = config[tab] === piece.value
+          const key = configKey(tab)
+          const isSelected = config[key] === piece.value
           const hint = unlockHint(piece)
-          const thumb = piece.unlocked ? buildAvatarDataUri({ ...config, [tab]: piece.value, seed: user.full_name }) : null
+          const thumb = piece.unlocked ? buildAvatarDataUri({ ...config, [key]: piece.value, seed: user.full_name }) : null
           return (
             <button
               key={piece.id}
@@ -157,13 +215,13 @@ export default function AvatarPicker({ user, onSaved }) {
             </button>
           )
         })}
-        {/* Opción "ninguno" para accesorios/vello facial/estampado, que son opcionales */}
-        {['accessories', 'facialHair', 'clothingGraphic'].includes(tab) && (
+        {/* Opción "ninguno" para accesorios/vello facial/estampado/gorro, que son opcionales */}
+        {['accessories', 'facialHair', 'clothingGraphic', 'hat'].includes(tab) && (
           <button
             type="button"
-            onClick={() => setConfig((c) => ({ ...c, [tab]: '' }))}
+            onClick={() => setConfig((c) => ({ ...c, [configKey(tab)]: '' }))}
             className={`aspect-square rounded-lg border text-[10px] font-mono-lab text-ink/40 ${
-              !config[tab] ? 'border-coral ring-2 ring-coral/40' : 'border-ink/10 hover:border-coral/40'
+              !config[configKey(tab)] ? 'border-coral ring-2 ring-coral/40' : 'border-ink/10 hover:border-coral/40'
             }`}
           >
             Ninguno

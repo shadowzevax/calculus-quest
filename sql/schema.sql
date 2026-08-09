@@ -203,6 +203,12 @@ CREATE TABLE avatar_pieces (
   speed_tier INTEGER, -- para 'speed': cuantos bonos de velocidad acumulados (x5) hacen falta
   UNIQUE (category, value)
 );
+-- Solo para category='top': separa "peinado" de "gorro" para la interfaz (el usuario pidio que
+-- no aparecieran mezclados) — ambos siguen escribiendo en la misma propiedad de DiceBear.
+ALTER TABLE avatar_pieces ADD COLUMN IF NOT EXISTS subcategory TEXT;
+-- male | female | unisex — que genero de avatar puede usar/ganar esta pieza. La mayoria del
+-- catalogo es unisex; solo el peinado y el vello facial se reparten por genero (ver _avatar.js).
+ALTER TABLE avatar_pieces ADD COLUMN IF NOT EXISTS gender TEXT NOT NULL DEFAULT 'unisex';
 
 CREATE TABLE user_avatar_pieces (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -216,6 +222,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_config JSONB;
 -- Cuantas veces ha ganado el bono de velocidad en total (across todas las misiones individuales) —
 -- determina cuando se desbloquean las piezas de avatar tipo 'speed' (cada 5 bonos, ver _avatar.js).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS speed_bonus_count INTEGER NOT NULL DEFAULT 0;
+-- Genero de avatar elegido al registrarse (male | female) — filtra que piezas del catalogo puede
+-- ver/ganar el usuario (ver api/_avatar.js y api/profile.js). NULL en cuentas de antes de esto.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_gender TEXT;
 
 CREATE INDEX idx_exercises_mission ON exercises(mission_id);
 CREATE INDEX idx_exercises_parent ON exercises(parent_exercise_id);
