@@ -190,7 +190,7 @@ export default function AvatarPicker({ user, onSaved }) {
           ))}
       </div>
 
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-4">
+      <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-10 gap-2 mb-4">
         {byCategory(tab).map((piece) => {
           const key = configKey(tab)
           const isSelected = config[key] === piece.value
@@ -229,34 +229,36 @@ export default function AvatarPicker({ user, onSaved }) {
         )}
       </div>
 
-      <div className="mb-4">
-        <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE PIEL</p>
-        <div className="flex gap-1.5">
-          {SKIN_COLORS.map((c) => (
-            <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, skinColor: c }))}
-              className={`w-6 h-6 rounded-full border-2 ${config.skinColor === c ? 'border-coral' : 'border-transparent'}`}
-              style={{ backgroundColor: `#${c}` }} />
-          ))}
+      <div className="grid sm:grid-cols-3 gap-4 mb-4">
+        <div>
+          <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE PIEL</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {SKIN_COLORS.map((c) => (
+              <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, skinColor: c }))}
+                className={`w-6 h-6 rounded-full border-2 ${config.skinColor === c ? 'border-coral' : 'border-transparent'}`}
+                style={{ backgroundColor: `#${c}` }} />
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="mb-4">
-        <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE PELO</p>
-        <div className="flex gap-1.5 flex-wrap">
-          {HAIR_COLORS.map((c) => (
-            <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, hairColor: c }))}
-              className={`w-6 h-6 rounded-full border-2 ${config.hairColor === c ? 'border-coral' : 'border-transparent'}`}
-              style={{ backgroundColor: `#${c}` }} />
-          ))}
+        <div>
+          <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE PELO</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {HAIR_COLORS.map((c) => (
+              <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, hairColor: c }))}
+                className={`w-6 h-6 rounded-full border-2 ${config.hairColor === c ? 'border-coral' : 'border-transparent'}`}
+                style={{ backgroundColor: `#${c}` }} />
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="mb-4">
-        <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE ROPA</p>
-        <div className="flex gap-1.5 flex-wrap">
-          {CLOTHES_COLORS.map((c) => (
-            <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, clothesColor: c }))}
-              className={`w-6 h-6 rounded-full border-2 ${config.clothesColor === c ? 'border-coral' : 'border-transparent'}`}
-              style={{ backgroundColor: `#${c}` }} />
-          ))}
+        <div>
+          <p className="text-xs font-mono-lab text-ink/40 mb-1.5">COLOR DE ROPA</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {CLOTHES_COLORS.map((c) => (
+              <button key={c} type="button" onClick={() => setConfig((cfg) => ({ ...cfg, clothesColor: c }))}
+                className={`w-6 h-6 rounded-full border-2 ${config.clothesColor === c ? 'border-coral' : 'border-transparent'}`}
+                style={{ backgroundColor: `#${c}` }} />
+            ))}
+          </div>
         </div>
       </div>
 

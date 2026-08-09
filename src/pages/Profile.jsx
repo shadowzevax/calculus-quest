@@ -135,11 +135,11 @@ export default function Profile() {
   if (!user) return null
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">CUENTA</div>
       <h1 className="text-3xl font-display font-bold text-ink mb-6">Mi Perfil</h1>
-      <div className="grid md:grid-cols-2 gap-6 items-start">
-      <div className="bg-white rounded-xl border border-ink/10 p-6">
+      <div className="grid md:grid-cols-5 gap-6 items-start">
+      <div className="bg-white rounded-xl border border-ink/10 p-6 md:col-span-2">
         <div className="flex items-center gap-4 mb-4">
           <div className="relative shrink-0">
             <AvatarCircle
@@ -207,7 +207,7 @@ export default function Profile() {
         </form>
       </div>
 
-      <div className="bg-white rounded-xl border border-ink/10 p-6">
+      <div className="bg-white rounded-xl border border-ink/10 p-6 md:col-span-3">
         <h2 className="text-lg font-display font-semibold text-ink mb-4">Mi avatar</h2>
         <AvatarPicker user={user} onSaved={refresh} />
       </div>
