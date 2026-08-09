@@ -150,10 +150,10 @@ export default function MissionDetail() {
           <p className="text-ink/50 mt-1">{mission.story || mission.description}</p>
         </div>
 
-        {rankInfo && (
+        {(showTimer || rankInfo) && (
           <div className="shrink-0 bg-white border-2 border-blueprint/15 rounded-2xl px-5 py-4 text-center min-w-[150px]">
             {showTimer && (
-              <div className="mb-3 pb-3 border-b border-ink/10">
+              <div className={rankInfo ? 'mb-3 pb-3 border-b border-ink/10' : ''}>
                 <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1">
                   Bono si respondes rápido
                 </div>
@@ -161,13 +161,18 @@ export default function MissionDetail() {
                   <Zap className="w-6 h-6" />
                   {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
                 </div>
+                <div className="text-[10px] text-ink/35 mt-1">También suma para piezas de avatar</div>
               </div>
             )}
-            <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
-              <TrendingUp className="w-3 h-3" /> Tu posición
-            </div>
-            <div className="text-3xl font-display font-bold text-coral">#{rankInfo.position}</div>
-            <div className="text-xs font-mono-lab text-ink/50 mt-0.5">{rankInfo.xp} XP total</div>
+            {rankInfo && (
+              <>
+                <div className="text-[10px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1 flex items-center justify-center gap-1">
+                  <TrendingUp className="w-3 h-3" /> Tu posición
+                </div>
+                <div className="text-3xl font-display font-bold text-coral">#{rankInfo.position}</div>
+                <div className="text-xs font-mono-lab text-ink/50 mt-0.5">{rankInfo.xp} XP total</div>
+              </>
+            )}
           </div>
         )}
       </div>

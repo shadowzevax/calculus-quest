@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Icons from 'lucide-react'
-import { HelpCircle, Camera, Shirt } from 'lucide-react'
+import { HelpCircle, Camera } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
 import { MissionsGridSkeleton } from '@/components/Skeleton'
+import { buildAvatarDataUri } from '@/lib/avatarBuilder'
+
+// Config base neutral para renderizar la miniatura de una sola pieza de avatar (el resto
+// del muñeco queda con valores por defecto, solo cambia lo que se quiere mostrar).
+const AVATAR_PREVIEW_BASE = {
+  top: 'shortFlat', clothing: 'shirtCrewNeck', skinColor: 'edb98a', hairColor: '2c1b18',
+  clothesColor: '65c9ff', eyes: 'default', eyebrows: 'default', mouth: 'smile',
+}
+function avatarPieceThumb(piece) {
+  const key = piece.category === 'top' ? 'top' : piece.category
+  return buildAvatarDataUri({ ...AVATAR_PREVIEW_BASE, [key]: piece.value, seed: piece.id })
+}
 
 const difficultyStyle = {
   facil: 'bg-teal/10 text-teal',
@@ -61,12 +73,12 @@ export default function Missions() {
       api.missions.list('misiones'),
       user ? api.progress.list().catch(() => []) : Promise.resolve([]),
       user ? api.badges.list().catch(() => []) : Promise.resolve([]),
-      user && !isAdmin ? api.profile.avatarCatalog().then((r) => r.pieces).catch(() => []) : Promise.resolve([]),
+      user ? api.profile.avatarCatalog().then((r) => r.pieces).catch(() => []) : Promise.resolve([]),
     ])
       .then(([m, p, b, ap]) => { setMissions(m); setProgress(p); setBadges(b); setAvatarPieces(ap) })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [user, isAdmin])
+  }, [user])
 
   // Insignia que otorga esta misión en particular, según su número de orden. Es información
   // de catálogo (qué recompensa da cada misión), así que se muestra siempre — sin importar si
@@ -205,33 +217,26 @@ export default function Missions() {
                         </div>
                       )
                     })}
-                    {avatarRewards.length > 0 && (() => {
-                      const infoKey = `${m.id}-avatar`
-                      const isOpen = openInfo === infoKey
-                      return (
-                        <div>
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <Shirt className="w-4 h-4 text-blueprint shrink-0" />
-                            <span className="text-ink/70">
-                              {avatarRewards.length === 1 ? '1 pieza para tu avatar' : `${avatarRewards.length} piezas para tu avatar`}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setOpenInfo(isOpen ? null : infoKey)}
-                              className="text-ink/35 hover:text-coral transition-colors"
-                              aria-label="Qué piezas de avatar da esta misión"
-                            >
-                              <HelpCircle className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          {isOpen && (
-                            <p className="text-[11px] text-ink/50 mt-1 pl-6 pr-1">
-                              {avatarRewards.map((p) => p.label).join(', ')} — personalizables en Mi Perfil.
-                            </p>
-                          )}
+                    {avatarRewards.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 text-xs mb-1">
+                          <span className="text-ink/70">
+                            {avatarRewards.length === 1 ? '1 pieza para tu avatar' : `${avatarRewards.length} piezas para tu avatar`}
+                          </span>
                         </div>
-                      )
-                    })()}
+                        <div className="flex flex-wrap gap-1.5">
+                          {avatarRewards.map((piece) => (
+                            <div
+                              key={piece.id}
+                              title={piece.label}
+                              className="w-8 h-8 rounded-full overflow-hidden bg-ink/5 ring-1 ring-ink/10 shrink-0"
+                            >
+                              <img src={avatarPieceThumb(piece)} alt={piece.label} className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 <button
