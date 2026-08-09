@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [progress, setProgress] = useState([])
   const [missionsLoading, setMissionsLoading] = useState(true)
   const [stats, setStats] = useState(null)
+  const [recommendation, setRecommendation] = useState(null)
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
@@ -54,6 +55,11 @@ export default function Dashboard() {
       .then(([m, p]) => { setMissions(m); setProgress(p) })
       .catch(() => {})
       .finally(() => setMissionsLoading(false))
+  }, [user, isAdmin])
+  // Version reducida de "dificultad adaptativa": sugiere repasar una mision anterior si el
+  // estudiante viene fallando mucho en la que tiene pendiente — no cambia que ejercicios ve.
+  useEffect(() => {
+    if (user && !isAdmin) api.progress.recommendation().then(setRecommendation).catch(() => {})
   }, [user, isAdmin])
   useEffect(() => { if (isAdmin) api.stats.get().then(setStats).catch(() => {}) }, [isAdmin])
 
@@ -120,6 +126,18 @@ export default function Dashboard() {
             <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
           </div>
           <div className="text-[11px] text-ink/40 mt-1.5 font-mono-lab">{XP_PER_LEVEL - xpIntoLevel} XP para el siguiente nivel</div>
+        </div>
+      )}
+
+      {recommendation && (
+        <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mt-6 flex items-start gap-3 max-w-2xl">
+          <Icons.Lightbulb className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm text-ink">{recommendation.reason}</p>
+            <Link to={`/missions/${recommendation.mission_id}`} className="text-sm font-medium text-gold hover:underline mt-1 inline-block">
+              Repasar "{recommendation.mission_title}" →
+            </Link>
+          </div>
         </div>
       )}
 

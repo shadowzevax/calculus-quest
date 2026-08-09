@@ -10,6 +10,39 @@ export default async function handler(req, res) {
   if (!user) return;
 
   if (req.method === 'GET') {
+    if (req.query.recommend) {
+      // Version reducida de "dificultad adaptativa": no cambia el contenido de los ejercicios,
+      // solo sugiere repasar la mision anterior si el estudiante viene fallando mucho en la
+      // mision pendiente actual — usa datos que ya existen (exercise_attempts), sin inventar
+      // ejercicios nuevos ni cambiar cuales se muestran.
+      const [pending] = await sql`
+        SELECT m.id, m."order", m.title FROM missions m
+        WHERE m.module = 'misiones' AND m.is_active = true
+          AND NOT EXISTS (
+            SELECT 1 FROM user_progress up
+            WHERE up.user_id = ${user.id} AND up.mission_id = m.id AND up.progress_percentage >= 100
+          )
+        ORDER BY m."order" ASC LIMIT 1
+      `;
+      if (!pending || pending.order <= 1) return res.status(200).json(null);
+
+      const [{ wrong_count }] = await sql`
+        SELECT COUNT(*)::int AS wrong_count FROM exercise_attempts ea
+        JOIN exercises e ON e.id = ea.exercise_id
+        WHERE e.mission_id = ${pending.id} AND ea.user_id = ${user.id} AND ea.is_correct = false
+      `;
+      if (wrong_count < 3) return res.status(200).json(null);
+
+      const [previous] = await sql`SELECT id, title FROM missions WHERE module = 'misiones' AND "order" = ${pending.order - 1}`;
+      if (!previous) return res.status(200).json(null);
+
+      return res.status(200).json({
+        mission_id: previous.id,
+        mission_title: previous.title,
+        reason: `Has fallado varias veces en "${pending.title}" — puede ayudarte repasar "${previous.title}" primero.`,
+      });
+    }
+
     const rows = await sql`SELECT * FROM user_progress WHERE user_id = ${user.id}`;
     return res.status(200).json(rows);
   }

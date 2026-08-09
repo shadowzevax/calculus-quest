@@ -48,6 +48,7 @@ export const api = {
   },
   progress: {
     list: () => request('/progress'),
+    recommendation: () => request('/progress?recommend=1'),
     submit: (data) =>
       request('/progress', { method: 'POST', body: JSON.stringify(data) }).then((r) => {
         invalidate('/ranking');
