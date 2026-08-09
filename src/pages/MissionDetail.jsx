@@ -33,7 +33,7 @@ const EXERCISE_COMPONENTS = {
 const BONUS_XP = 5
 // Debe coincidir con SPEED_BONUS_GROUP en api/_avatar.js — cuantos bonos de velocidad hay que
 // acumular para desbloquear la siguiente pieza de avatar (peinado, gorro, ropa, color, etc).
-const SPEED_BONUS_GROUP = 3
+const SPEED_BONUS_GROUP = 5
 
 // Cuanto dura la ventana de "bono de velocidad": varia segun el tipo de ejercicio (no es lo
 // mismo elegir una opcion que escribir una respuesta abierta, que exige calcular en papel) y

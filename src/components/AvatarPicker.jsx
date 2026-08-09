@@ -41,7 +41,7 @@ function unlockHint(piece) {
   if (piece.unlock_type === 'starter') return null
   if (piece.unlock_type === 'mission') return `Se desbloquea al completar la misión ${piece.unlock_mission_order}`
   if (piece.unlock_type === 'finale') return 'Se desbloquea al completar la misión cooperativa (Escape Room)'
-  if (piece.unlock_type === 'speed') return `Se desbloquea tras ganar el bono de velocidad ${piece.speed_tier * 3} veces`
+  if (piece.unlock_type === 'speed') return `Se desbloquea tras ganar el bono de velocidad ${piece.speed_tier * 5} veces`
   return null
 }
 

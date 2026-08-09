@@ -4,7 +4,12 @@ import { sql } from './_db.js';
 
 // Cuantos bonos de velocidad hay que acumular para desbloquear la siguiente pieza de avatar
 // (objeto avatar = cualquier cosa de la librería: peinado, gorro, ropa, accesorio, color, etc).
-export const SPEED_BONUS_GROUP = 3;
+// Calibrado contra el catalogo real de piezas "speed" (6 tiers) y el maximo de bonos que un
+// estudiante puede llegar a ganar en toda la plataforma (30 ejercicios individuales, uno por
+// mision no colaborativa — la mision 14 no tiene cronometro): con este valor, un estudiante que
+// responda rapido en TODOS los ejercicios alcanza exactamente el ultimo tier (30 / 5 = 6), sin
+// que sobren bonos sin premio ni falten piezas antes de terminar el curso.
+export const SPEED_BONUS_GROUP = 5;
 
 export async function checkAndUnlockAvatarPieces(userId) {
   const alreadyUnlocked = await sql`SELECT piece_id FROM user_avatar_pieces WHERE user_id = ${userId}`;
