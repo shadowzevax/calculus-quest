@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Lock, Camera, Check } from 'lucide-react'
+import { Lock, Camera } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import { Switch } from '@/components/ui/switch'
@@ -248,11 +248,6 @@ export default function Profile() {
                   />
                   {!b.earned && <Lock className="w-5 h-5 text-ink/50 absolute drop-shadow" />}
                 </div>
-                {b.earned && (
-                  <span className="absolute bottom-0 right-0 bg-teal rounded-full p-0.5 ring-2 ring-white">
-                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                  </span>
-                )}
               </div>
               <span className={`text-xs font-medium ${b.earned ? 'text-ink' : 'text-ink/35'}`}>{b.name}</span>
               <p className="text-[11px] text-ink/35 mt-0.5">{b.description}</p>
