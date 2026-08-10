@@ -78,7 +78,12 @@ export default function AvatarPicker({ user, onSaved }) {
         const missing = Object.keys(defaults).some((k) => r.config[k] === undefined)
         const merged = missing ? { ...defaults, ...r.config } : r.config
         setConfig(merged)
-        if (missing) api.profile.update({ avatar_config: merged }).catch(() => {})
+        // Cuentas con avatar_config completo pero que por algún motivo nunca recibieron la
+        // propiedad real de ningún color (p. ej. se corrigió el config a mano sin pasar por
+        // el otorgamiento) se quedan con todos los colores bloqueados para siempre, porque el
+        // otorgamiento solo se dispara al guardar — reenviar el config aquí lo fuerza.
+        const ownsAnyColor = r.pieces.some((p) => COLOR_CATEGORIES.some((c) => c.key === p.category) && p.owned)
+        if (missing || !ownsAnyColor) api.profile.update({ avatar_config: merged }).catch(() => {})
       }
     }).catch(() => {})
   }
