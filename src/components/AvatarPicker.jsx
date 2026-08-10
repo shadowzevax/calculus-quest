@@ -162,7 +162,19 @@ export default function AvatarPicker({ user, onSaved }) {
 
   const choose = (cat, value) => {
     const key = configKey(cat)
-    setConfig((c) => ({ ...c, [key]: c[key] === value ? '' : value }))
+    setConfig((c) => {
+      const turningOff = c[key] === value
+      const next = { ...c, [key]: turningOff ? '' : value }
+      // El estampado solo se dibuja de verdad cuando la prenda es "graphicShirt" — si el
+      // usuario elige un estampado Y ya tiene esa prenda desbloqueada, se le cambia la ropa
+      // automáticamente para que se vea de una vez. Si todavía no la desbloquea (es una
+      // recompensa de otra misión), el estampado igual se guarda para cuando la consiga.
+      if (cat === 'clothingGraphic' && !turningOff) {
+        const graphicShirtOwned = pieces.some((p) => p.category === 'clothing' && p.value === 'graphicShirt' && p.unlocked)
+        if (graphicShirtOwned) next.clothing = 'graphicShirt'
+      }
+      return next
+    })
   }
 
   const save = async () => {
@@ -180,7 +192,6 @@ export default function AvatarPicker({ user, onSaved }) {
     }
   }
 
-  const showGraphicTab = config.clothing === 'graphicShirt'
   const showFacialHairTab = gender !== 'female'
 
   if (!gender) {
@@ -229,7 +240,6 @@ export default function AvatarPicker({ user, onSaved }) {
 
       <div className="flex flex-wrap gap-1.5 mb-3">
         {CATEGORIES
-          .filter((c) => c !== 'clothingGraphic' || showGraphicTab)
           .filter((c) => c !== 'facialHair' || showFacialHairTab)
           .map((cat) => (
             <button
@@ -245,12 +255,23 @@ export default function AvatarPicker({ user, onSaved }) {
           ))}
       </div>
 
+      {tab === 'clothingGraphic' && config.clothing !== 'graphicShirt' && (
+        <p className="text-xs text-gold bg-gold/10 rounded-lg px-3 py-2 mb-3">
+          El estampado solo se ve sobre la prenda "con estampado" — si aún no la desbloqueas,
+          se guarda igual y aparecerá apenas la consigas y la elijas en la pestaña Ropa.
+        </p>
+      )}
+
       <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-10 gap-2 mb-4">
         {byCategory(tab).map((piece) => {
           const key = configKey(tab)
           const isSelected = config[key] === piece.value
           const hint = unlockHint(piece)
-          const thumb = buildAvatarDataUri({ ...config, [key]: piece.value, seed: user.full_name })
+          // El estampado no se ve si la prenda actual no es "graphicShirt" — al armar la
+          // miniatura de esta pestaña se fuerza esa prenda para que el estampado sí se
+          // alcance a ver en la vista previa, sin importar qué ropa tenga puesta ahora mismo.
+          const thumbConfig = tab === 'clothingGraphic' ? { ...config, clothing: 'graphicShirt' } : config
+          const thumb = buildAvatarDataUri({ ...thumbConfig, [key]: piece.value, seed: user.full_name })
           return (
             <button
               key={piece.id}
