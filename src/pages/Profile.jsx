@@ -223,10 +223,15 @@ export default function Profile() {
               type="button"
               disabled={!b.earned}
               onClick={() => toggleBadge(b)}
-              className={`text-center border rounded-xl p-3 transition-colors ${
+              className={`relative text-center border rounded-xl p-3 transition-colors ${
                 b.earned ? 'border-ink/10 hover:border-coral/40 cursor-pointer' : 'border-ink/10 cursor-not-allowed'
               } ${b.equipped ? 'ring-2 ring-coral border-coral/40' : ''}`}
             >
+              {b.equipped && (
+                <span className="absolute top-1.5 right-1.5 text-[9px] font-mono-lab font-semibold text-coral bg-coral/10 rounded px-1 py-0.5">
+                  EQUIPADA
+                </span>
+              )}
               <div className="w-16 h-16 mx-auto mb-2 relative">
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-ink/5 flex items-center justify-center relative">
                   <img
@@ -244,7 +249,6 @@ export default function Profile() {
               </div>
               <span className={`text-xs font-medium ${b.earned ? 'text-ink' : 'text-ink/35'}`}>{b.name}</span>
               <p className="text-[11px] text-ink/35 mt-0.5">{b.description}</p>
-              {b.equipped && <p className="text-[10px] font-mono-lab text-coral mt-1">EQUIPADA</p>}
             </button>
           ))}
           {badges.length === 0 && <p className="text-ink/35 text-sm col-span-full">Cargando insignias...</p>}
