@@ -136,12 +136,17 @@ export default function AvatarPicker({ user, onSaved }) {
   const hatValues = new Set(pieces.filter((p) => p.category === 'top' && p.subcategory === 'hat').map((p) => p.value))
   const noHatSelected = !config.top || !hatValues.has(config.top)
 
-  // Los colores tienen nombres tipo "Piel 3", "Color de pelo 7" — se muestran en ese orden
-  // numérico (no en el orden en que la base de datos los reparte entre misiones), para que la
-  // grilla sea predecible y fácil de recorrer.
+  // El color con el que ya arranca el avatar (el que se le otorgó al registrarse o elegir
+  // género) va siempre primero — no tiene sentido que aparezca a mitad de la grilla solo
+  // porque su número de etiqueta ("Piel 4", por ejemplo) cae ahí. El resto de colores, los
+  // que sí se ganan como recompensa, se muestran después en su orden numérico ("Piel 1",
+  // "Piel 2"...), que ya coincide con el orden real en que se van desbloqueando por misión.
   const byColorCategory = (key) => pieces
     .filter((p) => p.category === key)
-    .sort((a, b) => (parseInt(a.label.match(/\d+/)?.[0] || 0, 10) - parseInt(b.label.match(/\d+/)?.[0] || 0, 10)))
+    .sort((a, b) => {
+      if (a.owned !== b.owned) return a.owned ? -1 : 1
+      return parseInt(a.label.match(/\d+/)?.[0] || 0, 10) - parseInt(b.label.match(/\d+/)?.[0] || 0, 10)
+    })
 
   const chooseColor = (key, piece) => {
     if (!piece.unlocked) return
