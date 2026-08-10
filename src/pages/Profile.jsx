@@ -138,8 +138,8 @@ export default function Profile() {
     <div className="max-w-6xl">
       <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">CUENTA</div>
       <h1 className="text-3xl font-display font-bold text-ink mb-6">Mi Perfil</h1>
-      <div className="grid md:grid-cols-5 gap-6 items-start">
-      <div className="bg-white rounded-xl border border-ink/10 p-6 md:col-span-2">
+      <div className="grid md:grid-cols-5 gap-6 items-stretch">
+      <div className="bg-white rounded-xl border border-ink/10 p-6 md:col-span-2 flex flex-col">
         <div className="flex items-center gap-4 mb-4">
           <div className="relative shrink-0">
             <AvatarCircle
@@ -183,10 +183,10 @@ export default function Profile() {
 
         {equippedBadges.length > 0 && (
           <div className="mb-4 pt-1">
-            {/* min-h reserva espacio para 2 filas (hasta 8 insignias, el maximo posible) desde
-                la primera insignia equipada — asi pasar de 4 a 5 no empuja el formulario de
-                abajo, porque el alto ya estaba reservado de antemano. */}
-            <div className="grid grid-cols-4 gap-2 max-w-[280px] min-h-[120px] content-start">
+            {/* Sin ancho ni columnas fijas: se acomodan tantas insignias por fila como quepan
+                en el ancho disponible (más en pantallas anchas, menos en angostas), para no
+                dejar espacio vacío a la derecha. */}
+            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.5rem, 1fr))' }}>
               {equippedBadges.map((b) => (
                 <div key={b.id} className="w-14 h-14 rounded-full overflow-hidden bg-ink/5 ring-2 ring-coral/50" title={b.name}>
                   <img src={b.image} alt={b.name} className="w-full h-full object-cover scale-110" />
@@ -196,14 +196,18 @@ export default function Profile() {
           </div>
         )}
 
-        <form onSubmit={save} className="space-y-3">
+        <form onSubmit={save} className="space-y-3 flex flex-col flex-1">
           <div>
             <label className="text-sm text-ink/50">Nombre completo</label>
             <input className="w-full border border-ink/15 rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral" value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </div>
-          <div>
+          {/* La biografía absorbe el espacio vertical restante de la tarjeta (flex-1) en vez de
+              tener una altura fija — así, cuando las insignias equipadas ocupan más o menos
+              alto, es el cuadro de biografía el que crece o se encoge para compensar, y la
+              tarjeta completa nunca "salta" ni queda más corta que la de Mi avatar. */}
+          <div className="flex flex-col flex-1 min-h-[4.5rem]">
             <label className="text-sm text-ink/50">Biografía</label>
-            <textarea className="w-full border border-ink/15 rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral" rows={3} value={bio} onChange={(e) => setBio(e.target.value)} />
+            <textarea className="w-full flex-1 border border-ink/15 rounded-lg px-3 py-2 mt-1 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral" value={bio} onChange={(e) => setBio(e.target.value)} />
           </div>
           <button type="submit" className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">Guardar cambios</button>
           {saved && <span className="text-teal text-sm ml-3">Guardado ✓</span>}
