@@ -183,7 +183,10 @@ export default function Profile() {
 
         {equippedBadges.length > 0 && (
           <div className="mb-4 pt-1">
-            <div className="grid grid-cols-4 gap-2 max-w-[280px]">
+            {/* min-h reserva espacio para 2 filas (hasta 8 insignias, el maximo posible) desde
+                la primera insignia equipada — asi pasar de 4 a 5 no empuja el formulario de
+                abajo, porque el alto ya estaba reservado de antemano. */}
+            <div className="grid grid-cols-4 gap-2 max-w-[280px] min-h-[120px] content-start">
               {equippedBadges.map((b) => (
                 <div key={b.id} className="w-14 h-14 rounded-full overflow-hidden bg-ink/5 ring-2 ring-coral/50" title={b.name}>
                   <img src={b.image} alt={b.name} className="w-full h-full object-cover scale-110" />
