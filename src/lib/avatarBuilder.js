@@ -22,6 +22,12 @@ export function buildAvatarDataUri(config) {
   options.accessoriesProbability = config.accessories ? 100 : 0
   options.facialHairProbability = config.facialHair ? 100 : 0
   options.topProbability = 100
+  // La prenda "graphicShirt" en DiceBear SIEMPRE lleva algún estampado dibujado — la librería
+  // no tiene opción de "camiseta con estampado, pero en blanco" (a diferencia de accesorios o
+  // vello facial, que sí se pueden apagar del todo). Si no se especifica cuál, elige uno al
+  // azar según el seed en vez de dejarla lisa. Por eso cualquier miniatura que use esta prenda
+  // SIEMPRE debe pasar un `clothingGraphic` explícito — nunca dejarlo "sin elegir".
+  if (config.clothing === 'graphicShirt' && !options.clothingGraphic) options.clothingGraphic = ['bat']
 
   const avatar = createAvatar(avataaars, { seed: config.seed || 'funcionlab', ...options })
   return avatar.toDataUri()

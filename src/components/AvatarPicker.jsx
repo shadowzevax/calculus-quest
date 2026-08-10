@@ -270,7 +270,12 @@ export default function AvatarPicker({ user, onSaved }) {
           // El estampado no se ve si la prenda actual no es "graphicShirt" — al armar la
           // miniatura de esta pestaña se fuerza esa prenda para que el estampado sí se
           // alcance a ver en la vista previa, sin importar qué ropa tenga puesta ahora mismo.
-          const thumbConfig = tab === 'clothingGraphic' ? { ...config, clothing: 'graphicShirt' } : config
+          // Y al revés: la miniatura de la prenda "con estampado" en la pestaña Ropa nunca
+          // lleva ningún estampado puesto (aunque el usuario ya tenga uno elegido), para que
+          // esa elección viva únicamente en la pestaña Estampado y no parezca "duplicada" ahí.
+          let thumbConfig = config
+          if (tab === 'clothingGraphic') thumbConfig = { ...config, clothing: 'graphicShirt' }
+          else if (tab === 'clothing') thumbConfig = { ...config, clothingGraphic: '' }
           const thumb = buildAvatarDataUri({ ...thumbConfig, [key]: piece.value, seed: user.full_name })
           return (
             <button
