@@ -103,6 +103,22 @@ export const api = {
   settings: {
     get: () => request('/settings'),
     set: (key, value) => request('/settings', { method: 'PATCH', body: JSON.stringify({ key, value }) }),
+    getRegCode: () => request('/settings?action=reg_code'),
+    regenerateRegCode: () => request('/settings?action=reg_code', { method: 'POST' }),
+  },
+  diagnostic: {
+    get: () => request('/progress?action=diagnostic'),
+    submit: (phase, answers) =>
+      request('/progress?action=diagnostic', { method: 'POST', body: JSON.stringify({ phase, answers }) }),
+  },
+  survey: {
+    get: () => request('/profile?action=survey'),
+    submit: (answers, comment) =>
+      request('/profile?action=survey', { method: 'POST', body: JSON.stringify({ answers, comment }) }),
+  },
+  analytics: {
+    get: () => request('/stats?action=analytics'),
+    csvUrl: '/api/stats?action=analytics&format=csv',
   },
   rooms: {
     state: (roomId) => request(`/rooms?room_id=${roomId}`),

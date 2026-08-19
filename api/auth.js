@@ -4,16 +4,31 @@ import bcrypt from 'bcryptjs';
 import { sql } from './_db.js';
 import { signToken, setAuthCookie, clearAuthCookie, getUserFromRequest } from './_auth.js';
 import { grantStarterColors } from './_avatar.js';
+import { isCodeValid } from './_regcode.js';
+
+// Cuentas de prueba que quedan exentas del dominio institucional y del código
+// del docente, para poder seguir haciendo pruebas/demos sin depender de un correo real.
+const TEST_EMAILS = new Set(['estudiante@gmail.com', 'docente@gmail.com']);
+const INSTITUTIONAL_DOMAIN = '@umariana.edu.co';
 
 export default async function handler(req, res) {
   const action = req.query.action;
 
   if (action === 'register' && req.method === 'POST') {
-    const { email, password, full_name, avatar_gender, avatar_config } = req.body || {};
+    const { email, password, full_name, avatar_gender, avatar_config, reg_code } = req.body || {};
     if (!email || !password || password.length < 6) {
       return res.status(400).json({ error: 'Email y contraseña (mín. 6 caracteres) son requeridos' });
     }
-    const existing = await sql`SELECT id FROM users WHERE email = ${email}`;
+    const normalizedEmail = email.trim().toLowerCase();
+    const isTestEmail = TEST_EMAILS.has(normalizedEmail);
+    if (!isTestEmail) {
+      if (!normalizedEmail.endsWith(INSTITUTIONAL_DOMAIN)) {
+        return res.status(400).json({ error: `Debes registrarte con tu correo institucional (${INSTITUTIONAL_DOMAIN})` });
+      }
+      const valid = await isCodeValid(sql, reg_code);
+      if (!valid) return res.status(400).json({ error: 'Código de registro inválido o vencido. Pídele el código actual a tu docente.' });
+    }
+    const existing = await sql`SELECT id FROM users WHERE email = ${normalizedEmail}`;
     if (existing.length > 0) return res.status(409).json({ error: 'Ese correo ya está registrado' });
 
     // El avatar inicial se elige entre las piezas "starter" del genero elegido — se revalida
@@ -51,7 +66,7 @@ export default async function handler(req, res) {
     const password_hash = await bcrypt.hash(password, 10);
     const [user] = await sql`
       INSERT INTO users (email, password_hash, full_name, role, avatar_gender, avatar_config)
-      VALUES (${email}, ${password_hash}, ${full_name || email.split('@')[0]}, 'user', ${gender}, ${config ? JSON.stringify(config) : null}::jsonb)
+      VALUES (${normalizedEmail}, ${password_hash}, ${full_name || normalizedEmail.split('@')[0]}, 'user', ${gender}, ${config ? JSON.stringify(config) : null}::jsonb)
       RETURNING id, email, full_name, role, xp, level, avatar, avatar_config, avatar_gender
     `;
     if (config) {

@@ -18,6 +18,7 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [regCode, setRegCode] = useState('')
   const [presetId, setPresetId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -41,7 +42,7 @@ export default function Login() {
       } else {
         const preset = PRESETS.find((p) => p.id === presetId)
         await register({
-          email, password, full_name: fullName,
+          email, password, full_name: fullName, reg_code: regCode,
           avatar_gender: preset.gender,
           avatar_config: { top: preset.top, clothing: preset.clothing, clothesColor: preset.clothesColor, skinColor: preset.skinColor, hairColor: preset.hairColor },
         })
@@ -104,7 +105,7 @@ export default function Login() {
         <input
           className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
           type="email"
-          placeholder="Correo"
+          placeholder={mode === 'register' ? 'Correo institucional (@umariana.edu.co)' : 'Correo'}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -117,6 +118,16 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        {mode === 'register' && (
+          <input
+            className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest"
+            placeholder="Código de registro (te lo da tu docente)"
+            value={regCode}
+            onChange={(e) => setRegCode(e.target.value)}
+            maxLength={4}
+            required
+          />
+        )}
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
           type="submit"

@@ -5,9 +5,35 @@ import { grantStarterColors } from './_avatar.js';
 
 const MAX_AVATAR_LENGTH = 400_000; // ~300KB de imagen en base64, ya redimensionada en el navegador
 
+// Encuesta de percepcion/motivacion, aplicada al finalizar el recorrido (solo grupo
+// experimental, ya que requiere haber usado la plataforma). Escala Likert 1-5.
+async function handleSurvey(req, res, user) {
+  if (req.method === 'GET') {
+    const questions = await sql`SELECT id, "order", text FROM survey_questions ORDER BY "order"`;
+    const [response] = await sql`SELECT answers, comment, submitted_at FROM survey_responses WHERE user_id = ${user.id}`;
+    return res.status(200).json({ questions, response: response || null });
+  }
+
+  if (req.method === 'POST') {
+    const { answers, comment } = req.body || {};
+    if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'answers requerido' });
+    await sql`
+      INSERT INTO survey_responses (user_id, answers, comment)
+      VALUES (${user.id}, ${JSON.stringify(answers)}::jsonb, ${comment || null})
+      ON CONFLICT (user_id) DO UPDATE SET
+        answers = ${JSON.stringify(answers)}::jsonb, comment = ${comment || null}, submitted_at = now()
+    `;
+    return res.status(200).json({ ok: true });
+  }
+
+  res.status(405).json({ error: 'Method not allowed' });
+}
+
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
+
+  if (req.query.action === 'survey') return handleSurvey(req, res, user);
 
   if (req.method === 'GET') {
     // Catalogo del avatar armable: solo las piezas unisex + las del genero elegido por el

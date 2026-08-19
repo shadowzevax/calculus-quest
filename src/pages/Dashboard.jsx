@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
 import { SkeletonBlock, MissionCardSkeleton } from '@/components/Skeleton'
+import { AvatarCircle } from '@/components/ui/avatar-circle'
 
 const XP_PER_LEVEL = 500
 
@@ -38,6 +39,57 @@ function MissionPreviewCard({ mission }) {
   )
 }
 
+function ProfileSummaryCard({ user, badges, ranking }) {
+  const equippedBadges = badges
+    .filter((b) => b.equipped)
+    .sort((a, b) => new Date(a.equipped_at) - new Date(b.equipped_at))
+  const position = ranking.findIndex((r) => r.id === user.id)
+  const total = ranking.length
+
+  return (
+    <Link
+      to="/profile"
+      className="bg-white rounded-xl border border-ink/10 p-5 flex items-center gap-4 hover:border-coral/40 transition-colors"
+    >
+      <AvatarCircle
+        name={user.full_name}
+        image={user.avatar}
+        avatarConfig={user.avatar_config}
+        glow={user.avatar_glow}
+        className="w-14 h-14 bg-coral/15 border border-coral/30 shrink-0"
+        textClassName="text-xl font-display font-semibold text-coral"
+      />
+      <div className="min-w-0 flex-1">
+        <div className={`font-medium truncate ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>{user.full_name}</div>
+        <div className="flex items-center gap-3 mt-1 text-xs font-mono-lab text-ink/50">
+          <span className="flex items-center gap-1">
+            <Icons.Trophy className="w-3.5 h-3.5 text-gold" />
+            {position >= 0 ? `#${position + 1}${total ? ` de ${total}` : ''}` : 'Sin ranking aún'}
+          </span>
+          {equippedBadges.length > 0 && (
+            <span className="flex items-center gap-1">
+              <Icons.Medal className="w-3.5 h-3.5 text-coral" />
+              {equippedBadges.length}
+            </span>
+          )}
+        </div>
+        {equippedBadges.length > 0 && (
+          <div className="flex items-center gap-1.5 mt-2">
+            {equippedBadges.slice(0, 6).map((b) => (
+              <div key={b.id} className="w-7 h-7 rounded-full overflow-hidden bg-ink/5 ring-1 ring-coral/40 shrink-0" title={b.name}>
+                <img src={b.image} alt={b.name} className="w-full h-full object-cover scale-110" />
+              </div>
+            ))}
+            {equippedBadges.length > 6 && (
+              <span className="text-[11px] text-ink/40 font-mono-lab ml-1">+{equippedBadges.length - 6}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </Link>
+  )
+}
+
 export default function Dashboard() {
   const { user, isLoadingAuth } = useAuth()
   const [missions, setMissions] = useState([])
@@ -45,6 +97,8 @@ export default function Dashboard() {
   const [missionsLoading, setMissionsLoading] = useState(true)
   const [stats, setStats] = useState(null)
   const [recommendation, setRecommendation] = useState(null)
+  const [badges, setBadges] = useState([])
+  const [ranking, setRanking] = useState([])
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
@@ -62,6 +116,11 @@ export default function Dashboard() {
     if (user && !isAdmin) api.progress.recommendation().then(setRecommendation).catch(() => {})
   }, [user, isAdmin])
   useEffect(() => { if (isAdmin) api.stats.get().then(setStats).catch(() => {}) }, [isAdmin])
+  useEffect(() => {
+    if (!user || isAdmin) return
+    api.badges.list().then(setBadges).catch(() => {})
+    api.ranking.list().then(setRanking).catch(() => {})
+  }, [user, isAdmin])
 
   // La misión "actual" es la primera, en orden, que todavía no está al 100% — el mismo
   // criterio de desbloqueo secuencial que usa el catálogo de Misiones.
@@ -117,15 +176,19 @@ export default function Dashboard() {
       <p className="text-ink/50 mt-1">Cada misión es una función distinta por explorar.</p>
 
       {user && (
-        <div className="bg-white rounded-xl border border-ink/10 p-5 mt-6 max-w-md">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="font-mono-lab text-ink/50">NIVEL {user.level}</span>
-            <span className="font-mono-lab text-coral">{user.xp} XP</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 max-w-2xl">
+          <div className="bg-white rounded-xl border border-ink/10 p-5">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="font-mono-lab text-ink/50">NIVEL {user.level}</span>
+              <span className="font-mono-lab text-coral">{user.xp} XP</span>
+            </div>
+            <div className="h-2 rounded-full bg-ink/5 overflow-hidden relative">
+              <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="text-[11px] text-ink/40 mt-1.5 font-mono-lab">{XP_PER_LEVEL - xpIntoLevel} XP para el siguiente nivel</div>
           </div>
-          <div className="h-2 rounded-full bg-ink/5 overflow-hidden relative">
-            <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="text-[11px] text-ink/40 mt-1.5 font-mono-lab">{XP_PER_LEVEL - xpIntoLevel} XP para el siguiente nivel</div>
+
+          <ProfileSummaryCard user={user} badges={badges} ranking={ranking} />
         </div>
       )}
 
