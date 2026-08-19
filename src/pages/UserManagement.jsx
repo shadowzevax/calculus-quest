@@ -32,7 +32,7 @@ function RegistrationCodeCard() {
   const ss = String(secondsLeft % 60).padStart(2, '0')
 
   return (
-    <div className="bg-white rounded-xl border border-ink/10 p-4 flex items-center gap-4">
+    <div className="bg-white rounded-xl border border-ink/10 p-4 flex items-center gap-4 w-72 shrink-0">
       <div className="w-10 h-10 rounded-lg bg-coral/10 border border-coral/30 flex items-center justify-center shrink-0">
         <KeyRound className="w-4.5 h-4.5 text-coral" />
       </div>
@@ -41,7 +41,7 @@ function RegistrationCodeCard() {
         <div className="text-2xl font-display font-bold text-ink tracking-[0.2em] tabular-nums">
           {state ? state.code : '····'}
         </div>
-        <div className="text-[11px] text-ink/40">Se renueva solo en {mm}:{ss}</div>
+        <div className="text-[11px] text-ink/40 tabular-nums">Se renueva solo en {mm}:{ss}</div>
       </div>
       <button
         onClick={regenerate}
