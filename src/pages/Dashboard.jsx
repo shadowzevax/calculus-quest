@@ -39,7 +39,10 @@ function MissionPreviewCard({ mission }) {
   )
 }
 
-function ProfileSummaryCard({ user, badges, ranking }) {
+// Columna lateral del estudiante: avatar grande arriba, ranking en su propia caja,
+// insignias equipadas abajo — pensada para llenar el espacio vertical libre junto a
+// las misiones, no solo una tarjetita chica de una línea.
+function ProfileSidebar({ user, badges, ranking }) {
   const equippedBadges = badges
     .filter((b) => b.equipped)
     .sort((a, b) => new Date(a.equipped_at) - new Date(b.equipped_at))
@@ -47,46 +50,85 @@ function ProfileSummaryCard({ user, badges, ranking }) {
   const total = ranking.length
 
   return (
-    <Link
-      to="/profile"
-      className="bg-white rounded-xl border border-ink/10 p-5 flex items-center gap-4 hover:border-coral/40 transition-colors"
-    >
-      <AvatarCircle
-        name={user.full_name}
-        image={user.avatar}
-        avatarConfig={user.avatar_config}
-        glow={user.avatar_glow}
-        className="w-14 h-14 bg-coral/15 border border-coral/30 shrink-0"
-        textClassName="text-xl font-display font-semibold text-coral"
-      />
-      <div className="min-w-0 flex-1">
-        <div className={`font-medium truncate ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>{user.full_name}</div>
-        <div className="flex items-center gap-3 mt-1 text-xs font-mono-lab text-ink/50">
-          <span className="flex items-center gap-1">
-            <Icons.Trophy className="w-3.5 h-3.5 text-gold" />
-            {position >= 0 ? `#${position + 1}${total ? ` de ${total}` : ''}` : 'Sin ranking aún'}
-          </span>
-          {equippedBadges.length > 0 && (
-            <span className="flex items-center gap-1">
-              <Icons.Medal className="w-3.5 h-3.5 text-coral" />
-              {equippedBadges.length}
-            </span>
-          )}
+    <div className="bg-white rounded-xl border border-ink/10 p-6 flex flex-col h-full">
+      <Link to="/profile" className="flex flex-col items-center text-center group">
+        <AvatarCircle
+          name={user.full_name}
+          image={user.avatar}
+          avatarConfig={user.avatar_config}
+          glow={user.avatar_glow}
+          className="w-24 h-24 bg-coral/15 border-2 border-coral/30 group-hover:border-coral/60 transition-colors"
+          textClassName="text-4xl font-display font-semibold text-coral"
+        />
+        <div className={`font-display font-semibold text-lg mt-3 ${user.name_rainbow ? 'name-rainbow' : 'text-ink'}`}>
+          {user.full_name}
         </div>
-        {equippedBadges.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-2">
-            {equippedBadges.slice(0, 6).map((b) => (
-              <div key={b.id} className="w-7 h-7 rounded-full overflow-hidden bg-ink/5 ring-1 ring-coral/40 shrink-0" title={b.name}>
+        <div className="text-xs font-mono-lab text-ink/40">{user.xp} XP · Nivel {user.level}</div>
+      </Link>
+
+      <div className="mt-5 bg-gold/10 border border-gold/25 rounded-lg p-3.5 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-lg bg-gold/15 flex items-center justify-center shrink-0">
+          <Icons.Trophy className="w-4.5 h-4.5 text-gold" />
+        </div>
+        <div>
+          <div className="text-[11px] font-mono-lab text-ink/40 uppercase tracking-wide">Ranking</div>
+          <div className="text-sm font-semibold text-ink">
+            {position >= 0 ? `#${position + 1}${total ? ` de ${total}` : ''}` : 'Aún sin puntaje'}
+          </div>
+        </div>
+        <Link to="/ranking" className="ml-auto text-[11px] font-mono-lab text-gold hover:underline shrink-0">Ver →</Link>
+      </div>
+
+      <div className="mt-5 flex-1 flex flex-col min-h-0">
+        <div className="text-[11px] font-mono-lab text-ink/40 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          <Icons.Medal className="w-3.5 h-3.5 text-coral" /> Insignias equipadas
+        </div>
+        {equippedBadges.length > 0 ? (
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.25rem, 1fr))' }}>
+            {equippedBadges.map((b) => (
+              <div key={b.id} className="aspect-square rounded-full overflow-hidden bg-ink/5 ring-2 ring-coral/40" title={b.name}>
                 <img src={b.image} alt={b.name} className="w-full h-full object-cover scale-110" />
               </div>
             ))}
-            {equippedBadges.length > 6 && (
-              <span className="text-[11px] text-ink/40 font-mono-lab ml-1">+{equippedBadges.length - 6}</span>
-            )}
           </div>
+        ) : (
+          <p className="text-xs text-ink/35">Aún no equipas ninguna insignia — gánalas completando misiones.</p>
         )}
       </div>
-    </Link>
+    </div>
+  )
+}
+
+// Accesos rápidos del docente: llena el mismo espacio lateral que en el estudiante
+// ocupa el perfil, pero con lo que a un docente le sirve ver de un vistazo.
+function TeacherShortcuts() {
+  const items = [
+    { to: '/teacher-analytics', label: 'Analítica de estudiantes', desc: 'XP, tiempo, pre/post-test y encuesta', icon: Icons.BarChart3, accent: '#FF6B4A' },
+    { to: '/teacher-panel', label: 'Panel Docente', desc: 'Vista general del laboratorio', icon: Icons.LayoutDashboard, accent: '#1B3A5C' },
+    { to: '/user-management', label: 'Gestión de Usuarios', desc: 'Roles y código de registro', icon: Icons.Users, accent: '#3FBFAD' },
+    { to: '/mission-management', label: 'Gestión de Misiones', desc: 'Editar misiones y ejercicios', icon: Icons.Map, accent: '#F0A93C' },
+  ]
+  return (
+    <div className="bg-white rounded-xl border border-ink/10 p-6 h-full">
+      <div className="text-[11px] font-mono-lab text-ink/40 uppercase tracking-wide mb-3">Accesos rápidos</div>
+      <div className="space-y-2.5">
+        {items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            className="flex items-center gap-3 p-3 rounded-lg border border-ink/10 hover:border-coral/40 hover:-translate-y-0.5 transition-all"
+          >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${item.accent}1A` }}>
+              <item.icon className="w-4.5 h-4.5" style={{ color: item.accent }} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-ink">{item.label}</div>
+              <div className="text-[11px] text-ink/40 truncate">{item.desc}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -147,18 +189,21 @@ export default function Dashboard() {
           <StatCard label="Acceso" value="100%" icon={Icons.Shield} accent="#F0A93C" />
         </div>
 
-        <div className="mt-10">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display font-semibold text-ink flex items-center gap-2">
-              <Icons.Rocket className="w-4 h-4 text-coral" /> Misiones del Sistema
-            </h2>
-            <Link to="/missions" className="text-sm text-coral font-medium">Ver todas →</Link>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10 items-start">
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display font-semibold text-ink flex items-center gap-2">
+                <Icons.Rocket className="w-4 h-4 text-coral" /> Misiones del Sistema
+              </h2>
+              <Link to="/missions" className="text-sm text-coral font-medium">Ver todas →</Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {missionsLoading
+                ? Array.from({ length: 4 }).map((_, i) => <MissionCardSkeleton key={i} />)
+                : missions.slice(0, 4).map((m) => <MissionPreviewCard key={m.id} mission={m} />)}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {missionsLoading
-              ? Array.from({ length: 3 }).map((_, i) => <MissionCardSkeleton key={i} />)
-              : missions.slice(0, 3).map((m) => <MissionPreviewCard key={m.id} mission={m} />)}
-          </div>
+          <TeacherShortcuts />
         </div>
       </div>
     )
@@ -175,48 +220,50 @@ export default function Dashboard() {
       </h1>
       <p className="text-ink/50 mt-1">Cada misión es una función distinta por explorar.</p>
 
-      {user && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 max-w-2xl">
-          <div className="bg-white rounded-xl border border-ink/10 p-5">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="font-mono-lab text-ink/50">NIVEL {user.level}</span>
-              <span className="font-mono-lab text-coral">{user.xp} XP</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 items-start">
+        <div className="lg:col-span-2">
+          {user && (
+            <div className="bg-white rounded-xl border border-ink/10 p-5">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="font-mono-lab text-ink/50">NIVEL {user.level}</span>
+                <span className="font-mono-lab text-coral">{user.xp} XP</span>
+              </div>
+              <div className="h-2 rounded-full bg-ink/5 overflow-hidden relative">
+                <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="text-[11px] text-ink/40 mt-1.5 font-mono-lab">{XP_PER_LEVEL - xpIntoLevel} XP para el siguiente nivel</div>
             </div>
-            <div className="h-2 rounded-full bg-ink/5 overflow-hidden relative">
-              <div className="h-full bg-gradient-to-r from-coral to-gold" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="text-[11px] text-ink/40 mt-1.5 font-mono-lab">{XP_PER_LEVEL - xpIntoLevel} XP para el siguiente nivel</div>
-          </div>
-
-          <ProfileSummaryCard user={user} badges={badges} ranking={ranking} />
-        </div>
-      )}
-
-      {recommendation && (
-        <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mt-6 flex items-start gap-3 max-w-2xl">
-          <Icons.Lightbulb className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm text-ink">{recommendation.reason}</p>
-            <Link to={`/missions/${recommendation.mission_id}`} className="text-sm font-medium text-gold hover:underline mt-1 inline-block">
-              Repasar "{recommendation.mission_title}" →
-            </Link>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-8">
-        <h2 className="font-display font-semibold text-ink mb-3">Continúa donde quedaste</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {missionsLoading ? (
-            <MissionCardSkeleton />
-          ) : currentMission ? (
-            <MissionPreviewCard mission={currentMission} />
-          ) : allCompleted ? (
-            <p className="text-ink/40 text-sm col-span-full">¡Completaste todas las misiones!</p>
-          ) : (
-            <p className="text-ink/40 text-sm col-span-full">Aún no hay misiones disponibles.</p>
           )}
+
+          {recommendation && (
+            <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mt-6 flex items-start gap-3">
+              <Icons.Lightbulb className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-ink">{recommendation.reason}</p>
+                <Link to={`/missions/${recommendation.mission_id}`} className="text-sm font-medium text-gold hover:underline mt-1 inline-block">
+                  Repasar "{recommendation.mission_title}" →
+                </Link>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8">
+            <h2 className="font-display font-semibold text-ink mb-3">Continúa donde quedaste</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {missionsLoading ? (
+                <MissionCardSkeleton />
+              ) : currentMission ? (
+                <MissionPreviewCard mission={currentMission} />
+              ) : allCompleted ? (
+                <p className="text-ink/40 text-sm col-span-full">¡Completaste todas las misiones!</p>
+              ) : (
+                <p className="text-ink/40 text-sm col-span-full">Aún no hay misiones disponibles.</p>
+              )}
+            </div>
+          </div>
         </div>
+
+        {user && <ProfileSidebar user={user} badges={badges} ranking={ranking} />}
       </div>
     </div>
   )
