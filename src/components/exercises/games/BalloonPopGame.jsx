@@ -32,7 +32,7 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
                 className={`relative flex flex-col items-center gap-2 py-4 transition-all ${popped && !isRight ? 'opacity-30 scale-90' : ''}`}
               >
                 <div
-                  className={`w-16 h-20 rounded-full flex items-center justify-center text-white text-[11px] font-mono-lab px-2 text-center shadow-md transition-transform ${
+                  className={`w-full min-h-[6rem] rounded-[45%] flex items-center justify-center text-white text-[11px] leading-snug font-mono-lab px-3 py-3 text-center shadow-md transition-transform ${
                     isRight ? 'ring-4 ring-teal/40 scale-110' : ''
                   }`}
                   style={{ backgroundColor: BALLOON_COLORS[i % BALLOON_COLORS.length] }}
