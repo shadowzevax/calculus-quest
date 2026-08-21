@@ -17,7 +17,6 @@ const Chat = lazy(() => import('./pages/Chat'))
 const TeacherPanel = lazy(() => import('./pages/TeacherPanel'))
 const UserManagement = lazy(() => import('./pages/UserManagement'))
 const MissionManagement = lazy(() => import('./pages/MissionManagement'))
-const Diagnostic = lazy(() => import('./pages/Diagnostic'))
 const Survey = lazy(() => import('./pages/Survey'))
 const TeacherAnalytics = lazy(() => import('./pages/TeacherAnalytics'))
 
@@ -37,7 +36,6 @@ function App() {
               <Route path="/teacher-panel" element={<TeacherPanel />} />
               <Route path="/user-management" element={<UserManagement />} />
               <Route path="/mission-management" element={<MissionManagement />} />
-              <Route path="/diagnostic" element={<Diagnostic />} />
               <Route path="/survey" element={<Survey />} />
               <Route path="/teacher-analytics" element={<TeacherAnalytics />} />
               <Route path="/login" element={<Login />} />

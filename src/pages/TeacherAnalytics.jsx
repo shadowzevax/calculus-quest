@@ -17,9 +17,6 @@ export default function TeacherAnalytics() {
   if (!data) return <p className="text-ink/40 font-mono-lab text-sm">Cargando...</p>
 
   const { students, surveyRows } = data
-  const withBoth = students.filter((s) => s.pretest_score != null && s.posttest_score != null)
-  const avgPre = withBoth.length ? (withBoth.reduce((a, s) => a + s.pretest_score / s.pretest_total, 0) / withBoth.length) * 100 : null
-  const avgPost = withBoth.length ? (withBoth.reduce((a, s) => a + s.posttest_score / s.posttest_total, 0) / withBoth.length) * 100 : null
 
   // Promedio por pregunta de la encuesta (surveyRows viene como fila por usuario+pregunta).
   const surveyByQuestion = {}
@@ -48,19 +45,6 @@ export default function TeacherAnalytics() {
         </a>
       </div>
 
-      {avgPre != null && (
-        <div className="grid grid-cols-2 gap-4 mb-6 max-w-md">
-          <div className="bg-white rounded-xl border border-ink/10 p-5">
-            <div className="text-xs font-mono-lab text-ink/40 uppercase">Promedio pre-test</div>
-            <div className="text-2xl font-display font-bold text-ink mt-1">{avgPre.toFixed(0)}%</div>
-          </div>
-          <div className="bg-white rounded-xl border border-ink/10 p-5">
-            <div className="text-xs font-mono-lab text-ink/40 uppercase">Promedio post-test</div>
-            <div className="text-2xl font-display font-bold text-teal mt-1">{avgPost.toFixed(0)}%</div>
-          </div>
-        </div>
-      )}
-
       <div className="bg-white rounded-xl border border-ink/10 overflow-x-auto mb-8">
         <table className="w-full text-sm">
           <thead>
@@ -70,8 +54,6 @@ export default function TeacherAnalytics() {
               <th className="px-4 py-3">Misiones</th>
               <th className="px-4 py-3">Tiempo total</th>
               <th className="px-4 py-3">% aciertos</th>
-              <th className="px-4 py-3">Pre-test</th>
-              <th className="px-4 py-3">Post-test</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/5">
@@ -87,13 +69,11 @@ export default function TeacherAnalytics() {
                   <td className="px-4 py-3 font-mono-lab text-ink/70">{s.missions_completed}/14</td>
                   <td className="px-4 py-3 font-mono-lab text-ink/70">{fmtTime(s.total_time_seconds)}</td>
                   <td className="px-4 py-3 font-mono-lab text-ink/70">{pct != null ? `${pct}%` : '—'}</td>
-                  <td className="px-4 py-3 font-mono-lab text-ink/70">{s.pretest_score != null ? `${s.pretest_score}/${s.pretest_total}` : '—'}</td>
-                  <td className="px-4 py-3 font-mono-lab text-ink/70">{s.posttest_score != null ? `${s.posttest_score}/${s.posttest_total}` : '—'}</td>
                 </tr>
               )
             })}
             {students.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-ink/35">Aún no hay estudiantes registrados.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-ink/35">Aún no hay estudiantes registrados.</td></tr>
             )}
           </tbody>
         </table>

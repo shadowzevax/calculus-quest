@@ -106,11 +106,6 @@ export const api = {
     getRegCode: () => request('/settings?action=reg_code'),
     regenerateRegCode: () => request('/settings?action=reg_code', { method: 'POST' }),
   },
-  diagnostic: {
-    get: () => request('/progress?action=diagnostic'),
-    submit: (phase, answers) =>
-      request('/progress?action=diagnostic', { method: 'POST', body: JSON.stringify({ phase, answers }) }),
-  },
   survey: {
     get: () => request('/profile?action=survey'),
     submit: (answers, comment) =>

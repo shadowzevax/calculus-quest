@@ -5,44 +5,9 @@ import { requireAuth } from './_auth.js';
 import { checkAndAwardBadges } from './_badges.js';
 import { checkAndUnlockAvatarPieces, incrementSpeedBonusCount } from './_avatar.js';
 
-// Pre-test/post-test diagnostico: mismas 12 preguntas usadas antes y despues de las
-// misiones, para poder comparar el nivel del estudiante al inicio y al final (Objetivo 3).
-async function handleDiagnostic(req, res, user) {
-  if (req.method === 'GET') {
-    const questions = await sql`SELECT id, "order", topic, question, options FROM diagnostic_questions ORDER BY "order"`;
-    const attempts = await sql`SELECT phase, score, total, submitted_at FROM diagnostic_attempts WHERE user_id = ${user.id}`;
-    return res.status(200).json({ questions, attempts });
-  }
-
-  if (req.method === 'POST') {
-    const { phase, answers } = req.body || {};
-    if (phase !== 'pre' && phase !== 'post') return res.status(400).json({ error: 'phase debe ser "pre" o "post"' });
-    if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'answers requerido' });
-
-    const questions = await sql`SELECT id, correct_index FROM diagnostic_questions`;
-    let score = 0;
-    for (const q of questions) {
-      if (answers[q.id] === q.correct_index) score += 1;
-    }
-    const total = questions.length;
-
-    await sql`
-      INSERT INTO diagnostic_attempts (user_id, phase, answers, score, total)
-      VALUES (${user.id}, ${phase}, ${JSON.stringify(answers)}::jsonb, ${score}, ${total})
-      ON CONFLICT (user_id, phase) DO UPDATE SET
-        answers = ${JSON.stringify(answers)}::jsonb, score = ${score}, total = ${total}, submitted_at = now()
-    `;
-    return res.status(200).json({ ok: true, score, total });
-  }
-
-  res.status(405).json({ error: 'Method not allowed' });
-}
-
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
-
-  if (req.query.action === 'diagnostic') return handleDiagnostic(req, res, user);
 
   if (req.method === 'GET') {
     if (req.query.recommend) {
