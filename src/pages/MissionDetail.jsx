@@ -8,15 +8,48 @@ import FillBlankExercise from '@/components/exercises/FillBlankExercise'
 import TrueFalseExercise from '@/components/exercises/TrueFalseExercise'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import EscapeRoomGame from '@/components/EscapeRoomGame'
+import GroupSortGame from '@/components/exercises/games/GroupSortGame'
+import OpenBoxGame from '@/components/exercises/games/OpenBoxGame'
+import OrderStepsGame from '@/components/exercises/games/OrderStepsGame'
+import RaceLimitGame from '@/components/exercises/games/RaceLimitGame'
+import DiagramDragGame from '@/components/exercises/games/DiagramDragGame'
+import WhackMoleGame from '@/components/exercises/games/WhackMoleGame'
+import PuzzlePieceGame from '@/components/exercises/games/PuzzlePieceGame'
+import ErrorDetectiveGame from '@/components/exercises/games/ErrorDetectiveGame'
+import BalloonPopGame from '@/components/exercises/games/BalloonPopGame'
+import WheelSpinGame from '@/components/exercises/games/WheelSpinGame'
+import GraphSimulatorGame from '@/components/exercises/games/GraphSimulatorGame'
+import MemoryMatchGame from '@/components/exercises/games/MemoryMatchGame'
+import TowerClimbGame from '@/components/exercises/games/TowerClimbGame'
 import { avatarPieceThumb, pieceCropStyle, isColorPiece } from '@/lib/avatarPiecePreview'
 
 // Cada ejercicio tiene un `type`; este mapa elige qué componente lo renderiza
 // (evita un if/else gigante). Nuevo tipo = nuevo componente + una línea aquí.
+// Se usa como respaldo si la misión no tiene game_type asignado.
 const EXERCISE_COMPONENTS = {
   multiple_choice: MultipleChoiceExercise,
   fill_blank: FillBlankExercise,
   true_false: TrueFalseExercise,
   matching: MatchingExercise,
+}
+
+// Cada misión (excepto la 14, que es la sala colaborativa) tiene asignado un tipo de juego
+// distinto (mission.game_type) — este mapa elige el "envoltorio" visual que presenta todos
+// los ejercicios de esa misión, sin importar su tipo real de dato (opción múltiple, texto, etc).
+const GAME_COMPONENTS = {
+  group_sort: GroupSortGame,
+  open_box: OpenBoxGame,
+  order_steps: OrderStepsGame,
+  race_limit: RaceLimitGame,
+  diagram_drag: DiagramDragGame,
+  whack_mole: WhackMoleGame,
+  puzzle_piece: PuzzlePieceGame,
+  error_detective: ErrorDetectiveGame,
+  balloon_pop: BalloonPopGame,
+  wheel_spin: WheelSpinGame,
+  graph_simulator: GraphSimulatorGame,
+  memory_match: MemoryMatchGame,
+  tower_climb: TowerClimbGame,
 }
 
 const BONUS_XP = 5
@@ -147,7 +180,7 @@ export default function MissionDetail() {
   if (!mission) return <p className="text-red-500 text-sm">Misión no encontrada.</p>
 
   const exercise = exercises[current]
-  const Component = exercise ? EXERCISE_COMPONENTS[exercise.type] : null
+  const Component = exercise ? (GAME_COMPONENTS[mission.game_type] || EXERCISE_COMPONENTS[exercise.type]) : null
   const allCorrect = results.length > 0 && results.every((r) => r.isCorrect)
   const earnedXp = results.filter((r) => r.isCorrect).reduce((sum, r) => sum + (r.exercise.xp_value || 0) + (r.bonus || 0), 0)
   const nextMission = allMissions.find((m) => m.order === mission.order + 1)
