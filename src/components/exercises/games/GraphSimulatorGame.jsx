@@ -86,7 +86,9 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
           })}
         </div>
       ) : (
-        <TextAnswer feedback={feedback} onCheck={checkText} />
+        <div className="border border-blueprint/20 rounded-xl p-4 bg-blueprint/5">
+          <TextAnswer feedback={feedback} onCheck={checkText} />
+        </div>
       )}
 
       <FeedbackBanner feedback={feedback} />
