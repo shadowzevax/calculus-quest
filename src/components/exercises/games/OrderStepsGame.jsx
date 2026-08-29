@@ -18,8 +18,18 @@ function shuffle(arr) {
 // "operar funciones", que es justo seguir un procedimiento paso a paso.
 export default function OrderStepsGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'matching') return <MatchingExercise exercise={exercise} onComplete={onComplete} />
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
+  if (items.kind === 'matching') {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4 text-coral">
+          <ListOrdered className="w-5 h-5" />
+          <span className="text-xs font-mono-lab uppercase tracking-wide">Conecta cada paso con su pareja</span>
+        </div>
+        <MatchingExercise exercise={exercise} onComplete={onComplete} />
+      </div>
+    )
+  }
 
   const { index, total, current, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
 

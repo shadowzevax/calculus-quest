@@ -3,15 +3,26 @@ import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
-// Misión 13 — Torre/Escalera: cada acierto sube un escalón, cerrando el curso justo antes
-// del Escape Room (misión 14) con la sensación de ir escalando hacia la cima.
+// Misión 13 — Torre/Escalera: cada acierto sube un escalón; las opciones se muestran como
+// peldaños de la propia escalera — cierra el curso justo antes del Escape Room (misión 14).
 export default function TowerClimbGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'matching') return <MatchingExercise exercise={exercise} onComplete={onComplete} />
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const step = Math.min(index, total - 1)
+
+  if (items.kind === 'matching') {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4 text-gold">
+          <Star className="w-5 h-5" />
+          <span className="text-xs font-mono-lab uppercase tracking-wide">Escala emparejando cada pareja</span>
+        </div>
+        <MatchingExercise exercise={exercise} onComplete={onComplete} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex gap-5">
@@ -35,23 +46,28 @@ export default function TowerClimbGame({ exercise, onComplete, onFeedback }) {
 
         {items.kind === 'choice' ? (
           <div className="space-y-2">
-            {current.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => checkChoice(i)}
-                disabled={!!feedback}
-                className={`w-full text-left border rounded-lg px-4 py-2.5 text-sm font-mono-lab transition-colors ${
-                  selected === i ? 'border-coral bg-coral/5' : 'border-ink/10'
-                } ${feedback && i === current.correctIndex ? 'border-teal bg-teal/10' : ''} ${
-                  feedback && selected === i && i !== current.correctIndex ? 'border-red-400 bg-red-50' : ''
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+            {current.options.map((opt, i) => {
+              const isRight = feedback && i === current.correctIndex
+              const isWrongPick = feedback && selected === i && i !== current.correctIndex
+              return (
+                <button
+                  key={i}
+                  onClick={() => checkChoice(i)}
+                  disabled={!!feedback}
+                  className={`w-full flex items-center gap-3 border-b-4 rounded-md px-4 py-2.5 text-sm font-mono-lab bg-ink/[0.02] transition-transform hover:-translate-y-0.5 ${
+                    selected === i ? 'border-coral bg-coral/5' : 'border-ink/15'
+                  } ${isRight ? '!border-teal bg-teal/10' : ''} ${isWrongPick ? 'opacity-30' : ''}`}
+                >
+                  <span className="w-5 h-1 bg-current opacity-40 rounded-full shrink-0" />
+                  {opt}
+                </button>
+              )
+            })}
           </div>
         ) : (
-          <TextAnswer feedback={feedback} onCheck={checkText} />
+          <div className="border-b-4 border-gold/40 pb-3">
+            <TextAnswer feedback={feedback} onCheck={checkText} />
+          </div>
         )}
 
         <FeedbackBanner feedback={feedback} />

@@ -3,14 +3,26 @@ import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
-// Misión 6 — Golpea el topo: las opciones aparecen como topos en agujeros; hay que "golpear"
-// (tocar) el correcto — encaja con reconocer rápido si algo ES o NO ES una indeterminación.
+// Misión 6 — Golpea el topo: las opciones son agujeros de tierra con un topo asomado; hay
+// que "golpearlo" (tocarlo) si es la respuesta correcta — encaja con reconocer rápido si
+// algo ES o NO ES una indeterminación.
 export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'matching') return <MatchingExercise exercise={exercise} onComplete={onComplete} />
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+
+  if (items.kind === 'matching') {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4 text-[#6B4226]">
+          <Rabbit className="w-5 h-5" />
+          <span className="text-xs font-mono-lab uppercase tracking-wide">Empareja cada topo con su agujero</span>
+        </div>
+        <MatchingExercise exercise={exercise} onComplete={onComplete} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -18,25 +30,42 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
       <Prompt text={current.prompt} />
 
       {items.kind === 'choice' ? (
-        <div className="grid grid-cols-2 gap-3">
-          {current.options.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => checkChoice(i)}
-              disabled={!!feedback}
-              className={`flex items-center gap-2 rounded-full border-2 px-4 py-3 text-sm font-mono-lab transition-transform ${
-                selected === i && (!feedback || i === current.correctIndex) ? 'scale-95' : ''
-              } ${selected === i ? 'border-coral bg-coral/5' : 'border-ink/10 bg-ink/[0.02]'} ${
-                feedback && i === current.correctIndex ? '!border-teal bg-teal/10' : ''
-              } ${feedback && selected === i && i !== current.correctIndex ? '!border-red-400 bg-red-50 opacity-60' : ''}`}
-            >
-              <Rabbit className={`w-4 h-4 shrink-0 ${selected === i ? 'text-coral' : 'text-ink/30'}`} />
-              {opt}
-            </button>
-          ))}
+        <div className="grid grid-cols-2 gap-4">
+          {current.options.map((opt, i) => {
+            const hit = feedback && selected === i
+            const isRight = feedback && i === current.correctIndex
+            const missed = hit && !isRight
+            return (
+              <button
+                key={i}
+                onClick={() => checkChoice(i)}
+                disabled={!!feedback}
+                className="relative flex flex-col items-center transition-transform"
+              >
+                {/* aguero de tierra */}
+                <div
+                  className="w-full h-16 rounded-[50%] flex items-end justify-center overflow-hidden border-2"
+                  style={{
+                    background: 'radial-gradient(ellipse at center, #5b3a29 0%, #7a5236 60%, #a9764f 100%)',
+                    borderColor: isRight ? '#2A9D8F' : '#4a2f20',
+                  }}
+                >
+                  <Rabbit
+                    className={`w-9 h-9 mb-1 transition-transform ${missed ? 'translate-y-6 opacity-0' : hit ? '-translate-y-1' : ''}`}
+                    style={{ color: isRight ? '#2A9D8F' : '#D9B48F' }}
+                  />
+                </div>
+                <span className={`mt-1.5 text-xs font-mono-lab text-center leading-tight ${isRight ? 'text-teal font-semibold' : 'text-ink/70'}`}>
+                  {opt}
+                </span>
+              </button>
+            )
+          })}
         </div>
       ) : (
-        <TextAnswer feedback={feedback} onCheck={checkText} />
+        <div className="border-2 rounded-2xl p-4" style={{ borderColor: '#7a5236', backgroundColor: '#7a523612' }}>
+          <TextAnswer feedback={feedback} onCheck={checkText} />
+        </div>
       )}
 
       <FeedbackBanner feedback={feedback} />

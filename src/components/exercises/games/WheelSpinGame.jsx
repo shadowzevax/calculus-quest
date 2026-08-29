@@ -4,16 +4,29 @@ import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
-// Misión 10 — Rueda del azar: gira la ruleta y "cae" en el siguiente límite a resolver —
-// refuerza la variedad de técnicas (factorizar, racionalizar) para las indeterminaciones.
+const WEDGE_COLORS = ['#F0A93C', '#457B9D', '#3FBFAD', '#FF6B4A']
+
+// Misión 10 — Rueda del azar: gira la ruleta antes de cada límite; las opciones se muestran
+// como gajos de la propia ruleta, no como una lista — refuerza la variedad de técnicas.
 export default function WheelSpinGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'matching') return <MatchingExercise exercise={exercise} onComplete={onComplete} />
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [spun, setSpun] = useState(false)
   const [spinning, setSpinning] = useState(false)
+
+  if (items.kind === 'matching') {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4 text-gold">
+          <Disc3 className="w-5 h-5" />
+          <span className="text-xs font-mono-lab uppercase tracking-wide">Gira y conecta cada pareja</span>
+        </div>
+        <MatchingExercise exercise={exercise} onComplete={onComplete} />
+      </div>
+    )
+  }
 
   const spin = () => {
     setSpinning(true)
@@ -44,24 +57,27 @@ export default function WheelSpinGame({ exercise, onComplete, onFeedback }) {
       <Prompt text={current.prompt} />
 
       {items.kind === 'choice' ? (
-        <div className="space-y-2">
-          {current.options.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => checkChoice(i)}
-              disabled={!!feedback}
-              className={`w-full text-left border rounded-lg px-4 py-2.5 text-sm font-mono-lab transition-colors ${
-                selected === i ? 'border-coral bg-coral/5' : 'border-ink/10'
-              } ${feedback && i === current.correctIndex ? 'border-teal bg-teal/10' : ''} ${
-                feedback && selected === i && i !== current.correctIndex ? 'border-red-400 bg-red-50' : ''
-              }`}
-            >
-              {opt}
-            </button>
-          ))}
+        <div className="grid grid-cols-2 gap-0 rounded-full overflow-hidden border-4 border-ink/10 max-w-sm mx-auto">
+          {current.options.map((opt, i) => {
+            const isRight = feedback && i === current.correctIndex
+            const isWrongPick = feedback && selected === i && i !== current.correctIndex
+            return (
+              <button
+                key={i}
+                onClick={() => checkChoice(i)}
+                disabled={!!feedback}
+                className={`flex items-center justify-center text-center text-white text-xs font-mono-lab px-3 py-8 transition-opacity ${isWrongPick ? 'opacity-30' : ''}`}
+                style={{ backgroundColor: isRight ? '#2A9D8F' : WEDGE_COLORS[i % WEDGE_COLORS.length] }}
+              >
+                {opt}
+              </button>
+            )
+          })}
         </div>
       ) : (
-        <TextAnswer feedback={feedback} onCheck={checkText} />
+        <div className="border-4 border-gold/25 rounded-2xl p-4 bg-gold/5">
+          <TextAnswer feedback={feedback} onCheck={checkText} />
+        </div>
       )}
 
       <FeedbackBanner feedback={feedback} />
