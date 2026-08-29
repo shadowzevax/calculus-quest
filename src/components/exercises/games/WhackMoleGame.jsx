@@ -44,14 +44,14 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
               >
                 {/* aguero de tierra */}
                 <div
-                  className="w-full h-16 rounded-[50%] flex items-end justify-center overflow-hidden border-2"
+                  className="w-24 h-24 max-w-full mx-auto rounded-full flex items-end justify-center overflow-hidden border-4"
                   style={{
-                    background: 'radial-gradient(ellipse at center, #5b3a29 0%, #7a5236 60%, #a9764f 100%)',
+                    background: 'radial-gradient(circle at center, #5b3a29 0%, #7a5236 55%, #a9764f 100%)',
                     borderColor: isRight ? '#2A9D8F' : '#4a2f20',
                   }}
                 >
                   <Rabbit
-                    className={`w-9 h-9 mb-1 transition-transform ${missed ? 'translate-y-6 opacity-0' : hit ? '-translate-y-1' : ''}`}
+                    className={`w-9 h-9 mb-2 transition-transform ${missed ? 'translate-y-6 opacity-0' : hit ? '-translate-y-1' : ''}`}
                     style={{ color: isRight ? '#2A9D8F' : '#D9B48F' }}
                   />
                 </div>
