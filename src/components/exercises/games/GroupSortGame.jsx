@@ -109,7 +109,7 @@ function GroupSortBoard({ options, correctIndex, feedback, onSubmit }) {
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
                       {...dragProvided.dragHandleProps}
-                      className={`flex items-center gap-2 bg-white border rounded-lg px-3 py-2 text-sm font-mono-lab shadow-sm ${
+                      className={`select-none flex items-center gap-2 bg-white border rounded-lg px-3 py-2 text-sm font-mono-lab shadow-sm cursor-grab active:cursor-grabbing ${
                         snapshot.isDragging ? 'shadow-lg' : ''
                       } ${submitted ? (isRightHere ? 'border-teal bg-teal/10' : 'border-red-400 bg-red-50') : 'border-ink/10'}`}
                     >
@@ -144,7 +144,7 @@ function GroupSortBoard({ options, correctIndex, feedback, onSubmit }) {
                     ref={dragProvided.innerRef}
                     {...dragProvided.draggableProps}
                     {...dragProvided.dragHandleProps}
-                    className={`px-3 py-2 rounded-lg text-white text-sm font-mono-lab shadow-sm cursor-grab active:cursor-grabbing ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                    className={`select-none px-3 py-2 rounded-lg text-white text-sm font-mono-lab shadow-sm cursor-grab active:cursor-grabbing ${snapshot.isDragging ? 'shadow-lg' : ''}`}
                     style={{ backgroundColor: BLOCK_COLORS[item.i % BLOCK_COLORS.length] }}
                   >
                     {item.text}
