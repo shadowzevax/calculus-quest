@@ -66,29 +66,27 @@ function DragToBins({ options, correctIndex, feedback, onDrop }) {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      {placedIn === null && (
-        <Droppable droppableId="pool" isDropDisabled>
-          {(provided) => (
-            <div ref={provided.innerRef} {...provided.droppableProps} className="flex justify-center mb-5">
-              <Draggable draggableId="answer-chip" index={0} isDragDisabled={!!feedback}>
-                {(dragProvided, snapshot) => (
-                  <div
-                    ref={dragProvided.innerRef}
-                    {...dragProvided.draggableProps}
-                    {...dragProvided.dragHandleProps}
-                    className={`flex items-center gap-2 bg-white border-2 border-coral rounded-full px-4 py-2 text-sm font-mono-lab shadow-md ${
-                      snapshot.isDragging ? 'shadow-xl' : ''
-                    }`}
-                  >
-                    <Move className="w-3.5 h-3.5 text-coral" /> Arrastra tu respuesta
-                  </div>
-                )}
-              </Draggable>
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      )}
+      <Droppable droppableId="pool" isDropDisabled>
+        {(provided) => (
+          <div ref={provided.innerRef} {...provided.droppableProps} className={`flex justify-center mb-5 ${placedIn !== null ? 'hidden' : ''}`}>
+            <Draggable draggableId="answer-chip" index={0} isDragDisabled={!!feedback || placedIn !== null}>
+              {(dragProvided, snapshot) => (
+                <div
+                  ref={dragProvided.innerRef}
+                  {...dragProvided.draggableProps}
+                  {...dragProvided.dragHandleProps}
+                  className={`flex items-center gap-2 bg-white border-2 border-coral rounded-full px-4 py-2 text-sm font-mono-lab shadow-md ${
+                    snapshot.isDragging ? 'shadow-xl' : ''
+                  }`}
+                >
+                  <Move className="w-3.5 h-3.5 text-coral" /> Arrastra tu respuesta
+                </div>
+              )}
+            </Draggable>
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
 
       <div className="grid grid-cols-2 gap-3">
         {options.map((opt, i) => {
