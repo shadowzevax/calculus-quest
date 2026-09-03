@@ -1,19 +1,34 @@
-import { useState } from 'react'
-import { RotateCw, Brain } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Brain, Eye, EyeOff } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
-// Misión 12 — Memoria: cuando el ejercicio ya es de tipo "emparejar" (pares función-derivada)
-// se usa tal cual, que es justo el juego de memoria. Los demás ejercicios se presentan primero
-// como una carta boca abajo, y las opciones como un pequeño tablero de mini-cartas volteables.
+const MEMORIZE_SECONDS = 8
+
+// Misión 12 — Memoria: todas las opciones se muestran boca arriba unos segundos para que se
+// memoricen, luego se tapan y solo queda UN intento para señalar la correcta de memoria.
 export default function MemoryMatchGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
-  const [flipped, setFlipped] = useState(false)
-  const [revealedOpts, setRevealedOpts] = useState([])
+  const [secondsLeft, setSecondsLeft] = useState(MEMORIZE_SECONDS)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (items.kind !== 'choice') return
+    setSecondsLeft(MEMORIZE_SECONDS)
+    clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) { clearInterval(timerRef.current); return 0 }
+        return s - 1
+      })
+    }, 1000)
+    return () => clearInterval(timerRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index])
 
   if (items.kind === 'matching') {
     return (
@@ -27,56 +42,46 @@ export default function MemoryMatchGame({ exercise, onComplete, onFeedback }) {
     )
   }
 
-  if (!flipped) {
-    return (
-      <div className="text-center py-4">
-        <GameHeader index={index} total={total} label="CARTA" />
-        <button
-          onClick={() => setFlipped(true)}
-          className="mx-auto w-40 h-24 rounded-xl bg-blueprint text-white flex flex-col items-center justify-center gap-2 hover:bg-coral transition-colors"
-        >
-          <RotateCw className="w-6 h-6" />
-          <span className="text-xs font-mono-lab">Voltear carta</span>
-        </button>
-      </div>
-    )
-  }
-
-  const reveal = (i) => setRevealedOpts((r) => (r.includes(i) ? r : [...r, i]))
+  const memorizing = items.kind === 'choice' && secondsLeft > 0
 
   return (
     <div>
-      <GameHeader index={index} total={total} label="CARTA" />
+      <GameHeader index={index} total={total} label="RONDA" />
       <Prompt text={current.prompt} />
 
       {items.kind === 'choice' ? (
-        <div className="grid grid-cols-2 gap-3">
-          {current.options.map((opt, i) => {
-            const isUp = revealedOpts.includes(i) || !!feedback
-            const isRight = feedback && i === current.correctIndex
-            const isWrongPick = feedback && selected === i && i !== current.correctIndex
-            return (
-              <button
-                key={i}
-                onClick={() => (isUp ? checkChoice(i) : reveal(i))}
-                disabled={!!feedback}
-                className={`h-16 rounded-lg border-2 flex items-center justify-center text-center text-xs font-mono-lab px-2 transition-all ${
-                  isUp
-                    ? `bg-white ${selected === i ? 'border-coral' : 'border-ink/15'} ${isRight ? '!border-teal bg-teal/10' : ''} ${isWrongPick ? 'opacity-30' : ''}`
-                    : 'bg-blueprint text-white hover:bg-blueprint/90 border-blueprint'
-                }`}
-              >
-                {isUp ? opt : <Brain className="w-5 h-5 opacity-70" />}
-              </button>
-            )
-          })}
+        <div>
+          <div className={`flex items-center gap-1.5 mb-2 text-xs font-mono-lab ${memorizing ? 'text-coral' : 'text-blueprint'}`}>
+            {memorizing ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {memorizing ? `Memoriza la respuesta correcta... ${secondsLeft}s` : 'Elige de memoria — solo tienes un intento'}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {current.options.map((opt, i) => {
+              const isRight = feedback && i === current.correctIndex
+              const isWrongPick = feedback && selected === i && i !== current.correctIndex
+              return (
+                <button
+                  key={i}
+                  onClick={() => !memorizing && checkChoice(i)}
+                  disabled={!!feedback || memorizing}
+                  className={`h-16 rounded-lg border-2 flex items-center justify-center text-center text-xs font-mono-lab px-2 transition-all ${
+                    memorizing
+                      ? 'bg-white border-blueprint/20'
+                      : `bg-blueprint text-white hover:bg-blueprint/90 border-blueprint ${isWrongPick ? 'opacity-30' : ''}`
+                  } ${isRight ? '!bg-teal/10 !border-teal !text-teal' : ''}`}
+                >
+                  {memorizing ? opt : (feedback ? opt : <Brain className="w-5 h-5 opacity-70" />)}
+                </button>
+              )
+            })}
+          </div>
         </div>
       ) : (
         <TextAnswer feedback={feedback} onCheck={checkText} />
       )}
 
       <FeedbackBanner feedback={feedback} />
-      <NextButton feedback={feedback} index={index} total={total} onNext={() => { next(); setFlipped(false); setRevealedOpts([]) }} />
+      <NextButton feedback={feedback} index={index} total={total} onNext={next} />
     </div>
   )
 }

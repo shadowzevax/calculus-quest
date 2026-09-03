@@ -203,6 +203,25 @@ export default function EscapeRoomGame({ mission }) {
     }
   }
 
+  // A los 15s de llegar a "done", el anfitrion dispara automaticamente el Sistema 6 para
+  // que todo el equipo pase sin depender de que alguien haga clic manualmente.
+  const autoCardsRef = useRef(false)
+  useEffect(() => {
+    autoCardsRef.current = false
+  }, [room?.id])
+  useEffect(() => {
+    const amHost = room?.host_user_id === user?.id
+    if (room?.status !== 'done' || !amHost) return
+    const t = setTimeout(() => {
+      if (!autoCardsRef.current) {
+        autoCardsRef.current = true
+        handleStartCards()
+      }
+    }, 15000)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.status, room?.host_user_id, user?.id])
+
   const handleNext = () => {
     if (feedback?.nextRoom) setRoom(feedback.nextRoom)
     setSelected(null)
@@ -330,25 +349,19 @@ export default function EscapeRoomGame({ mission }) {
         </div>
         {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
         <div className="flex items-center justify-center gap-3 mt-6">
-          {isHost && (
-            <button
-              onClick={handleStartCards}
-              disabled={busy}
-              className="bg-gold hover:bg-gold/80 transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2 disabled:opacity-30"
-            >
-              <Zap className="w-4 h-4" /> Jugar Sistema 6 (desempate)
-            </button>
-          )}
           <button
-            onClick={handleLeave}
-            className="border border-ink/15 hover:bg-ink/5 transition-colors text-ink/70 rounded-lg px-5 py-2.5 text-sm font-medium"
+            onClick={isHost ? handleStartCards : undefined}
+            disabled={busy || !isHost}
+            title={isHost ? undefined : 'Solo el anfitrión puede iniciarlo — empezará automáticamente en unos segundos'}
+            className="bg-gold hover:bg-gold/80 transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2 disabled:opacity-40"
           >
-            Salir de la sala
+            <Zap className="w-4 h-4" /> Jugar Sistema 6 (desempate)
           </button>
         </div>
         <p className="text-xs text-ink/35 mt-3">
           El Sistema 6 es opcional: un desafío de memoria individual (todo el equipo juega a la vez) que
-          no da XP, solo sirve para desempatar el ranking si varios llegan al mismo puntaje.
+          no da XP, solo sirve para desempatar el ranking si varios llegan al mismo puntaje. Empieza solo
+          a los 15 segundos.
         </p>
       </div>
     )
@@ -449,75 +462,85 @@ export default function EscapeRoomGame({ mission }) {
   // Jugando: acertijo actual, solo el que tiene el turno puede responder.
   const myTurn = room.my_turn
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-mono-lab text-ink/40">SISTEMA {room.current_puzzle_index + 1} / {room.total_puzzles}</span>
-        <button onClick={handleLeave} className="text-xs text-ink/40 hover:text-red-500 transition-colors flex items-center gap-1">
-          <LogOut className="w-3.5 h-3.5" /> Salir
-        </button>
-      </div>
+    <div className="flex gap-5">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-mono-lab text-ink/40">SISTEMA {room.current_puzzle_index + 1} / {room.total_puzzles}</span>
+          <button onClick={handleLeave} className="text-xs text-ink/40 hover:text-red-500 transition-colors flex items-center gap-1">
+            <LogOut className="w-3.5 h-3.5" /> Salir
+          </button>
+        </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        {room.members.map((m, i) => (
-          <span
-            key={m.user_id}
-            className={`text-[11px] font-mono-lab px-2 py-1 rounded-full ${
-              m.user_id === room.turn_user_id ? 'bg-coral text-white' : 'bg-ink/5 text-ink/40'
-            }`}
-          >
-            {m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}
-          </span>
-        ))}
-      </div>
+        {room.puzzle && (
+          <>
+            <p className="font-display font-medium text-ink mb-4"><MathText text={room.puzzle.question} /></p>
+            <div className="space-y-2">
+              {room.puzzle.options.map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => myTurn && !feedback && setSelected(i)}
+                  disabled={!myTurn || !!feedback}
+                  className={`w-full text-left border rounded-lg px-4 py-2.5 text-sm font-mono-lab transition-colors ${
+                    selected === i ? 'border-coral bg-coral/5' : 'border-ink/10'
+                  } ${feedback?.isCorrect && selected === i ? 'border-teal bg-teal/10' : ''} ${
+                    feedback && !feedback.isCorrect && selected === i ? 'border-red-400 bg-red-50' : ''
+                  } ${!myTurn ? 'opacity-50' : ''}`}
+                >
+                  <MathText text={opt} />
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
-      {room.puzzle && (
-        <>
-          <p className="font-display font-medium text-ink mb-4"><MathText text={room.puzzle.question} /></p>
-          <div className="space-y-2">
-            {room.puzzle.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => myTurn && !feedback && setSelected(i)}
-                disabled={!myTurn || !!feedback}
-                className={`w-full text-left border rounded-lg px-4 py-2.5 text-sm font-mono-lab transition-colors ${
-                  selected === i ? 'border-coral bg-coral/5' : 'border-ink/10'
-                } ${feedback?.isCorrect && selected === i ? 'border-teal bg-teal/10' : ''} ${
-                  feedback && !feedback.isCorrect && selected === i ? 'border-red-400 bg-red-50' : ''
-                } ${!myTurn ? 'opacity-50' : ''}`}
-              >
-                <MathText text={opt} />
-              </button>
-            ))}
+        {!myTurn && !feedback && (
+          <p className="text-sm text-ink/40 mt-4">Esperando a que {room.members.find((m) => m.user_id === room.turn_user_id)?.full_name} resuelva este sistema…</p>
+        )}
+
+        {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+
+        {feedback && (
+          <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-teal/10 text-teal' : 'bg-gold/10 text-gold'}`}>
+            {feedback.isCorrect ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
+            <span>{feedback.isCorrect ? '¡Correcto! Sistema restaurado.' : 'No es correcto, inténtalo de nuevo.'} {feedback.explanation}</span>
           </div>
-        </>
-      )}
+        )}
 
-      {!myTurn && !feedback && (
-        <p className="text-sm text-ink/40 mt-4">Esperando a que {room.members.find((m) => m.user_id === room.turn_user_id)?.full_name} resuelva este sistema…</p>
-      )}
+        {myTurn && (
+          <div className="mt-4">
+            {!feedback ? (
+              <button onClick={handleAnswer} disabled={selected === null || busy} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-30">
+                Verificar
+              </button>
+            ) : (
+              <button onClick={handleNext} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">
+                {feedback.isCorrect ? (feedback.nextRoom?.status === 'done' ? 'Ver resultado' : 'Siguiente sistema') : 'Reintentar'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
-      {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
-
-      {feedback && (
-        <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-teal/10 text-teal' : 'bg-gold/10 text-gold'}`}>
-          {feedback.isCorrect ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
-          <span>{feedback.isCorrect ? '¡Correcto! Sistema restaurado.' : 'No es correcto, inténtalo de nuevo.'} {feedback.explanation}</span>
-        </div>
-      )}
-
-      {myTurn && (
-        <div className="mt-4">
-          {!feedback ? (
-            <button onClick={handleAnswer} disabled={selected === null || busy} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-30">
-              Verificar
-            </button>
-          ) : (
-            <button onClick={handleNext} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">
-              {feedback.isCorrect ? (feedback.nextRoom?.status === 'done' ? 'Ver resultado' : 'Siguiente sistema') : 'Reintentar'}
-            </button>
-          )}
-        </div>
-      )}
+      <div className="flex flex-col items-center gap-3 shrink-0 pt-1">
+        {room.members.map((m) => {
+          const onTurn = m.user_id === room.turn_user_id
+          const initials = (m.full_name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
+          return (
+            <div key={m.user_id} className="flex flex-col items-center gap-1 w-14">
+              <div
+                className={`w-11 h-11 rounded-full flex items-center justify-center text-xs font-mono-lab font-semibold transition-all ${
+                  onTurn ? 'bg-coral text-white ring-4 ring-coral/25 scale-110' : 'bg-ink/10 text-ink/40'
+                }`}
+              >
+                {initials}
+              </div>
+              <span className={`text-[10px] font-mono-lab text-center leading-tight ${onTurn ? 'text-coral font-semibold' : 'text-ink/35'}`}>
+                {m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}
+              </span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
