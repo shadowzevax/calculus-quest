@@ -36,13 +36,18 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
     setNeedle({ x: e.clientX - rect.left, y: e.clientY - rect.top })
   }
 
+  // Se pinchan globos sin importar si son la respuesta correcta o no; la respuesta que
+  // realmente cuenta es la del ÚNICO globo que quede sin reventar al final.
   const pop = (i) => {
     if (feedback || popped.includes(i)) return
-    if (i === current.correctIndex) {
-      checkChoice(i)
+    const newPopped = [...popped, i]
+    if (newPopped.length >= current.options.length - 1) {
+      const remaining = current.options.findIndex((_, idx) => !newPopped.includes(idx))
+      setPopped(newPopped)
+      setTimeout(() => checkChoice(remaining), 350)
       return
     }
-    setPopped((p) => [...p, i])
+    setPopped(newPopped)
   }
 
   return (
@@ -74,12 +79,12 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
                 disabled={!!feedback || isGone}
                 className={`relative flex flex-col items-center gap-1.5 transition-all duration-200 ${OFFSETS[i % OFFSETS.length]} ${
                   isGone ? 'opacity-0 scale-[0.3] pointer-events-none' : ''
-                } ${isWrongPick ? 'opacity-0 scale-[0.3]' : ''}`}
+                }`}
               >
                 <div
                   className={`w-24 h-28 max-w-full rounded-[48%_48%_48%_48%/58%_58%_42%_42%] flex items-center justify-center text-white text-xs leading-snug font-mono-lab px-3 py-3 text-center shadow-lg transition-transform ${
                     isRight ? 'ring-4 ring-teal/40 scale-110' : ''
-                  }`}
+                  } ${isWrongPick ? 'ring-4 ring-red-400/50' : ''}`}
                   style={{ backgroundColor: BALLOON_COLORS[i % BALLOON_COLORS.length] }}
                 >
                   <span className="line-clamp-4">{opt}</span>
@@ -96,7 +101,7 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
       )}
 
       {!feedback && items.kind === 'choice' && (
-        <p className="text-[11px] text-ink/30 font-mono-lab -mt-2 mb-2">Pincha los globos incorrectos hasta dejar solo el correcto.</p>
+        <p className="text-[11px] text-ink/30 font-mono-lab -mt-2 mb-2">Pincha 3 globos: el que quede sin pinchar es tu respuesta.</p>
       )}
 
       <FeedbackBanner feedback={feedback} />

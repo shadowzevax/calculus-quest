@@ -48,7 +48,7 @@ export default function OpenBoxGame({ exercise, onComplete, onFeedback }) {
           <Prompt text={current.prompt} />
 
           {items.kind === 'choice' ? (
-            <div className="grid grid-cols-2 gap-2.5 max-w-sm">
+            <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
               {current.options.map((opt, i) => {
                 const color = BOX_COLORS[i % BOX_COLORS.length]
                 const isRight = feedback && i === current.correctIndex
@@ -59,18 +59,18 @@ export default function OpenBoxGame({ exercise, onComplete, onFeedback }) {
                     key={i}
                     onClick={() => checkChoice(i)}
                     disabled={!!feedback}
-                    className={`relative rounded-lg border-2 flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-center text-xs font-mono-lab transition-all ${
+                    className={`relative rounded-xl border-2 flex flex-col items-center justify-center gap-2 px-4 py-6 min-h-[6.5rem] text-center text-sm font-mono-lab transition-all ${
                       isPicked ? 'scale-95' : 'hover:-translate-y-0.5'
                     } ${feedback && !isRight && !isPicked ? 'opacity-40' : ''}`}
                     style={{ borderColor: isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : color, backgroundColor: `${isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : color}12` }}
                   >
                     {feedback && (isPicked || isRight) && (
-                      <span className="absolute -top-2 -right-2 rounded-full bg-white shadow">
-                        {isRight ? <CheckCircle2 className="w-4 h-4 text-teal" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                      <span className="absolute -top-2.5 -right-2.5 rounded-full bg-white shadow">
+                        {isRight ? <CheckCircle2 className="w-5 h-5 text-teal" /> : <XCircle className="w-5 h-5 text-red-500" />}
                       </span>
                     )}
-                    <Package className="w-4 h-4" style={{ color: isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : color }} />
-                    <span className="text-ink leading-tight">{opt}</span>
+                    <Package className="w-6 h-6" style={{ color: isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : color }} />
+                    <span className="text-ink leading-snug">{opt}</span>
                   </button>
                 )
               })}

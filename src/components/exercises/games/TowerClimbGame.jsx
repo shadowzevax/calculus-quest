@@ -4,8 +4,13 @@ import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, Prompt } from './GameBits'
 
-const MAX_WRONG = 6
-const ALPHABET = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('')
+const MAX_WRONG = 8
+const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('')
+const DIGITS = '0123456789'.split('')
+// Muchas respuestas correctas son expresiones (2x+1, x^2, 16, -3...) con pocas o ninguna
+// letra real — si solo se pudieran adivinar letras el juego se resolvía solo o se reducía a
+// una sola "X". Al incluir dígitos como caracteres adivinables el reto vuelve a tener sentido.
+const KEYS = [...LETTERS, ...DIGITS]
 
 const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g')
 function stripAccents(s) {
@@ -58,6 +63,8 @@ function HangmanFigure({ wrong }) {
     <line key="armR" x1="60" y1="52" x2="74" y2="65" stroke="#1B3A5C" strokeWidth="2.5" />,
     <line key="legL" x1="60" y1="72" x2="48" y2="90" stroke="#1B3A5C" strokeWidth="2.5" />,
     <line key="legR" x1="60" y1="72" x2="72" y2="90" stroke="#1B3A5C" strokeWidth="2.5" />,
+    <g key="eyeL" stroke="#E76F51" strokeWidth="1.6"><line x1="55" y1="31" x2="59" y2="35" /><line x1="59" y1="31" x2="55" y2="35" /></g>,
+    <g key="eyeR" stroke="#E76F51" strokeWidth="1.6"><line x1="61" y1="31" x2="65" y2="35" /><line x1="65" y1="31" x2="61" y2="35" /></g>,
   ]
   return (
     <svg viewBox="0 0 120 100" className="w-32 h-28 mx-auto">
@@ -75,7 +82,7 @@ function HangmanBody({ target, current, index, total, feedback, onWin, onLose, o
   const [done, setDone] = useState(false)
 
   const normTarget = stripAccents(target)
-  const letterPositions = normTarget.split('').map((ch) => /[A-ZÑ]/.test(ch))
+  const letterPositions = normTarget.split('').map((ch) => /[A-ZÑ0-9]/.test(ch))
   const wrong = guessed.filter((l) => !normTarget.includes(l))
   const wrongCount = wrong.length
   const solved = letterPositions.every((isLetter, i) => !isLetter || guessed.includes(normTarget[i]))
@@ -116,25 +123,47 @@ function HangmanBody({ target, current, index, total, feedback, onWin, onLose, o
       </div>
 
       {!feedback && (
-        <div className="flex flex-wrap justify-center gap-1.5">
-          {ALPHABET.map((letter) => {
-            const used = guessed.includes(letter)
-            const wasWrong = used && !normTarget.includes(letter)
-            return (
-              <button
-                key={letter}
-                onClick={() => guess(letter)}
-                disabled={used || wrongCount >= MAX_WRONG}
-                className={`w-8 h-8 rounded-md border text-xs font-mono-lab font-semibold transition-colors ${
-                  used
-                    ? wasWrong ? 'bg-red-100 border-red-300 text-red-400' : 'bg-teal/10 border-teal/30 text-teal'
-                    : 'border-ink/15 hover:bg-ink/5 text-ink/70'
-                }`}
-              >
-                {letter}
-              </button>
-            )
-          })}
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {LETTERS.map((letter) => {
+              const used = guessed.includes(letter)
+              const wasWrong = used && !normTarget.includes(letter)
+              return (
+                <button
+                  key={letter}
+                  onClick={() => guess(letter)}
+                  disabled={used || wrongCount >= MAX_WRONG}
+                  className={`w-8 h-8 rounded-md border text-xs font-mono-lab font-semibold transition-colors ${
+                    used
+                      ? wasWrong ? 'bg-red-100 border-red-300 text-red-400' : 'bg-teal/10 border-teal/30 text-teal'
+                      : 'border-ink/15 hover:bg-ink/5 text-ink/70'
+                  }`}
+                >
+                  {letter}
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {DIGITS.map((d) => {
+              const used = guessed.includes(d)
+              const wasWrong = used && !normTarget.includes(d)
+              return (
+                <button
+                  key={d}
+                  onClick={() => guess(d)}
+                  disabled={used || wrongCount >= MAX_WRONG}
+                  className={`w-8 h-8 rounded-md border text-xs font-mono-lab font-semibold transition-colors ${
+                    used
+                      ? wasWrong ? 'bg-red-100 border-red-300 text-red-400' : 'bg-teal/10 border-teal/30 text-teal'
+                      : 'border-blueprint/20 bg-blueprint/[0.04] hover:bg-blueprint/10 text-blueprint/70'
+                  }`}
+                >
+                  {d}
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 

@@ -1,23 +1,44 @@
 import { useState } from 'react'
-import { Disc3 } from 'lucide-react'
+import { Disc3, Dices } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
-import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt, MathText } from './GameBits'
+import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
 const WEDGE_COLORS = ['#F0A93C', '#457B9D', '#3FBFAD', '#FF6B4A', '#9B5DE5', '#2A9D8F', '#E76F51', '#264653']
+const MIN_WEDGES = 6
 
-function short(text, n = 34) {
-  const s = String(text || '')
-  return s.length > n ? s.slice(0, n - 1) + '…' : s
+// Envuelve texto en hasta 3 lineas cortas para que quepa dentro de un gajo de la ruleta.
+function wrapLines(text, maxChars = 11, maxLines = 3) {
+  const words = String(text).split(/\s+/)
+  const lines = []
+  let cur = ''
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length > maxChars && cur) {
+      lines.push(cur.trim())
+      cur = w
+    } else {
+      cur = (cur + ' ' + w).trim()
+    }
+    if (lines.length === maxLines - 1) break
+  }
+  if (cur) lines.push(cur.trim())
+  const consumed = lines.join(' ').length
+  if (consumed < String(text).length && lines.length === maxLines) {
+    lines[maxLines - 1] = lines[maxLines - 1].slice(0, maxChars - 1) + '…'
+  }
+  return lines.slice(0, maxLines)
 }
 
-// Misión 10 — Rueda del azar: la ruleta se ve completa desde el inicio, con una pregunta por
-// gajo. Al girar cae en una pregunta al azar, la ruleta desaparece y se responde esa pregunta
-// con sus propias opciones; si se acierta esa pregunta se quita de la ruleta para siempre y la
-// ruleta reaparece con las que faltan, hasta vaciarla.
+// Misión 10 — Rueda del azar: la ruleta se ve completa desde el inicio con al menos 6 gajos
+// (si la pregunta tiene menos opciones se rellena con gajos decorativos "vuelve a girar" para
+// que la ruleta siempre luzca completa); cada gajo real es clicable y responde la pregunta.
 export default function WheelSpinGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
+
+  const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+  const [spun, setSpun] = useState(false)
+  const [spinning, setSpinning] = useState(false)
 
   if (items.kind === 'matching') {
     return (
@@ -31,19 +52,10 @@ export default function WheelSpinGame({ exercise, onComplete, onFeedback }) {
     )
   }
 
-  if (items.kind === 'text') {
-    return <TextWheelFallback items={items} onComplete={onComplete} onFeedback={onFeedback} />
-  }
-
-  return <ChoiceWheel items={items} onComplete={onComplete} onFeedback={onFeedback} />
-}
-
-// El ejercicio es de tipo texto: no hay gajos que remover por pregunta, se juega secuencial
-// pero conservando el mismo giro-de-ruleta como transición entre preguntas.
-function TextWheelFallback({ items, onComplete, onFeedback }) {
-  const { index, total, current, feedback, checkText, next } = useStepper(items, onComplete, onFeedback)
-  const [spun, setSpun] = useState(false)
-  const [spinning, setSpinning] = useState(false)
+  const nReal = items.kind === 'choice' ? current.options.length : 0
+  const nDecoy = Math.max(MIN_WEDGES - nReal, 0)
+  const nWedges = nReal + nDecoy
+  const wedgeAngle = 360 / Math.max(nWedges, 1)
 
   const spin = () => { setSpinning(true); setTimeout(() => { setSpinning(false); setSpun(true) }, 700) }
 
@@ -63,144 +75,65 @@ function TextWheelFallback({ items, onComplete, onFeedback }) {
     <div>
       <GameHeader index={index} total={total} label="TURNO" />
       <Prompt text={current.prompt} />
-      <div className="border-4 border-gold/25 rounded-2xl p-4 bg-gold/5">
-        <TextAnswer feedback={feedback} onCheck={checkText} />
-      </div>
+
+      {items.kind === 'choice' ? (
+        <div className="flex justify-center mb-4">
+          <svg viewBox="0 0 260 260" className="w-72 h-72 max-w-full">
+            <circle cx="130" cy="130" r="128" fill="white" stroke="#1B3A5C" strokeOpacity="0.15" strokeWidth="2" />
+            {Array.from({ length: nWedges }).map((_, slot) => {
+              const isReal = slot < nReal
+              const start = slot * wedgeAngle
+              const end = start + wedgeAngle
+              const toRad = (deg) => ((deg - 90) * Math.PI) / 180
+              const R = 122
+              const x1 = 130 + R * Math.cos(toRad(start))
+              const y1 = 130 + R * Math.sin(toRad(start))
+              const x2 = 130 + R * Math.cos(toRad(end))
+              const y2 = 130 + R * Math.sin(toRad(end))
+              const largeArc = wedgeAngle > 180 ? 1 : 0
+              const mid = start + wedgeAngle / 2
+              const lx = 130 + 74 * Math.cos(toRad(mid))
+              const ly = 130 + 74 * Math.sin(toRad(mid))
+              const isRight = feedback && isReal && slot === current.correctIndex
+              const isWrongPick = feedback && isReal && selected === slot && slot !== current.correctIndex
+              const fill = isReal ? (isRight ? '#2A9D8F' : WEDGE_COLORS[slot % WEDGE_COLORS.length]) : '#CBD5D9'
+              const lines = isReal ? wrapLines(current.options[slot]) : ['Vuelve', 'a girar']
+              return (
+                <g
+                  key={slot}
+                  onClick={() => isReal && !feedback && checkChoice(slot)}
+                  style={{ cursor: isReal && !feedback ? 'pointer' : 'default', opacity: feedback && !isRight && !isWrongPick ? 0.45 : 1 }}
+                >
+                  <path d={`M130,130 L${x1},${y1} A${R},${R} 0 ${largeArc} 1 ${x2},${y2} Z`} fill={fill} stroke="white" strokeWidth="1.5" />
+                  <text
+                    x={lx} y={ly}
+                    fill="white" fontSize="8.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" textAnchor="middle"
+                    transform={`rotate(${mid + (mid > 90 && mid < 270 ? 180 : 0)}, ${lx}, ${ly})`}
+                  >
+                    {lines.map((ln, li) => (
+                      <tspan key={li} x={lx} dy={li === 0 ? -(lines.length - 1) * 5 : 10}>{ln}</tspan>
+                    ))}
+                  </text>
+                </g>
+              )
+            })}
+            <circle cx="130" cy="130" r="16" fill="white" stroke="#1B3A5C" strokeWidth="2" />
+          </svg>
+        </div>
+      ) : (
+        <div className="border-4 border-gold/25 rounded-2xl p-4 bg-gold/5">
+          <TextAnswer feedback={feedback} onCheck={checkText} />
+        </div>
+      )}
+
+      {items.kind === 'choice' && !feedback && (
+        <p className="text-[11px] text-ink/30 font-mono-lab text-center -mt-1 mb-2 flex items-center justify-center gap-1">
+          <Dices className="w-3 h-3" /> Toca el gajo con la respuesta correcta
+        </p>
+      )}
+
       <FeedbackBanner feedback={feedback} />
       <NextButton feedback={feedback} index={index} total={total} onNext={() => { next(); setSpun(false) }} />
-    </div>
-  )
-}
-
-function ChoiceWheel({ items, onComplete, onFeedback }) {
-  const total = items.list.length
-  const [pool, setPool] = useState(() => items.list.map((_, i) => i))
-  const [solvedCount, setSolvedCount] = useState(0)
-  const [phase, setPhase] = useState('wheel') // wheel | spinning | question
-  const [rotation, setRotation] = useState(0)
-  const [landed, setLanded] = useState(null)
-  const [selected, setSelected] = useState(null)
-  const [feedback, setFeedback] = useState(null)
-
-  const wedgeAngle = 360 / Math.max(pool.length, 1)
-
-  const spin = () => {
-    if (phase !== 'wheel' || pool.length === 0) return
-    setPhase('spinning')
-    const landedSlot = Math.floor(Math.random() * pool.length)
-    const targetAngle = 360 * 5 + (360 - (landedSlot * wedgeAngle + wedgeAngle / 2))
-    setRotation((r) => r + targetAngle)
-    setTimeout(() => {
-      setLanded(pool[landedSlot])
-      setPhase('question')
-    }, 1400)
-  }
-
-  const current = landed !== null ? items.list[landed] : null
-
-  const answer = (optIndex) => {
-    if (feedback || current === null) return
-    setSelected(optIndex)
-    const isCorrect = optIndex === current.correctIndex
-    setFeedback({ isCorrect, explanation: current.explanation })
-    onFeedback?.(true)
-  }
-
-  const goNext = () => {
-    onFeedback?.(false)
-    const wasCorrect = feedback?.isCorrect
-    const newSolved = wasCorrect ? solvedCount + 1 : solvedCount
-    const newPool = wasCorrect ? pool.filter((i) => i !== landed) : pool
-    setSolvedCount(newSolved)
-    setPool(newPool)
-    setSelected(null)
-    setFeedback(null)
-    setLanded(null)
-    if (newPool.length === 0) {
-      onComplete({ isCorrect: newSolved / total >= items.threshold })
-    } else {
-      setPhase('wheel')
-    }
-  }
-
-  if (phase === 'question' && current) {
-    return (
-      <div>
-        <GameHeader index={total - pool.length} total={total} label="PREGUNTA" />
-        <Prompt text={current.prompt} />
-        <div className="grid grid-cols-1 gap-2">
-          {current.options.map((opt, i) => {
-            const isRight = feedback && i === current.correctIndex
-            const isWrongPick = feedback && selected === i && i !== current.correctIndex
-            return (
-              <button
-                key={i}
-                onClick={() => answer(i)}
-                disabled={!!feedback}
-                className={`text-left border-2 rounded-lg px-4 py-2.5 text-sm font-mono-lab transition-colors ${
-                  selected === i ? 'border-gold bg-gold/10' : 'border-ink/10'
-                } ${isRight ? '!border-teal !bg-teal/10' : ''} ${isWrongPick ? 'opacity-40' : ''}`}
-              >
-                <MathText text={opt} />
-              </button>
-            )
-          })}
-        </div>
-        <FeedbackBanner feedback={feedback} />
-        {feedback && (
-          <button onClick={goNext} className="mt-4 bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium">
-            {pool.length - (feedback.isCorrect ? 1 : 0) === 0 ? 'Finalizar' : 'Volver a la ruleta'}
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="text-center py-2">
-      <GameHeader index={total - pool.length} total={total} label="PREGUNTAS RESTANTES" />
-      <div className="relative w-64 h-64 mx-auto mb-5">
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[16px] border-t-ink" />
-        <svg
-          viewBox="0 0 200 200"
-          className="w-full h-full"
-          style={{ transform: `rotate(${rotation}deg)`, transition: phase === 'spinning' ? 'transform 1.4s cubic-bezier(0.15,0.9,0.25,1)' : 'none' }}
-        >
-          {pool.map((itemIdx, slot) => {
-            const start = slot * wedgeAngle
-            const end = start + wedgeAngle
-            const toRad = (deg) => ((deg - 90) * Math.PI) / 180
-            const x1 = 100 + 100 * Math.cos(toRad(start))
-            const y1 = 100 + 100 * Math.sin(toRad(start))
-            const x2 = 100 + 100 * Math.cos(toRad(end))
-            const y2 = 100 + 100 * Math.sin(toRad(end))
-            const largeArc = wedgeAngle > 180 ? 1 : 0
-            const midAngle = toRad(start + wedgeAngle / 2)
-            const lx = 100 + 62 * Math.cos(midAngle)
-            const ly = 100 + 62 * Math.sin(midAngle)
-            return (
-              <g key={itemIdx}>
-                <path d={`M100,100 L${x1},${y1} A100,100 0 ${largeArc} 1 ${x2},${y2} Z`} fill={WEDGE_COLORS[slot % WEDGE_COLORS.length]} stroke="white" strokeWidth="1" />
-                <text
-                  x={lx} y={ly}
-                  fill="white" fontSize="7" fontFamily="monospace" textAnchor="middle"
-                  transform={`rotate(${(start + wedgeAngle / 2)}, ${lx}, ${ly})`}
-                >
-                  {short(items.list[itemIdx].prompt, 22)}
-                </text>
-              </g>
-            )
-          })}
-          <circle cx="100" cy="100" r="14" fill="white" stroke="#1B3A5C" strokeWidth="2" />
-        </svg>
-      </div>
-      <button
-        onClick={spin}
-        disabled={phase === 'spinning' || pool.length === 0}
-        className="bg-gold hover:bg-coral transition-colors text-white rounded-full px-6 py-2.5 text-sm font-medium disabled:opacity-50"
-      >
-        {phase === 'spinning' ? 'Girando...' : 'Girar'}
-      </button>
     </div>
   )
 }
