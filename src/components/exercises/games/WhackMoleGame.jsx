@@ -3,6 +3,7 @@ import { Rabbit } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
+import martilloIcon from '@/assets/games/martillo.svg'
 
 const MALLET_ANGLE = { idle: -55, windup: -115, strike: 15 }
 const MALLET_SCALE = { idle: 1, windup: 1.08, strike: 1.3 }
@@ -54,19 +55,18 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
           className="relative grid grid-cols-2 gap-4 [&_*]:cursor-none cursor-none"
         >
           {/* mazo: siempre en su propia capa, sigue el mouse sin depender del elemento bajo el cursor */}
-          <div
-            className="pointer-events-none absolute z-30 select-none"
+          <img
+            src={martilloIcon}
+            alt=""
+            className="pointer-events-none absolute z-30 select-none w-14 h-14"
             style={{
               left: malletPos.x,
               top: malletPos.y,
-              transform: `translate(-25%, -75%) rotate(${MALLET_ANGLE[phase]}deg) scale(${MALLET_SCALE[phase]})`,
+              transform: `translate(-30%, -80%) rotate(${MALLET_ANGLE[phase]}deg) scale(${MALLET_SCALE[phase]})`,
               transition: phase === 'idle' ? 'transform 160ms ease-out' : 'transform 130ms cubic-bezier(.3,0,.6,1)',
-              fontSize: '2.75rem',
-              filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.25))',
+              filter: 'drop-shadow(0 3px 2px rgba(0,0,0,0.3))',
             }}
-          >
-            🔨
-          </div>
+          />
 
           {current.options.map((opt, i) => {
             const hit = feedback && selected === i
@@ -85,7 +85,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
                   className="relative w-24 h-24 max-w-full mx-auto rounded-full flex items-end justify-center overflow-hidden border-4"
                   style={{
                     background: 'radial-gradient(circle at center, #5b3a29 0%, #7a5236 55%, #a9764f 100%)',
-                    borderColor: isRight ? '#2A9D8F' : '#4a2f20',
+                    borderColor: isRight ? '#2A9D8F' : hit ? '#E76F51' : '#4a2f20',
                   }}
                 >
                   <Rabbit
@@ -98,7 +98,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
                     </span>
                   )}
                 </div>
-                <span className={`mt-1.5 text-xs font-mono-lab text-center leading-tight ${isRight ? 'text-teal font-semibold' : 'text-ink/70'}`}>
+                <span className={`mt-1.5 text-xs font-mono-lab text-center leading-tight ${isRight ? 'text-teal font-semibold' : missed ? 'text-red-500 font-semibold' : 'text-ink/70'}`}>
                   {opt}
                 </span>
               </button>

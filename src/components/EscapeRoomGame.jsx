@@ -385,7 +385,7 @@ export default function EscapeRoomGame({ mission }) {
             {cardBoard.length === 0 ? (
               <p className="text-ink/40 text-sm">Preparando tablero…</p>
             ) : (
-              <div className="grid grid-cols-4 gap-2 max-w-md">
+              <div className="grid grid-cols-4 gap-2 max-w-md mx-auto">
                 {cardBoard.map((card, i) => {
                   const isRevealed = flipped.includes(i) || matchedPairs.has(card.pairId)
                   const isMatched = matchedPairs.has(card.pairId)
