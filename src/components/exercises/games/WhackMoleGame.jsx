@@ -5,7 +5,12 @@ import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 import martilloIcon from '@/assets/games/martillo.svg'
 
-const MALLET_ANGLE = { idle: 40, strike: 180 }
+// Los grados los da el usuario en convención de transportador (0° = derecha, 90° = arriba,
+// 180° = izquierda). El SVG del mazo, sin rotar, apunta hacia arriba (90°), así que para
+// llevarlo a un ángulo de transportador θ hay que rotarlo en CSS (que gira en sentido horario
+// desde ese "arriba") por (90 - θ).
+const toCssRotation = (protractorDeg) => 90 - protractorDeg
+const MALLET_ANGLE = { idle: toCssRotation(40), strike: toCssRotation(180) }
 const MALLET_SCALE = { idle: 1, strike: 1.15 }
 
 // Misión 6 — Golpea el topo: las opciones son agujeros de tierra con un topo asomado; hay
