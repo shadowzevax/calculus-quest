@@ -58,7 +58,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
           <img
             src={martilloIcon}
             alt=""
-            className="pointer-events-none absolute z-30 select-none w-14 h-14"
+            className="pointer-events-none absolute z-30 select-none w-28 h-28"
             style={{
               left: malletPos.x,
               top: malletPos.y,
