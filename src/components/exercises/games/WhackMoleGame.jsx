@@ -5,8 +5,8 @@ import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 import martilloIcon from '@/assets/games/martillo.svg'
 
-const MALLET_ANGLE = { idle: -55, windup: -115, strike: 15 }
-const MALLET_SCALE = { idle: 1, windup: 1.08, strike: 1.3 }
+const MALLET_ANGLE = { idle: 40, strike: 180 }
+const MALLET_SCALE = { idle: 1, strike: 1.15 }
 
 // Misión 6 — Golpea el topo: las opciones son agujeros de tierra con un topo asomado; hay
 // que "golpearlo" (tocarlo) si es la respuesta correcta. El mazo sigue al mouse con un buen
@@ -25,9 +25,8 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
     setMalletPos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
   }
   const swing = () => {
-    setPhase('windup')
-    setTimeout(() => setPhase('strike'), 140)
-    setTimeout(() => setPhase('idle'), 340)
+    setPhase('strike')
+    setTimeout(() => setPhase('idle'), 180)
   }
 
   if (items.kind === 'matching') {
