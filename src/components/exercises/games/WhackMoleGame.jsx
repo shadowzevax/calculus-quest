@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { Rabbit } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
@@ -11,6 +12,17 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+  const [mallet, setMallet] = useState({ x: 0, y: 0, hitting: false })
+  const areaRef = useRef(null)
+
+  const trackMallet = (e) => {
+    const rect = areaRef.current.getBoundingClientRect()
+    setMallet((m) => ({ ...m, x: e.clientX - rect.left, y: e.clientY - rect.top }))
+  }
+  const swing = () => {
+    setMallet((m) => ({ ...m, hitting: true }))
+    setTimeout(() => setMallet((m) => ({ ...m, hitting: false })), 150)
+  }
 
   if (items.kind === 'matching') {
     return (
@@ -30,7 +42,22 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
       <Prompt text={current.prompt} />
 
       {items.kind === 'choice' ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div
+          ref={areaRef}
+          onMouseMove={trackMallet}
+          onMouseEnter={trackMallet}
+          className="relative grid grid-cols-2 gap-4 cursor-none"
+        >
+          <div
+            className="pointer-events-none absolute z-20 text-4xl select-none transition-transform duration-100"
+            style={{
+              left: mallet.x,
+              top: mallet.y,
+              transform: `translate(-30%, -70%) rotate(${mallet.hitting ? -35 : -55}deg) scale(${mallet.hitting ? 1.15 : 1})`,
+            }}
+          >
+            🔨
+          </div>
           {current.options.map((opt, i) => {
             const hit = feedback && selected === i
             const isRight = feedback && i === current.correctIndex
@@ -38,7 +65,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
             return (
               <button
                 key={i}
-                onClick={() => checkChoice(i)}
+                onClick={() => { swing(); checkChoice(i) }}
                 disabled={!!feedback}
                 className="relative flex flex-col items-center transition-transform"
               >

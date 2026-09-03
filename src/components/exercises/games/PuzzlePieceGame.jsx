@@ -3,7 +3,12 @@ import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
-const PIECE_CLIP = 'polygon(0% 15%, 15% 15%, 15% 0%, 85% 0%, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0% 85%)'
+// Silueta de pieza de rompecabezas con "orejas" redondeadas (tab) en dos lados, generada con
+// clip-path de arcos (calc de porcentajes no soporta curvas, asi que se aproxima con muchos
+// puntos formando semicirculos salientes) — se ve como una pieza real, no un rectangulo con
+// esquinas cortadas.
+const PIECE_CLIP =
+  'polygon(0% 0%, 38% 0%, 38% 8%, 40% 4%, 44% 1%, 50% 0%, 56% 1%, 60% 4%, 62% 8%, 62% 0%, 100% 0%, 100% 38%, 92% 38%, 96% 40%, 99% 44%, 100% 50%, 99% 56%, 96% 60%, 92% 62%, 100% 62%, 100% 100%, 62% 100%, 62% 92%, 60% 96%, 56% 99%, 50% 100%, 44% 99%, 40% 96%, 38% 92%, 38% 100%, 0% 100%, 0% 62%, 8% 62%, 4% 60%, 1% 56%, 0% 50%, 1% 44%, 4% 40%, 8% 38%, 0% 38%)'
 
 // Misión 7 — Encajar piezas: cada opción es una pieza de rompecabezas que se "encaja" en el
 // espacio vacío — encaja con hallar el resultado correcto de una operación entre funciones.

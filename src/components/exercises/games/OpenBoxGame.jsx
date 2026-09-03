@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Package, PackageOpen, Gift } from 'lucide-react'
+import { Package, PackageOpen, Gift, CheckCircle2, XCircle } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
@@ -48,22 +48,28 @@ export default function OpenBoxGame({ exercise, onComplete, onFeedback }) {
           <Prompt text={current.prompt} />
 
           {items.kind === 'choice' ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5 max-w-sm">
               {current.options.map((opt, i) => {
                 const color = BOX_COLORS[i % BOX_COLORS.length]
                 const isRight = feedback && i === current.correctIndex
-                const isWrongPick = feedback && selected === i && i !== current.correctIndex
+                const isPicked = selected === i
+                const isWrongPick = feedback && isPicked && i !== current.correctIndex
                 return (
                   <button
                     key={i}
                     onClick={() => checkChoice(i)}
                     disabled={!!feedback}
-                    className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center gap-1.5 p-2 text-center text-xs font-mono-lab transition-transform ${
-                      selected === i ? 'scale-95' : 'hover:-translate-y-0.5'
-                    } ${isWrongPick ? 'opacity-30' : ''}`}
-                    style={{ borderColor: isRight ? '#2A9D8F' : color, backgroundColor: `${color}12` }}
+                    className={`relative rounded-lg border-2 flex flex-col items-center justify-center gap-1 px-2 py-2.5 text-center text-xs font-mono-lab transition-all ${
+                      isPicked ? 'scale-95' : 'hover:-translate-y-0.5'
+                    } ${feedback && !isRight && !isPicked ? 'opacity-40' : ''}`}
+                    style={{ borderColor: isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : color, backgroundColor: `${isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : color}12` }}
                   >
-                    <Package className="w-5 h-5" style={{ color: isRight ? '#2A9D8F' : color }} />
+                    {feedback && (isPicked || isRight) && (
+                      <span className="absolute -top-2 -right-2 rounded-full bg-white shadow">
+                        {isRight ? <CheckCircle2 className="w-4 h-4 text-teal" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                      </span>
+                    )}
+                    <Package className="w-4 h-4" style={{ color: isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : color }} />
                     <span className="text-ink leading-tight">{opt}</span>
                   </button>
                 )

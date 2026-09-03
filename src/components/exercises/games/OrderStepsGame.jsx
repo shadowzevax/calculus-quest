@@ -1,21 +1,19 @@
-import { useMemo, useState } from 'react'
-import { ListOrdered } from 'lucide-react'
+import { Footprints, MapPin } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
-import { GameHeader, FeedbackBanner, NextButton, Prompt } from './GameBits'
+import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
-function shuffle(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
+// Puntos de un sendero en zigzag donde se ubican las paradas (hasta 4).
+const STOPS = [
+  { x: 20, y: 78 },
+  { x: 70, y: 45 },
+  { x: 30, y: 30 },
+  { x: 80, y: 8 },
+]
 
-// Misión 3 — Ordenar los pasos: la respuesta correcta se parte en piezas (palabras/símbolos)
-// desordenadas; el estudiante las toca en el orden correcto para reconstruirla. Encaja con
-// "operar funciones", que es justo seguir un procedimiento paso a paso.
+// Misión 3 — Sendero de pasos: la respuesta correcta es la parada correcta de un camino que
+// avanza paso a paso; cada opción es una parada del sendero (no una lista vertical de texto),
+// y no se revela la respuesta al armarla como ocurría con el orden de fichas.
 export default function OrderStepsGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
@@ -23,80 +21,61 @@ export default function OrderStepsGame({ exercise, onComplete, onFeedback }) {
     return (
       <div>
         <div className="flex items-center gap-2 mb-4 text-coral">
-          <ListOrdered className="w-5 h-5" />
-          <span className="text-xs font-mono-lab uppercase tracking-wide">Conecta cada paso con su pareja</span>
+          <Footprints className="w-5 h-5" />
+          <span className="text-xs font-mono-lab uppercase tracking-wide">Recorre el sendero emparejando cada pareja</span>
         </div>
         <MatchingExercise exercise={exercise} onComplete={onComplete} />
       </div>
     )
   }
 
-  const { index, total, current, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
-
-  const targetText = items.kind === 'choice' ? current.options[current.correctIndex] : (current.answer || '')
-  const tokens = useMemo(() => shuffle(String(targetText).split(/(\s+)/).filter((t) => t.trim())), [current])
-  const [placed, setPlaced] = useState([])
-  const [usedIdx, setUsedIdx] = useState([])
-
-  const place = (tok, i) => {
-    if (feedback || usedIdx.includes(i)) return
-    setPlaced((p) => [...p, tok])
-    setUsedIdx((u) => [...u, i])
-  }
-  const reset = () => { setPlaced([]); setUsedIdx([]) }
-
-  const submit = () => {
-    const assembled = placed.join(' ')
-    if (items.kind === 'choice') {
-      const matchIndex = current.options.findIndex((o) => o.replace(/\s+/g, ' ').trim() === assembled)
-      checkChoice(matchIndex)
-    } else {
-      checkText(assembled)
-    }
-  }
-
-  const nextItem = () => { next(); reset() }
+  const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+  const stops = STOPS.slice(0, items.kind === 'choice' ? current.options.length : 0)
+  const pathD = stops.map((s, i) => `${i === 0 ? 'M' : 'L'} ${s.x} ${s.y}`).join(' ')
 
   return (
     <div>
       <GameHeader index={index} total={total} label="PASO" />
       <Prompt text={current.prompt} />
 
-      <div className="min-h-[3rem] flex flex-wrap gap-2 border-2 border-dashed border-ink/15 rounded-xl p-3 mb-3 bg-ink/[0.02]">
-        {placed.length === 0 && <span className="text-xs text-ink/30 font-mono-lab">Toca las piezas en orden...</span>}
-        {placed.map((t, i) => (
-          <span key={i} className="bg-blueprint text-white rounded-md px-2.5 py-1 text-sm font-mono-lab">{t}</span>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-4">
-        {tokens.map((t, i) => (
-          <button
-            key={i}
-            onClick={() => place(t, i)}
-            disabled={usedIdx.includes(i) || !!feedback}
-            className={`flex items-center gap-1.5 border rounded-md px-2.5 py-1.5 text-sm font-mono-lab transition-opacity ${
-              usedIdx.includes(i) ? 'opacity-25 border-ink/10' : 'border-coral/40 hover:bg-coral/5'
-            }`}
-          >
-            <ListOrdered className="w-3 h-3 text-coral" /> {t}
-          </button>
-        ))}
-      </div>
-
-      {!feedback ? (
-        <div className="flex gap-2">
-          <button onClick={submit} disabled={placed.length === 0} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-30">
-            Verificar orden
-          </button>
-          <button onClick={reset} className="border border-ink/15 hover:bg-ink/5 transition-colors text-ink/60 rounded-lg px-4 py-2 text-sm font-medium">
-            Reiniciar
-          </button>
+      {items.kind === 'choice' ? (
+        <div className="relative w-full mb-2" style={{ paddingBottom: '55%' }}>
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 90" preserveAspectRatio="none">
+            <path d={pathD} fill="none" stroke="#FF6B4A" strokeWidth="1.2" strokeDasharray="3 2" opacity="0.5" vectorEffect="non-scaling-stroke" />
+          </svg>
+          {stops.map((s, i) => {
+            const isRight = feedback && i === current.correctIndex
+            const isWrongPick = feedback && selected === i && i !== current.correctIndex
+            return (
+              <button
+                key={i}
+                onClick={() => checkChoice(i)}
+                disabled={!!feedback}
+                style={{ left: `${s.x}%`, top: `${s.y}%` }}
+                className={`absolute -translate-x-1/2 -translate-y-full flex flex-col items-center gap-0.5 transition-transform ${
+                  selected === i ? 'scale-110' : 'hover:-translate-y-[110%]'
+                } ${isWrongPick ? 'opacity-30' : ''}`}
+              >
+                <span className="w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center text-[10px] font-mono-lab font-bold shrink-0"
+                  style={{ borderColor: isRight ? '#2A9D8F' : '#FF6B4A', color: isRight ? '#2A9D8F' : '#FF6B4A' }}>
+                  {i + 1}
+                </span>
+                <MapPin className="w-5 h-5 -mt-1" style={{ color: isRight ? '#2A9D8F' : '#FF6B4A' }} fill={selected === i ? 'currentColor' : 'none'} />
+                <span className={`text-[11px] font-mono-lab text-center leading-tight max-w-[6rem] ${isRight ? 'text-teal font-semibold' : 'text-ink/70'}`}>
+                  {current.options[i]}
+                </span>
+              </button>
+            )
+          })}
         </div>
-      ) : null}
+      ) : (
+        <div className="border-2 border-dashed border-coral/30 rounded-xl p-4">
+          <TextAnswer feedback={feedback} onCheck={checkText} />
+        </div>
+      )}
 
       <FeedbackBanner feedback={feedback} />
-      <NextButton feedback={feedback} index={index} total={total} onNext={nextItem} />
+      <NextButton feedback={feedback} index={index} total={total} onNext={next} />
     </div>
   )
 }
