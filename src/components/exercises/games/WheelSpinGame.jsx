@@ -10,54 +10,81 @@ function normalizeText(str) {
   return String(str).trim().toLowerCase().replace(/\s+/g, '')
 }
 
-// Misión 10 — Rueda del azar: cada gajo es uno de los ejercicios de la misión ("Ejercicio N"),
-// no una opción de respuesta — así la ruleta siempre muestra lo mismo (los ejercicios que
-// faltan) y tiene un objetivo claro: girar hasta VACIARLA. Al girar cae en un ejercicio al
-// azar y hay que resolverlo de verdad debajo; si se acierta, ese gajo desaparece para
-// siempre; si se falla, se queda en la ruleta para volver a intentarlo más tarde.
-export default function WheelSpinGame({ exercise, onComplete, onFeedback }) {
-  const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
-  if (items.kind === 'matching') {
-    return (
-      <div>
-        <div className="flex items-center gap-2 mb-4 text-gold">
-          <Dices className="w-5 h-5" />
-          <span className="text-xs font-mono-lab uppercase tracking-wide">Gira y conecta cada pareja</span>
-        </div>
-        <MatchingExercise exercise={exercise} onComplete={onComplete} />
-      </div>
-    )
-  }
-
-  return <WheelBoard items={items} onComplete={onComplete} onFeedback={onFeedback} />
+// Etiqueta corta del gajo: un adelanto de la pregunta real, para saber que actividad hay ahi
+// sin tener que girar a ciegas (en vez del generico "Ejercicio N").
+function shortLabel(text, n = 26) {
+  const s = String(text || '').replace(/\s+/g, ' ').trim()
+  return s.length > n ? s.slice(0, n - 1) + '…' : s
 }
 
-function WheelBoard({ items, onComplete, onFeedback }) {
-  const total = items.list.length
-  const [pool, setPool] = useState(() => items.list.map((_, i) => i))
+// Aplana TODOS los ejercicios de la mision en un solo mazo de "fichas" para la ruleta —
+// cada pregunta/afirmacion de cada ejercicio es su propio gajo, sin importar de que
+// ejercicio real venga (opcion multiple, completar espacio, verdadero/falso, emparejar).
+function buildPool(exercises) {
+  const entries = []
+  exercises.forEach((ex) => {
+    const items = getExerciseItems(ex)
+    if (items.kind === 'empty') return
+    if (items.kind === 'matching') {
+      entries.push({ id: `${ex.id}-m`, sourceExercise: ex, kind: 'matching', label: 'Emparejar parejas' })
+      return
+    }
+    items.list.forEach((it, i) => {
+      entries.push({
+        id: `${ex.id}-${i}`,
+        sourceExercise: ex,
+        kind: items.kind,
+        prompt: it.prompt,
+        options: it.options,
+        correctIndex: it.correctIndex,
+        explanation: it.explanation,
+        accepted: it.accepted,
+        answer: it.answer,
+        tolerance: it.tolerance,
+        label: shortLabel(it.prompt),
+      })
+    })
+  })
+  return entries
+}
+
+// Misión 10 — Rueda del azar: UNA sola ruleta para toda la misión. Cada gajo es una pregunta
+// real de cualquiera de los ejercicios de la misión, con un adelanto de su enunciado como
+// título — la rueda gira de verdad y cae al azar (flecha fija arriba). Al acertar la pregunta
+// que cayó, su gajo desaparece para siempre (y si esa era la última de su ejercicio, se marca
+// ese ejercicio como completado); si se falla, el gajo se queda para reintentarlo. La misión
+// termina cuando la ruleta queda completamente vacía.
+export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedback }) {
+  const [pool, setPool] = useState(() => buildPool(exercises))
+  const [total] = useState(() => pool.length)
   const [rotation, setRotation] = useState(0)
   const [spinning, setSpinning] = useState(false)
-  const [landedIdx, setLandedIdx] = useState(null)
+  const [landedId, setLandedId] = useState(null)
   const [selected, setSelected] = useState(null)
   const [feedback, setFeedback] = useState(null)
 
   const wedgeAngle = 360 / Math.max(pool.length, 1)
-  const current = landedIdx !== null ? items.list[landedIdx] : null
-  const isTrueFalse = items.kind === 'choice' && current?.options.length === 2 && current.options[0] === 'Verdadero' && current.options[1] === 'Falso'
+  const current = pool.find((e) => e.id === landedId) || null
+  const isTrueFalse = current?.kind === 'choice' && current.options.length === 2 && current.options[0] === 'Verdadero' && current.options[1] === 'Falso'
 
   const spin = () => {
-    if (spinning || landedIdx !== null || pool.length === 0) return
-    // Con un solo ejercicio restante no hace falta el suspenso del giro largo: un pequeño
-    // efecto y directo a responderlo.
+    if (spinning || landedId !== null || pool.length === 0) return
     const quick = pool.length === 1
     setSpinning(true)
     const landingSlot = Math.floor(Math.random() * pool.length)
     const fullSpins = quick ? 1 : 5 + Math.floor(Math.random() * 3)
     const targetWithinWheel = 360 - (landingSlot * wedgeAngle + wedgeAngle / 2)
     setRotation((r) => r - (r % 360) + fullSpins * 360 + targetWithinWheel)
-    setTimeout(() => { setSpinning(false); setLandedIdx(pool[landingSlot]) }, quick ? 500 : 3200)
+    setTimeout(() => { setSpinning(false); setLandedId(pool[landingSlot].id) }, quick ? 500 : 3200)
+  }
+
+  // Al resolver bien una ficha, se quita del mazo para siempre; si esa era la última de su
+  // ejercicio de origen, se avisa hacia arriba (XP, progreso) para ese ejercicio real.
+  const removeSolved = () => {
+    const nextPool = pool.filter((e) => e.id !== current.id)
+    const exerciseStillPending = nextPool.some((e) => e.sourceExercise.id === current.sourceExercise.id)
+    if (!exerciseStillPending) onExerciseComplete?.(current.sourceExercise)
+    setPool(nextPool)
   }
 
   const checkChoice = (optionIndex) => {
@@ -83,15 +110,11 @@ function WheelBoard({ items, onComplete, onFeedback }) {
 
   const nextItem = () => {
     onFeedback?.(false)
-    const solvedIdx = landedIdx
-    const wasCorrect = feedback?.isCorrect
-    const newPool = wasCorrect ? pool.filter((i) => i !== solvedIdx) : pool
-    setPool(newPool)
+    if (feedback?.isCorrect) removeSolved()
     setSelected(null)
     setFeedback(null)
-    setLandedIdx(null)
+    setLandedId(null)
     setRotation(0)
-    if (newPool.length === 0) onComplete({ isCorrect: true })
   }
 
   return (
@@ -111,12 +134,12 @@ function WheelBoard({ items, onComplete, onFeedback }) {
             // inicio y fin no se dibuja en SVG, así que en ese caso se pinta un círculo entero.
             <g>
               <circle cx="130" cy="130" r="122" fill={WEDGE_COLORS[0]} stroke="white" strokeWidth="1.5" />
-              <text x="130" y="134" fill="white" fontSize="13" fontFamily="'IBM Plex Mono', monospace" fontWeight="700" textAnchor="middle">
-                Ej. {pool[0] + 1}
+              <text x="130" y="126" fill="white" fontSize="10" fontFamily="'IBM Plex Mono', monospace" fontWeight="700" textAnchor="middle">
+                {pool[0].label}
               </text>
             </g>
           ) : (
-            pool.map((itemIdx, slot) => {
+            pool.map((entry, slot) => {
               const start = slot * wedgeAngle
               const end = start + wedgeAngle
               const toRad = (deg) => ((deg - 90) * Math.PI) / 180
@@ -129,15 +152,18 @@ function WheelBoard({ items, onComplete, onFeedback }) {
               const mid = start + wedgeAngle / 2
               const lx = 130 + 76 * Math.cos(toRad(mid))
               const ly = 130 + 76 * Math.sin(toRad(mid))
+              const lines = entry.label.length > 13 ? [entry.label.slice(0, 12) + '…'] : [entry.label]
               return (
-                <g key={itemIdx}>
+                <g key={entry.id}>
                   <path d={`M130,130 L${x1},${y1} A${R},${R} 0 ${largeArc} 1 ${x2},${y2} Z`} fill={WEDGE_COLORS[slot % WEDGE_COLORS.length]} stroke="white" strokeWidth="1.5" />
                   <text
                     x={lx} y={ly}
-                    fill="white" fontSize="11" fontFamily="'IBM Plex Mono', monospace" fontWeight="700" textAnchor="middle"
+                    fill="white" fontSize="7.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" textAnchor="middle"
                     transform={`rotate(${mid + (mid > 90 && mid < 270 ? 180 : 0)}, ${lx}, ${ly})`}
                   >
-                    Ej. {itemIdx + 1}
+                    {lines.map((ln, li) => (
+                      <tspan key={li} x={lx} dy={li === 0 ? 0 : 10}>{ln}</tspan>
+                    ))}
                   </text>
                 </g>
               )
@@ -147,7 +173,7 @@ function WheelBoard({ items, onComplete, onFeedback }) {
         </svg>
       </div>
 
-      {landedIdx === null ? (
+      {landedId === null ? (
         <div className="text-center">
           <button
             onClick={spin}
@@ -162,12 +188,20 @@ function WheelBoard({ items, onComplete, onFeedback }) {
             {pool.length} de {total} ejercicio{total === 1 ? '' : 's'} por resolver en la ruleta
           </p>
         </div>
+      ) : current.kind === 'matching' ? (
+        <div>
+          <div className="flex items-center gap-2 mb-4 text-gold">
+            <Dices className="w-5 h-5" />
+            <span className="text-xs font-mono-lab uppercase tracking-wide">Encuentra cada pareja</span>
+          </div>
+          <MatchingExercise exercise={current.sourceExercise} onComplete={() => { removeSolved(); setLandedId(null); setRotation(0) }} />
+        </div>
       ) : (
         <div>
-          <p className="text-xs font-mono-lab text-coral uppercase tracking-wide mb-2">Ejercicio {landedIdx + 1}</p>
+          <p className="text-xs font-mono-lab text-coral uppercase tracking-wide mb-2">{current.sourceExercise.type === 'fill_blank' ? 'Completa el espacio' : 'Responde'}</p>
           <Prompt text={current.prompt} />
 
-          {items.kind === 'choice' ? (
+          {current.kind === 'choice' ? (
             isTrueFalse ? (
               <div className="grid grid-cols-2 gap-3">
                 {current.options.map((opt, i) => {

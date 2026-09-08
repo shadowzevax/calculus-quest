@@ -46,7 +46,9 @@ const GAME_COMPONENTS = {
   puzzle_piece: PuzzlePieceGame,
   error_detective: ErrorDetectiveGame,
   balloon_pop: BalloonPopGame,
-  wheel_spin: WheelSpinGame,
+  // wheel_spin no está aquí: a diferencia de los demás juegos (que envuelven UN ejercicio a
+  // la vez), la ruleta necesita ver TODOS los ejercicios de la misión juntos para armar una
+  // sola rueda con todas las preguntas — se renderiza aparte, ver isWheelMission más abajo.
   graph_simulator: GraphSimulatorGame,
   memory_match: MemoryMatchGame,
   tower_climb: TowerClimbGame,
@@ -179,6 +181,7 @@ export default function MissionDetail() {
   if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misión...</p>
   if (!mission) return <p className="text-red-500 text-sm">Misión no encontrada.</p>
 
+  const isWheelMission = mission.game_type === 'wheel_spin'
   const exercise = exercises[current]
   const Component = exercise ? (GAME_COMPONENTS[mission.game_type] || EXERCISE_COMPONENTS[exercise.type]) : null
   const allCorrect = results.length > 0 && results.every((r) => r.isCorrect)
@@ -227,6 +230,31 @@ export default function MissionDetail() {
     }
   }
 
+  // Misión 10 (ruleta): a diferencia del resto, aquí no hay un "ejercicio actual" que avanza
+  // uno por uno — los ejercicios se completan en el orden en que la ruleta los va vaciando.
+  // Cada vez que se termina uno de verdad (todas sus preguntas resueltas), se le da su XP y se
+  // suma a los resultados; cuando ya se completaron todos, se muestra el resumen de la misión.
+  const handleWheelExerciseComplete = async (ex) => {
+    try {
+      await api.progress.submit({
+        exercise_id: ex.id,
+        answer_given: 'completed',
+        is_correct: true,
+        xp_earned: ex.xp_value || 10,
+      })
+      await refresh()
+      api.ranking.list().then((rows) => {
+        const idx = rows.findIndex((r) => r.id === user.id)
+        if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
+      }).catch(() => {})
+    } catch {}
+    setResults((r) => {
+      const updated = [...r, { exercise: ex, isCorrect: true, bonus: 0 }]
+      if (updated.length >= exercises.length) setShowDone(true)
+      return updated
+    })
+  }
+
   const retry = () => {
     setResults([])
     setCurrent(0)
@@ -236,7 +264,7 @@ export default function MissionDetail() {
 
   // El recuadro del cronómetro se queda visible toda la duración del ejercicio (no desaparece
   // al agotarse el tiempo) — solo cambia a gris para indicar que ya no se puede ganar el bono.
-  const timerActive = !mission.is_collaborative && !showDone && !!exercise
+  const timerActive = !mission.is_collaborative && !showDone && !!exercise && !isWheelMission
   const timeExpired = secondsLeft <= 0
 
   return (
@@ -321,7 +349,13 @@ export default function MissionDetail() {
         </div>
       )}
 
-      {!showDone && exercise && (
+      {!showDone && isWheelMission && exercises.length > 0 && (
+        <div className="bg-white rounded-xl border border-ink/10 p-8">
+          <WheelSpinGame key={retryKey} exercises={exercises} onExerciseComplete={handleWheelExerciseComplete} onFeedback={handleFeedback} />
+        </div>
+      )}
+
+      {!showDone && !isWheelMission && exercise && (
         <div className="bg-white rounded-xl border border-ink/10 p-8">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-mono-lab text-ink/40">EJERCICIO {current + 1} / {exercises.length}</span>
