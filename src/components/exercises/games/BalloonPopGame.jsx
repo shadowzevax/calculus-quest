@@ -3,6 +3,7 @@ import { PartyPopper } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
+import agujaIcon from '@/assets/games/aguja.svg'
 
 const BALLOON_COLORS = ['#FF6B4A', '#457B9D', '#F4A261', '#9B5DE5']
 const OFFSETS = ['mt-0', 'mt-6', 'mt-2', 'mt-8']
@@ -60,14 +61,19 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
           ref={areaRef}
           onMouseMove={trackNeedle}
           onMouseEnter={trackNeedle}
-          className="relative grid grid-cols-2 gap-x-4 gap-y-6 cursor-none py-4"
+          className="relative grid grid-cols-2 gap-x-4 gap-y-6 cursor-none [&_*]:cursor-none py-4"
         >
-          <div
-            className="pointer-events-none absolute z-20 text-3xl select-none"
-            style={{ left: needle.x, top: needle.y, transform: 'translate(-15%, -85%) rotate(35deg)' }}
-          >
-            📌
-          </div>
+          <img
+            src={agujaIcon}
+            alt=""
+            className="pointer-events-none absolute z-20 select-none w-16 h-16"
+            style={{
+              left: needle.x,
+              top: needle.y,
+              transform: 'translate(-70%, -15%) rotate(-35deg)',
+              filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.25))',
+            }}
+          />
           {current.options.map((opt, i) => {
             const isGone = popped.includes(i)
             const isRight = feedback && i === current.correctIndex
