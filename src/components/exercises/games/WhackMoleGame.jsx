@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
-import { Rabbit } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 import martilloIcon from '@/assets/games/martillo.svg'
+import topoIcon from '@/assets/games/topo.png'
 
 // Los grados los da el usuario en convención de transportador (0° = derecha, 90° = arriba,
 // 180° = izquierda). El SVG del mazo, sin rotar, apunta hacia arriba (90°), así que para
@@ -38,7 +38,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
     return (
       <div>
         <div className="flex items-center gap-2 mb-4 text-[#6B4226]">
-          <Rabbit className="w-5 h-5" />
+          <img src={topoIcon} alt="" className="w-5 h-5 object-contain" />
           <span className="text-xs font-mono-lab uppercase tracking-wide">Empareja cada topo con su agujero</span>
         </div>
         <MatchingExercise exercise={exercise} onComplete={onComplete} />
@@ -92,9 +92,11 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
                     borderColor: isRight ? '#2A9D8F' : hit ? '#E76F51' : '#4a2f20',
                   }}
                 >
-                  <Rabbit
-                    className={`w-9 h-9 mb-2 transition-transform ${missed ? 'translate-y-6 opacity-0' : hit ? '-translate-y-1' : ''}`}
-                    style={{ color: isRight ? '#2A9D8F' : '#D9B48F' }}
+                  <img
+                    src={topoIcon}
+                    alt=""
+                    className={`w-14 h-14 object-contain mb-1 transition-transform ${missed ? 'translate-y-6 opacity-0' : hit ? '-translate-y-1' : ''}`}
+                    style={{ filter: isRight ? 'drop-shadow(0 0 6px #2A9D8F)' : hit ? 'drop-shadow(0 0 6px #E76F51)' : 'none' }}
                   />
                   {showSpark && (
                     <span className="absolute inset-0 flex items-center justify-center text-3xl animate-ping [animation-iteration-count:1] [animation-duration:280ms]">

@@ -18,6 +18,7 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [popped, setPopped] = useState([])
   const [needle, setNeedle] = useState({ x: 0, y: 0 })
+  const [burstAt, setBurstAt] = useState(null)
   const areaRef = useRef(null)
 
   if (items.kind === 'matching') {
@@ -41,6 +42,8 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
   // realmente cuenta es la del ÚNICO globo que quede sin reventar al final.
   const pop = (i) => {
     if (feedback || popped.includes(i)) return
+    setBurstAt(i)
+    setTimeout(() => setBurstAt((cur) => (cur === i ? null : cur)), 400)
     const newPopped = [...popped, i]
     if (newPopped.length >= current.options.length - 1) {
       const remaining = current.options.findIndex((_, idx) => !newPopped.includes(idx))
@@ -50,6 +53,10 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
     }
     setPopped(newPopped)
   }
+
+  // 8 chispas repartidas en abanico alrededor del punto donde pinchó la aguja.
+  const SPARK_COUNT = 8
+  const sparkColors = ['#FFD166', '#FF6B4A', '#F4A261', '#FFFFFF']
 
   return (
     <div>
@@ -88,12 +95,27 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
                 }`}
               >
                 <div
-                  className={`w-24 h-28 max-w-full rounded-[48%_48%_48%_48%/58%_58%_42%_42%] flex items-center justify-center text-white text-xs leading-snug font-mono-lab px-3 py-3 text-center shadow-lg transition-transform ${
+                  className={`relative w-24 h-28 max-w-full rounded-[48%_48%_48%_48%/58%_58%_42%_42%] flex items-center justify-center text-white text-xs leading-snug font-mono-lab px-3 py-3 text-center shadow-lg transition-transform ${
                     isRight ? 'ring-4 ring-teal/40 scale-110' : ''
                   } ${isWrongPick ? 'ring-4 ring-red-400/50' : ''}`}
                   style={{ backgroundColor: BALLOON_COLORS[i % BALLOON_COLORS.length] }}
                 >
                   <span className="line-clamp-4">{opt}</span>
+                  {burstAt === i && (
+                    <span className="pointer-events-none absolute inset-0 overflow-visible">
+                      {Array.from({ length: SPARK_COUNT }).map((_, s) => (
+                        <span
+                          key={s}
+                          className="spark-particle block w-2 h-2 rounded-full"
+                          style={{
+                            backgroundColor: sparkColors[s % sparkColors.length],
+                            '--angle': `${(360 / SPARK_COUNT) * s}deg`,
+                            '--dist': '38px',
+                          }}
+                        />
+                      ))}
+                    </span>
+                  )}
                 </div>
                 <div className="w-px h-5 bg-ink/25" />
               </button>
@@ -111,7 +133,7 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
       )}
 
       <FeedbackBanner feedback={feedback} />
-      <NextButton feedback={feedback} index={index} total={total} onNext={() => { next(); setPopped([]) }} />
+      <NextButton feedback={feedback} index={index} total={total} onNext={() => { next(); setPopped([]); setBurstAt(null) }} />
     </div>
   )
 }
