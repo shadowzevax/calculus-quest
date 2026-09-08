@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import confetti from 'canvas-confetti'
 import { PartyPopper } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
@@ -7,6 +8,21 @@ import agujaIcon from '@/assets/games/aguja.svg'
 
 const BALLOON_COLORS = ['#FF6B4A', '#457B9D', '#F4A261', '#9B5DE5']
 const OFFSETS = ['mt-0', 'mt-6', 'mt-2', 'mt-8']
+
+// Estallido realista con canvas-confetti (en vez de "chispas" caseras en CSS) justo en el
+// punto de la pantalla donde revienta el globo.
+function popBurst(x, y, color) {
+  confetti({
+    particleCount: 22,
+    startVelocity: 28,
+    spread: 360,
+    ticks: 45,
+    gravity: 1.1,
+    scalar: 0.7,
+    colors: [color, '#FFFFFF'],
+    origin: { x: x / window.innerWidth, y: y / window.innerHeight },
+  })
+}
 
 // Misión 9 — Globos: hay que "pinchar" 3 globos hasta dejar solo el que tiene la respuesta
 // correcta. El cursor se convierte en una aguja; cada clic revienta un globo (si es
@@ -18,7 +34,6 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [popped, setPopped] = useState([])
   const [needle, setNeedle] = useState({ x: 0, y: 0 })
-  const [burstAt, setBurstAt] = useState(null)
   const areaRef = useRef(null)
 
   if (items.kind === 'matching') {
@@ -40,10 +55,10 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
 
   // Se pinchan globos sin importar si son la respuesta correcta o no; la respuesta que
   // realmente cuenta es la del ÚNICO globo que quede sin reventar al final.
-  const pop = (i) => {
+  const pop = (i, e) => {
     if (feedback || popped.includes(i)) return
-    setBurstAt(i)
-    setTimeout(() => setBurstAt((cur) => (cur === i ? null : cur)), 400)
+    const rect = e.currentTarget.getBoundingClientRect()
+    popBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, BALLOON_COLORS[i % BALLOON_COLORS.length])
     const newPopped = [...popped, i]
     if (newPopped.length >= current.options.length - 1) {
       const remaining = current.options.findIndex((_, idx) => !newPopped.includes(idx))
@@ -53,10 +68,6 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
     }
     setPopped(newPopped)
   }
-
-  // 8 chispas repartidas en abanico alrededor del punto donde pinchó la aguja.
-  const SPARK_COUNT = 8
-  const sparkColors = ['#FFD166', '#FF6B4A', '#F4A261', '#FFFFFF']
 
   return (
     <div>
@@ -88,7 +99,7 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
             return (
               <button
                 key={i}
-                onClick={() => pop(i)}
+                onClick={(e) => pop(i, e)}
                 disabled={!!feedback || isGone}
                 className={`relative flex flex-col items-center gap-1.5 transition-all duration-200 ${OFFSETS[i % OFFSETS.length]} ${
                   isGone ? 'opacity-0 scale-[0.3] pointer-events-none' : ''
@@ -101,21 +112,6 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
                   style={{ backgroundColor: BALLOON_COLORS[i % BALLOON_COLORS.length] }}
                 >
                   <span className="line-clamp-4">{opt}</span>
-                  {burstAt === i && (
-                    <span className="pointer-events-none absolute inset-0 overflow-visible">
-                      {Array.from({ length: SPARK_COUNT }).map((_, s) => (
-                        <span
-                          key={s}
-                          className="spark-particle block w-2 h-2 rounded-full"
-                          style={{
-                            backgroundColor: sparkColors[s % sparkColors.length],
-                            '--angle': `${(360 / SPARK_COUNT) * s}deg`,
-                            '--dist': '38px',
-                          }}
-                        />
-                      ))}
-                    </span>
-                  )}
                 </div>
                 <div className="w-px h-5 bg-ink/25" />
               </button>
@@ -133,7 +129,7 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
       )}
 
       <FeedbackBanner feedback={feedback} />
-      <NextButton feedback={feedback} index={index} total={total} onNext={() => { next(); setPopped([]); setBurstAt(null) }} />
+      <NextButton feedback={feedback} index={index} total={total} onNext={() => { next(); setPopped([]) }} />
     </div>
   )
 }

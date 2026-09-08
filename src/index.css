@@ -51,18 +51,3 @@ body {
 .avatar-glow {
   animation: avatar-glow-pulse 2.4s ease-in-out infinite;
 }
-
-/* Estallido de chispas reutilizable (globo pinchado, golpe de mazo, etc.): cada partícula
-   define su propio --angle/--dist vía style inline y esta animación las dispara desde el
-   centro hacia afuera mientras se desvanecen. */
-@keyframes spark-burst {
-  0% { transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scale(1); opacity: 1; }
-  100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateX(var(--dist)) scale(0.3); opacity: 0; }
-}
-
-.spark-particle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  animation: spark-burst 380ms ease-out forwards;
-}
