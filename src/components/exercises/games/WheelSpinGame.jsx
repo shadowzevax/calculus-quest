@@ -106,32 +106,43 @@ function WheelBoard({ items, onComplete, onFeedback }) {
           style={{ transform: `rotate(${rotation}deg)`, transition: spinning ? `transform ${pool.length === 1 ? 0.5 : 3.1}s cubic-bezier(0.15,0.85,0.2,1)` : 'none' }}
         >
           <circle cx="130" cy="130" r="128" fill="white" stroke="#1B3A5C" strokeOpacity="0.15" strokeWidth="2" />
-          {pool.map((itemIdx, slot) => {
-            const start = slot * wedgeAngle
-            const end = start + wedgeAngle
-            const toRad = (deg) => ((deg - 90) * Math.PI) / 180
-            const R = 122
-            const x1 = 130 + R * Math.cos(toRad(start))
-            const y1 = 130 + R * Math.sin(toRad(start))
-            const x2 = 130 + R * Math.cos(toRad(end))
-            const y2 = 130 + R * Math.sin(toRad(end))
-            const largeArc = wedgeAngle > 180 ? 1 : 0
-            const mid = start + wedgeAngle / 2
-            const lx = 130 + 76 * Math.cos(toRad(mid))
-            const ly = 130 + 76 * Math.sin(toRad(mid))
-            return (
-              <g key={itemIdx}>
-                <path d={`M130,130 L${x1},${y1} A${R},${R} 0 ${largeArc} 1 ${x2},${y2} Z`} fill={WEDGE_COLORS[slot % WEDGE_COLORS.length]} stroke="white" strokeWidth="1.5" />
-                <text
-                  x={lx} y={ly}
-                  fill="white" fontSize="11" fontFamily="'IBM Plex Mono', monospace" fontWeight="700" textAnchor="middle"
-                  transform={`rotate(${mid + (mid > 90 && mid < 270 ? 180 : 0)}, ${lx}, ${ly})`}
-                >
-                  Ej. {itemIdx + 1}
-                </text>
-              </g>
-            )
-          })}
+          {pool.length === 1 ? (
+            // Un solo gajo = la rueda completa. Un arco de 360° con el mismo punto de
+            // inicio y fin no se dibuja en SVG, así que en ese caso se pinta un círculo entero.
+            <g>
+              <circle cx="130" cy="130" r="122" fill={WEDGE_COLORS[0]} stroke="white" strokeWidth="1.5" />
+              <text x="130" y="134" fill="white" fontSize="13" fontFamily="'IBM Plex Mono', monospace" fontWeight="700" textAnchor="middle">
+                Ej. {pool[0] + 1}
+              </text>
+            </g>
+          ) : (
+            pool.map((itemIdx, slot) => {
+              const start = slot * wedgeAngle
+              const end = start + wedgeAngle
+              const toRad = (deg) => ((deg - 90) * Math.PI) / 180
+              const R = 122
+              const x1 = 130 + R * Math.cos(toRad(start))
+              const y1 = 130 + R * Math.sin(toRad(start))
+              const x2 = 130 + R * Math.cos(toRad(end))
+              const y2 = 130 + R * Math.sin(toRad(end))
+              const largeArc = wedgeAngle > 180 ? 1 : 0
+              const mid = start + wedgeAngle / 2
+              const lx = 130 + 76 * Math.cos(toRad(mid))
+              const ly = 130 + 76 * Math.sin(toRad(mid))
+              return (
+                <g key={itemIdx}>
+                  <path d={`M130,130 L${x1},${y1} A${R},${R} 0 ${largeArc} 1 ${x2},${y2} Z`} fill={WEDGE_COLORS[slot % WEDGE_COLORS.length]} stroke="white" strokeWidth="1.5" />
+                  <text
+                    x={lx} y={ly}
+                    fill="white" fontSize="11" fontFamily="'IBM Plex Mono', monospace" fontWeight="700" textAnchor="middle"
+                    transform={`rotate(${mid + (mid > 90 && mid < 270 ? 180 : 0)}, ${lx}, ${ly})`}
+                  >
+                    Ej. {itemIdx + 1}
+                  </text>
+                </g>
+              )
+            })
+          )}
           <circle cx="130" cy="130" r="16" fill="white" stroke="#1B3A5C" strokeWidth="2" />
         </svg>
       </div>
