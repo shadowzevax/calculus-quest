@@ -1,8 +1,17 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Dices, ThumbsUp, ThumbsDown, CheckCircle2, XCircle } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt, MathText } from './GameBits'
+
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 const WEDGE_COLORS = ['#F0A93C', '#457B9D', '#3FBFAD', '#FF6B4A', '#9B5DE5', '#2A9D8F', '#E76F51', '#264653']
 const MIN_WEDGES = 6
@@ -49,7 +58,10 @@ export default function WheelSpinGame({ exercise, onComplete, onFeedback }) {
     )
   }
 
-  const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+  // La ruleta pierde el sentido si las preguntas siempre salen en el mismo orden — se
+  // mezclan una vez por partida (no en cada render) para que cada intento sea distinto.
+  const shuffledList = useMemo(() => shuffle(items.list), [exercise.id])
+  const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper({ ...items, list: shuffledList }, onComplete, onFeedback)
   const [rotation, setRotation] = useState(0)
   const [spinning, setSpinning] = useState(false)
   const [landed, setLanded] = useState(false)
