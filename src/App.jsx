@@ -1,8 +1,9 @@
 import './App.css'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './lib/AuthContext'
 import Layout from './Layout'
+import ChunkErrorBoundary from './ChunkErrorBoundary'
 
 // Cada página se descarga en su propio archivo separado, solo cuando se visita esa ruta —
 // antes todas (incluidas las de admin, que la mayoría de usuarios nunca abre) iban juntas en
@@ -21,26 +22,33 @@ const Survey = lazy(() => import('./pages/Survey'))
 const TeacherAnalytics = lazy(() => import('./pages/TeacherAnalytics'))
 
 function App() {
+  // Si esta carga sí funcionó, se limpia la marca de "ya recargué por un chunk roto" —
+  // así un futuro redeploy real (mientras el usuario sigue con la pestaña abierta) puede
+  // volver a disparar el auto-reload en vez de quedar bloqueado para siempre en esta pestaña.
+  useEffect(() => { sessionStorage.removeItem('funcionlab_chunk_reload') }, [])
+
   return (
     <AuthProvider>
       <Router>
         <Layout>
-          <Suspense fallback={null}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/missions" element={<Missions />} />
-              <Route path="/missions/:id" element={<MissionDetail />} />
-              <Route path="/ranking" element={<Ranking />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/teacher-panel" element={<TeacherPanel />} />
-              <Route path="/user-management" element={<UserManagement />} />
-              <Route path="/mission-management" element={<MissionManagement />} />
-              <Route path="/survey" element={<Survey />} />
-              <Route path="/teacher-analytics" element={<TeacherAnalytics />} />
-              <Route path="/login" element={<Login />} />
-            </Routes>
-          </Suspense>
+          <ChunkErrorBoundary>
+            <Suspense fallback={null}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/missions" element={<Missions />} />
+                <Route path="/missions/:id" element={<MissionDetail />} />
+                <Route path="/ranking" element={<Ranking />} />
+                <Route path="/chat" element={<Chat />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/teacher-panel" element={<TeacherPanel />} />
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/mission-management" element={<MissionManagement />} />
+                <Route path="/survey" element={<Survey />} />
+                <Route path="/teacher-analytics" element={<TeacherAnalytics />} />
+                <Route path="/login" element={<Login />} />
+              </Routes>
+            </Suspense>
+          </ChunkErrorBoundary>
         </Layout>
       </Router>
     </AuthProvider>
