@@ -21,7 +21,9 @@ const adminNav = [
   { to: '/teacher-panel', label: 'Panel Docente', icon: BarChart3 },
   { to: '/teacher-analytics', label: 'Analítica', icon: BarChart2 },
   { to: '/user-management', label: 'Gestión Usuarios', icon: Users },
-  { to: '/mission-management', label: 'Gestión Misiones', icon: Map },
+  // "Gestión Misiones" oculto a pedido del usuario (2026-09-08) — la ruta /mission-management
+  // sigue existiendo en App.jsx, solo se quitó del menú. Volver a agregar aquí cuando pida
+  // que se muestre de nuevo: { to: '/mission-management', label: 'Gestión Misiones', icon: Map },
 ]
 
 function NavItem({ to, label, icon: Icon }) {
