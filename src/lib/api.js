@@ -63,6 +63,8 @@ export const api = {
     register: (data) => request('/auth?action=register', { method: 'POST', body: JSON.stringify(data) }),
     logout: () => request('/auth?action=logout', { method: 'POST' }),
     me: () => request('/auth?action=me'),
+    redeemResetCode: (email, code, new_password) =>
+      request('/auth?action=redeem_reset_code', { method: 'POST', body: JSON.stringify({ email, code, new_password }) }),
   },
   stats: {
     get: () => cachedGet('/stats'),
@@ -94,6 +96,8 @@ export const api = {
         invalidate('/users');
         return r;
       }),
+    generateResetCode: (id) =>
+      request('/users?action=reset_code', { method: 'POST', body: JSON.stringify({ id }) }),
   },
   messages: {
     list: () => request('/messages'),

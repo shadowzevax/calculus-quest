@@ -226,6 +226,19 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS speed_bonus_count INTEGER NOT NULL DE
 -- ver/ganar el usuario (ver api/_avatar.js y api/profile.js). NULL en cuentas de antes de esto.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_gender TEXT;
 
+-- Codigos temporales que el docente genera desde Gestion de Usuarios para que un estudiante que
+-- perdio el acceso pueda ponerse una contraseña nueva el mismo, sin que el docente llegue a
+-- conocerla (a diferencia de que el docente se la asigne directamente).
+CREATE TABLE password_reset_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_password_reset_codes_user ON password_reset_codes(user_id);
+
 CREATE INDEX idx_exercises_mission ON exercises(mission_id);
 CREATE INDEX idx_exercises_parent ON exercises(parent_exercise_id);
 CREATE INDEX idx_progress_user ON user_progress(user_id);

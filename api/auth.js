@@ -94,6 +94,30 @@ export default async function handler(req, res) {
     return res.status(200).json({ user });
   }
 
+  // Canjea el código temporal que le dio el docente por una contraseña nueva — no requiere
+  // sesión iniciada (justamente porque la perdió), solo el correo + el código vigente.
+  if (action === 'redeem_reset_code' && req.method === 'POST') {
+    const { email, code, new_password } = req.body || {};
+    if (!email || !code || !new_password || new_password.length < 6) {
+      return res.status(400).json({ error: 'Correo, código y contraseña nueva (mín. 6 caracteres) son requeridos' });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = code.trim().toUpperCase();
+    const [user] = await sql`SELECT id FROM users WHERE email = ${normalizedEmail}`;
+    if (!user) return res.status(400).json({ error: 'Código inválido o vencido' });
+
+    const [resetRow] = await sql`
+      SELECT id FROM password_reset_codes
+      WHERE user_id = ${user.id} AND code = ${normalizedCode} AND used_at IS NULL AND expires_at > now()
+    `;
+    if (!resetRow) return res.status(400).json({ error: 'Código inválido o vencido. Pídele uno nuevo a tu docente.' });
+
+    const password_hash = await bcrypt.hash(new_password, 10);
+    await sql`UPDATE users SET password_hash = ${password_hash} WHERE id = ${user.id}`;
+    await sql`UPDATE password_reset_codes SET used_at = now() WHERE id = ${resetRow.id}`;
+    return res.status(200).json({ ok: true });
+  }
+
   if (action === 'logout' && req.method === 'POST') {
     clearAuthCookie(res);
     return res.status(200).json({ ok: true });

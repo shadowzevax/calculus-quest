@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Users, KeyRound, RefreshCw } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Users, KeyRound, RefreshCw, Search, Copy, X } from 'lucide-react'
 import { api } from '@/lib/api'
 
 function RegistrationCodeCard() {
@@ -55,8 +55,48 @@ function RegistrationCodeCard() {
   )
 }
 
+// Banner con el código de acceso recién generado para un estudiante puntual — se muestra
+// arriba de la lista hasta que el docente lo cierra o vence (30 min, igual que en el backend).
+function ResetCodeBanner({ result, onClose }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(tick)
+  }, [])
+  const secondsLeft = Math.max(0, Math.floor((new Date(result.expires_at).getTime() - now) / 1000))
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
+  const ss = String(secondsLeft % 60).padStart(2, '0')
+  const copy = () => navigator.clipboard?.writeText(result.code).catch(() => {})
+
+  return (
+    <div className="bg-teal/5 border border-teal/30 rounded-xl p-4 mb-4 flex items-center gap-4">
+      <div className="w-10 h-10 rounded-lg bg-teal/10 border border-teal/30 flex items-center justify-center shrink-0">
+        <KeyRound className="w-4.5 h-4.5 text-teal" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] font-mono-lab text-ink/40 uppercase tracking-wide">
+          Código para {result.full_name} ({result.email})
+        </div>
+        <div className="text-2xl font-display font-bold text-ink tracking-[0.2em] tabular-nums">{result.code}</div>
+        <div className="text-[11px] text-ink/40 tabular-nums">
+          {secondsLeft > 0 ? `Vence en ${mm}:${ss} — dáselo al estudiante para que entre a "¿Olvidaste tu contraseña?" en el login` : 'Este código ya venció, genera uno nuevo'}
+        </div>
+      </div>
+      <button onClick={copy} title="Copiar código" className="w-8 h-8 rounded-lg border border-ink/15 text-ink/50 hover:bg-ink/5 hover:text-ink flex items-center justify-center shrink-0">
+        <Copy className="w-4 h-4" />
+      </button>
+      <button onClick={onClose} title="Cerrar" className="w-8 h-8 rounded-lg border border-ink/15 text-ink/50 hover:bg-ink/5 hover:text-ink flex items-center justify-center shrink-0">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
+
 export default function UserManagement() {
   const [users, setUsers] = useState([])
+  const [search, setSearch] = useState('')
+  const [resetResult, setResetResult] = useState(null)
+  const [generatingFor, setGeneratingFor] = useState(null)
 
   const load = () => api.users.list().then(setUsers).catch(() => {})
   useEffect(() => { load() }, [])
@@ -66,6 +106,22 @@ export default function UserManagement() {
     await api.users.setRole(u.id, newRole)
     load()
   }
+
+  const generateCode = async (u) => {
+    setGeneratingFor(u.id)
+    try {
+      const result = await api.users.generateResetCode(u.id)
+      setResetResult(result)
+    } finally {
+      setGeneratingFor(null)
+    }
+  }
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return users
+    return users.filter((u) => u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+  }, [users, search])
 
   return (
     <div>
@@ -80,9 +136,21 @@ export default function UserManagement() {
         <RegistrationCodeCard />
       </div>
 
+      {resetResult && <ResetCodeBanner result={resetResult} onClose={() => setResetResult(null)} />}
+
+      <div className="relative mb-4 max-w-sm">
+        <Search className="w-4 h-4 text-ink/30 absolute left-3 top-1/2 -translate-y-1/2" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o correo..."
+          className="w-full border border-ink/15 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
+        />
+      </div>
+
       <div className="bg-white rounded-xl border border-ink/10 divide-y divide-ink/5">
-        {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between px-5 py-3.5">
+        {filtered.map((u) => (
+          <div key={u.id} className="flex items-center justify-between px-5 py-3.5 gap-3 flex-wrap">
             <div>
               <div className="font-medium text-ink">{u.full_name}</div>
               <div className="text-xs text-ink/40">{u.email}</div>
@@ -92,6 +160,14 @@ export default function UserManagement() {
                 {u.role === 'admin' ? 'Docente' : 'Estudiante'}
               </span>
               <button
+                onClick={() => generateCode(u)}
+                disabled={generatingFor === u.id}
+                title="Generar un código para que este usuario se ponga una contraseña nueva"
+                className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5 flex items-center gap-1 disabled:opacity-40"
+              >
+                <KeyRound className="w-3.5 h-3.5" /> {generatingFor === u.id ? 'Generando...' : 'Código de acceso'}
+              </button>
+              <button
                 onClick={() => toggleRole(u)}
                 className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5"
               >
@@ -100,6 +176,9 @@ export default function UserManagement() {
             </div>
           </div>
         ))}
+        {filtered.length === 0 && (
+          <p className="px-5 py-6 text-sm text-ink/35 text-center">No hay usuarios que coincidan con "{search}".</p>
+        )}
       </div>
     </div>
   )

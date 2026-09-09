@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/AuthContext'
+import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
 import { buildAvatarDataUri } from '@/lib/avatarBuilder'
 
@@ -22,6 +23,9 @@ export default function Login() {
   const [presetId, setPresetId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetCode, setResetCode] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [resetDone, setResetDone] = useState(false)
 
   const previews = useMemo(
     () => PRESETS.map((p) => ({ ...p, uri: buildAvatarDataUri({ ...p, eyes: 'default', eyebrows: 'default', mouth: 'smile', seed: p.id }) })),
@@ -39,6 +43,12 @@ export default function Login() {
     try {
       if (mode === 'login') {
         await login(email, password)
+        navigate('/')
+      } else if (mode === 'reset') {
+        await api.auth.redeemResetCode(email, resetCode, newPassword)
+        setResetDone(true)
+        setMode('login')
+        setPassword('')
       } else {
         const preset = PRESETS.find((p) => p.id === presetId)
         await register({
@@ -46,8 +56,8 @@ export default function Login() {
           avatar_gender: preset.gender,
           avatar_config: { top: preset.top, clothing: preset.clothing, clothesColor: preset.clothesColor, skinColor: preset.skinColor, hairColor: preset.hairColor },
         })
+        navigate('/')
       }
-      navigate('/')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -68,11 +78,21 @@ export default function Login() {
       </div>
 
       <h1 className="text-xl font-display font-semibold text-ink mb-1">
-        {mode === 'login' ? 'Bienvenido de vuelta' : 'Crea tu cuenta'}
+        {mode === 'login' ? 'Bienvenido de vuelta' : mode === 'reset' ? 'Recupera tu acceso' : 'Crea tu cuenta'}
       </h1>
       <p className="text-sm text-ink/50 mb-6">
-        {mode === 'login' ? 'Continúa tu recorrido por el laboratorio.' : 'Empieza a resolver misiones y ganar XP.'}
+        {mode === 'login'
+          ? 'Continúa tu recorrido por el laboratorio.'
+          : mode === 'reset'
+            ? 'Escribe el código que te dio tu docente y elige una contraseña nueva.'
+            : 'Empieza a resolver misiones y ganar XP.'}
       </p>
+
+      {resetDone && mode === 'login' && (
+        <div className="bg-teal/10 border border-teal/30 text-teal text-sm rounded-lg p-3 mb-4">
+          Listo, tu contraseña ya se actualizó. Inicia sesión con la nueva.
+        </div>
+      )}
 
       <form onSubmit={submit} className="space-y-3">
         {mode === 'register' && (
@@ -110,14 +130,36 @@ export default function Login() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <input
-          className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        {mode === 'reset' ? (
+          <>
+            <input
+              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest uppercase"
+              placeholder="Código (te lo da tu docente)"
+              value={resetCode}
+              onChange={(e) => setResetCode(e.target.value)}
+              maxLength={6}
+              required
+            />
+            <input
+              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
+              type="password"
+              placeholder="Contraseña nueva (mín. 6 caracteres)"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+          </>
+        ) : (
+          <input
+            className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        )}
         {mode === 'register' && (
           <input
             className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest"
@@ -134,15 +176,35 @@ export default function Login() {
           disabled={loading}
           className="w-full bg-coral hover:bg-coral/90 transition-colors text-white rounded-lg px-3 py-2.5 text-sm font-medium disabled:opacity-50"
         >
-          {loading ? 'Cargando...' : mode === 'login' ? 'Entrar' : 'Registrarme'}
+          {loading ? 'Cargando...' : mode === 'login' ? 'Entrar' : mode === 'reset' ? 'Cambiar contraseña' : 'Registrarme'}
         </button>
       </form>
-      <button
-        className="text-sm text-coral mt-4 font-medium"
-        onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-      >
-        {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
-      </button>
+      <div className="flex flex-col items-start gap-1.5 mt-4">
+        {mode !== 'reset' && (
+          <button
+            className="text-sm text-coral font-medium"
+            onClick={() => { setError(''); setMode(mode === 'login' ? 'register' : 'login') }}
+          >
+            {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+          </button>
+        )}
+        {mode === 'login' && (
+          <button
+            className="text-sm text-ink/40 hover:text-ink/60 transition-colors"
+            onClick={() => { setError(''); setMode('reset') }}
+          >
+            ¿Olvidaste tu contraseña? Tengo un código
+          </button>
+        )}
+        {mode === 'reset' && (
+          <button
+            className="text-sm text-ink/40 hover:text-ink/60 transition-colors"
+            onClick={() => { setError(''); setMode('login') }}
+          >
+            ← Volver a iniciar sesión
+          </button>
+        )}
+      </div>
     </div>
   )
 }
