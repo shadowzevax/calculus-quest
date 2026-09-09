@@ -51,7 +51,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full flex flex-col">
       <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">COMUNIDAD</div>
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-3xl font-display font-bold text-ink flex items-center gap-2">
@@ -76,8 +76,8 @@ export default function Chat() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-ink/10 flex flex-col h-[calc(100vh-220px)] min-h-[600px]">
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="bg-white rounded-xl border border-ink/10 flex flex-col flex-1 min-h-[420px]">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
           {messages.map((m) => {
             const isMine = m.user_id === user?.id
             const avatar = (
