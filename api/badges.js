@@ -1,5 +1,5 @@
 import { sql } from './_db.js';
-import { requireAuth } from './_auth.js';
+import { requireAuth, isStaffRole } from './_auth.js';
 
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
