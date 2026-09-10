@@ -12,7 +12,7 @@ function baseFor(gender) {
   }
 }
 
-export const COLOR_CATEGORIES = ['skinColor', 'hairColor', 'clothesColor']
+const COLOR_CATEGORIES = ['skinColor', 'hairColor', 'clothesColor']
 
 export function isColorPiece(piece) {
   return COLOR_CATEGORIES.includes(piece.category)
