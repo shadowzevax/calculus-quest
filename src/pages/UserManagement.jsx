@@ -201,11 +201,11 @@ export default function UserManagement() {
                   Cambiar Rol
                 </button>
               )}
-              {u.role === 'user' && (
+              {(u.role === 'user' || (u.role === 'admin' && isSuperAdmin)) && (
                 <button
                   onClick={() => deleteStudent(u)}
                   disabled={deletingFor === u.id}
-                  title="Eliminar esta cuenta de estudiante"
+                  title={`Eliminar esta cuenta de ${u.role === 'admin' ? 'docente' : 'estudiante'}`}
                   className="text-xs border border-red-200 rounded px-2 py-1 text-red-500 hover:bg-red-50 flex items-center gap-1 disabled:opacity-40"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> {deletingFor === u.id ? 'Eliminando...' : 'Eliminar'}

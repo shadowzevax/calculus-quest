@@ -42,16 +42,18 @@ export default async function handler(req, res) {
     return res.status(200).json({ user: updated });
   }
 
-  // Eliminar una cuenta — solo de estudiante, sin importar quién lo pida (ni el propio
-  // administrador puede borrar a otro docente o a sí mismo por aquí). Docente y administrador
-  // pueden hacerlo por igual (ya pasaron por requireAdmin arriba).
+  // Eliminar una cuenta — un docente solo puede eliminar estudiantes; el administrador puede
+  // eliminar estudiantes Y docentes, pero nunca al administrador (ni a sí mismo) por aquí.
   if (req.method === 'DELETE') {
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id requerido' });
     const [target] = await sql`SELECT role FROM users WHERE id = ${id}`;
     if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
-    if (target.role !== 'user') {
-      return res.status(403).json({ error: 'Solo se pueden eliminar cuentas de estudiante' });
+    if (target.role === 'superadmin') {
+      return res.status(403).json({ error: 'No se puede eliminar la cuenta del administrador' });
+    }
+    if (target.role === 'admin' && admin.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Solo el administrador puede eliminar cuentas de docente' });
     }
     await sql`DELETE FROM users WHERE id = ${id}`;
     return res.status(200).json({ ok: true });
