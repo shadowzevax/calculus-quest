@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Users, KeyRound, RefreshCw, Search, Copy, X, Trash2 } from 'lucide-react'
+import { Users, KeyRound, RefreshCw, Search, Copy, X, Trash2, ChevronDown, ChevronRight, UserCircle2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 
@@ -100,6 +100,56 @@ function ResetCodeBanner({ result, onClose }) {
   )
 }
 
+// Una fila de usuario, con los botones habilitados según lo que el rol de quien mira le
+// permite hacerle al rol del usuario de la fila (ver reglas espejo en api/users.js).
+function UserRow({ u, isSuperAdmin, generatingFor, deletingFor, onGenerateCode, onToggleRole, onDelete }) {
+  const canCode = u.role === 'user' || (u.role === 'admin' && isSuperAdmin)
+  const canChangeRole = isSuperAdmin && u.role !== 'superadmin'
+  const canDelete = u.role === 'user' || (u.role === 'admin' && isSuperAdmin)
+
+  return (
+    <div className="flex items-center justify-between px-5 py-3.5 gap-3 flex-wrap">
+      <div>
+        <div className="font-medium text-ink">{u.full_name}</div>
+        <div className="text-xs text-ink/40">{u.email}</div>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${ROLE_STYLE[u.role] || ROLE_STYLE.user}`}>
+          {ROLE_LABEL[u.role] || 'Estudiante'}
+        </span>
+        {canCode && (
+          <button
+            onClick={() => onGenerateCode(u)}
+            disabled={generatingFor === u.id}
+            title="Generar un código para que este usuario se ponga una contraseña nueva"
+            className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5 flex items-center gap-1 disabled:opacity-40"
+          >
+            <KeyRound className="w-3.5 h-3.5" /> {generatingFor === u.id ? 'Generando...' : 'Código de acceso'}
+          </button>
+        )}
+        {canChangeRole && (
+          <button
+            onClick={() => onToggleRole(u)}
+            className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5"
+          >
+            Cambiar Rol
+          </button>
+        )}
+        {canDelete && (
+          <button
+            onClick={() => onDelete(u)}
+            disabled={deletingFor === u.id}
+            title={`Eliminar esta cuenta de ${u.role === 'admin' ? 'docente' : 'estudiante'}`}
+            className="text-xs border border-red-200 rounded px-2 py-1 text-red-500 hover:bg-red-50 flex items-center gap-1 disabled:opacity-40"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> {deletingFor === u.id ? 'Eliminando...' : 'Eliminar'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function UserManagement() {
   const { user: viewer } = useAuth()
   const isSuperAdmin = viewer?.role === 'superadmin'
@@ -108,6 +158,7 @@ export default function UserManagement() {
   const [resetResult, setResetResult] = useState(null)
   const [generatingFor, setGeneratingFor] = useState(null)
   const [deletingFor, setDeletingFor] = useState(null)
+  const [showTeachers, setShowTeachers] = useState(false)
 
   const load = () => api.users.list().then(setUsers).catch(() => {})
   useEffect(() => { load() }, [])
@@ -128,7 +179,7 @@ export default function UserManagement() {
     }
   }
 
-  const deleteStudent = async (u) => {
+  const deleteUser = async (u) => {
     if (!confirm(`¿Eliminar la cuenta de ${u.full_name} (${u.email})? Esto borra todo su progreso y no se puede deshacer.`)) return
     setDeletingFor(u.id)
     try {
@@ -141,11 +192,29 @@ export default function UserManagement() {
     }
   }
 
-  const filtered = useMemo(() => {
+  // La propia cuenta de quien mira se saca de la lista y se muestra aparte arriba, para que
+  // nunca se confunda con "otro usuario más" en la tabla. Los administradores (rol tope) se
+  // ocultan por completo salvo que quien mire sea el propio administrador (ya se ve arriba
+  // como "tu cuenta", así que aquí solo aplicaría si hubiera un segundo administrador).
+  const me = users.find((u) => u.id === viewer?.id) || viewer
+  const others = useMemo(
+    () => users.filter((u) => u.id !== viewer?.id && (u.role !== 'superadmin' || isSuperAdmin)),
+    [users, viewer, isSuperAdmin]
+  )
+  const teachers = useMemo(() => others.filter((u) => u.role === 'admin'), [others])
+  const students = useMemo(() => others.filter((u) => u.role === 'user'), [others])
+
+  const matches = (u, q) => u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+  const filteredStudents = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return users
-    return users.filter((u) => u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
-  }, [users, search])
+    return q ? students.filter((u) => matches(u, q)) : students
+  }, [students, search])
+  const filteredTeachers = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return q ? teachers.filter((u) => matches(u, q)) : teachers
+  }, [teachers, search])
+
+  const rowProps = { isSuperAdmin, generatingFor, deletingFor, onGenerateCode: generateCode, onToggleRole: toggleRole, onDelete: deleteUser }
 
   return (
     <div>
@@ -162,6 +231,19 @@ export default function UserManagement() {
 
       {resetResult && <ResetCodeBanner result={resetResult} onClose={() => setResetResult(null)} />}
 
+      {me && (
+        <div className="bg-blueprint/5 border border-blueprint/15 rounded-xl px-5 py-3.5 mb-4 flex items-center gap-3">
+          <UserCircle2 className="w-5 h-5 text-blueprint shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-ink">{me.full_name} <span className="text-xs text-blueprint font-mono-lab">(tú)</span></div>
+            <div className="text-xs text-ink/40">{me.email}</div>
+          </div>
+          <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase shrink-0 ${ROLE_STYLE[me.role] || ROLE_STYLE.user}`}>
+            {ROLE_LABEL[me.role] || 'Estudiante'}
+          </span>
+        </div>
+      )}
+
       <div className="relative mb-4 max-w-sm">
         <Search className="w-4 h-4 text-ink/30 absolute left-3 top-1/2 -translate-y-1/2" />
         <input
@@ -172,50 +254,30 @@ export default function UserManagement() {
         />
       </div>
 
+      {teachers.length > 0 && (
+        <div className="bg-white rounded-xl border border-ink/10 mb-4">
+          <button
+            onClick={() => setShowTeachers((v) => !v)}
+            className="w-full flex items-center gap-2 px-5 py-3 text-sm font-medium text-ink/70 hover:bg-ink/[0.02]"
+          >
+            {showTeachers ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            Docentes ({teachers.length})
+          </button>
+          {showTeachers && (
+            <div className="divide-y divide-ink/5 border-t border-ink/10">
+              {filteredTeachers.map((u) => <UserRow key={u.id} u={u} {...rowProps} />)}
+              {filteredTeachers.length === 0 && (
+                <p className="px-5 py-4 text-sm text-ink/35 text-center">Ningún docente coincide con "{search}".</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-ink/10 divide-y divide-ink/5">
-        {filtered.map((u) => (
-          <div key={u.id} className="flex items-center justify-between px-5 py-3.5 gap-3 flex-wrap">
-            <div>
-              <div className="font-medium text-ink">{u.full_name}</div>
-              <div className="text-xs text-ink/40">{u.email}</div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${ROLE_STYLE[u.role] || ROLE_STYLE.user}`}>
-                {ROLE_LABEL[u.role] || 'Estudiante'}
-              </span>
-              {(u.role === 'user' || (u.role === 'admin' && isSuperAdmin)) && (
-                <button
-                  onClick={() => generateCode(u)}
-                  disabled={generatingFor === u.id}
-                  title="Generar un código para que este usuario se ponga una contraseña nueva"
-                  className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5 flex items-center gap-1 disabled:opacity-40"
-                >
-                  <KeyRound className="w-3.5 h-3.5" /> {generatingFor === u.id ? 'Generando...' : 'Código de acceso'}
-                </button>
-              )}
-              {isSuperAdmin && u.role !== 'superadmin' && (
-                <button
-                  onClick={() => toggleRole(u)}
-                  className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5"
-                >
-                  Cambiar Rol
-                </button>
-              )}
-              {(u.role === 'user' || (u.role === 'admin' && isSuperAdmin)) && (
-                <button
-                  onClick={() => deleteStudent(u)}
-                  disabled={deletingFor === u.id}
-                  title={`Eliminar esta cuenta de ${u.role === 'admin' ? 'docente' : 'estudiante'}`}
-                  className="text-xs border border-red-200 rounded px-2 py-1 text-red-500 hover:bg-red-50 flex items-center gap-1 disabled:opacity-40"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> {deletingFor === u.id ? 'Eliminando...' : 'Eliminar'}
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <p className="px-5 py-6 text-sm text-ink/35 text-center">No hay usuarios que coincidan con "{search}".</p>
+        {filteredStudents.map((u) => <UserRow key={u.id} u={u} {...rowProps} />)}
+        {filteredStudents.length === 0 && (
+          <p className="px-5 py-6 text-sm text-ink/35 text-center">No hay estudiantes que coincidan con "{search}".</p>
         )}
       </div>
     </div>
