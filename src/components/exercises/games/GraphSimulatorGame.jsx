@@ -56,11 +56,10 @@ function DiscontinuityGraph({ type, accent = '#1B3A5C' }) {
 // función en vivo, así se puede EXPLORAR antes de escribir la respuesta.
 export default function GraphSimulatorGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [preview, setPreview] = useState(null)
   const [k, setK] = useState(0)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

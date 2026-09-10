@@ -9,11 +9,10 @@ import { GameHeader, FeedbackBanner, NextButton, Prompt, MathText } from './Game
 // desde un menú numerado, o escribir la respuesta en el prompt de comandos.
 export default function DataTerminalGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [booted, setBooted] = useState(false)
   const [scanning, setScanning] = useState(false)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

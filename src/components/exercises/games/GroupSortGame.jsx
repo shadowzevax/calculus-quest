@@ -11,9 +11,8 @@ import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './Ga
 // tocar un bloque lo selecciona, tocar un canasto lo coloca ahi.
 export default function GroupSortGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

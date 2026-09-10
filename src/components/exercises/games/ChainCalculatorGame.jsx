@@ -17,11 +17,10 @@ function detectStages(prompt) {
 // que dar el resultado numérico — encaja con evaluar y componer funciones paso a paso.
 export default function ChainCalculatorGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [running, setRunning] = useState(false)
   const [pendingIndex, setPendingIndex] = useState(null)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

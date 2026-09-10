@@ -7,9 +7,8 @@ import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './Ga
 // opciones son postes/marcadores repartidos a lo largo del camino, no una lista vertical.
 export default function RaceLimitGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
   const progressPct = Math.round((index / total) * 100)
 
   if (items.kind === 'matching') {

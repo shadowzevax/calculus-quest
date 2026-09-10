@@ -29,12 +29,11 @@ function popBurst(x, y, color) {
 // incorrecto desaparece, si es el correcto queda flotando solo).
 export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [popped, setPopped] = useState([])
   const [needle, setNeedle] = useState({ x: 0, y: 0 })
   const areaRef = useRef(null)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

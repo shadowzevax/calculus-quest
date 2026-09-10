@@ -10,10 +10,9 @@ const BOX_COLORS = ['#F0A93C', '#457B9D', '#3FBFAD', '#FF6B4A']
 // opciones aparecen como mini-cajas para escoger (no como una lista de texto plano).
 export default function OpenBoxGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [opened, setOpened] = useState(false)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

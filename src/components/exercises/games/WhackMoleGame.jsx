@@ -18,12 +18,11 @@ const MALLET_SCALE = { idle: 1, strike: 1.15 }
 // retroceso antes del golpe, y el golpe deja chispas sobre el agujero elegido.
 export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [malletPos, setMalletPos] = useState({ x: 0, y: 0 })
   const [phase, setPhase] = useState('idle')
   const areaRef = useRef(null)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   const trackMallet = (e) => {
     const point = e.touches ? e.touches[0] : e

@@ -9,10 +9,9 @@ import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './Ga
 // El estudiante desliza hasta que la curva se vea como la transformación pedida y confirma.
 export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [sliderPos, setSliderPos] = useState(0)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

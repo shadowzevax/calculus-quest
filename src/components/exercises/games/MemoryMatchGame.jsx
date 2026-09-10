@@ -10,8 +10,6 @@ const MEMORIZE_SECONDS = 8
 // memoricen, luego se tapan y solo queda UN intento para señalar la correcta de memoria.
 export default function MemoryMatchGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [secondsLeft, setSecondsLeft] = useState(MEMORIZE_SECONDS)
   const timerRef = useRef(null)
@@ -29,6 +27,8 @@ export default function MemoryMatchGame({ exercise, onComplete, onFeedback }) {
     return () => clearInterval(timerRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index])
+
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (

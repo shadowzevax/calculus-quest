@@ -10,9 +10,8 @@ const TILTS = ['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2']
 // "detectar" en qué puntos falla la continuidad.
 export default function ErrorDetectiveGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
-  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
-
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
+  if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
     return (
