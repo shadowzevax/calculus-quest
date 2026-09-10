@@ -42,7 +42,12 @@ export function getExerciseItems(exercise) {
       kind: 'text',
       list: meta.problems.map((p) => ({
         prompt: p.question,
-        accepted: Array.isArray(p.accepted_answers) ? p.accepted_answers : [p.answer],
+        // El formato exacto que la propia pregunta le pide escribir al estudiante (p.answer)
+        // SIEMPRE debe aceptarse, aunque accepted_answers exista — antes, si accepted_answers
+        // se definía, reemplazaba a p.answer en vez de sumarse, y si alguien olvidaba incluir
+        // ahí el formato literal que la pregunta pedía, esa respuesta exacta quedaba rechazada
+        // (pasó en la Misión 2: "[3,inf)" era el formato pedido pero no estaba en la lista).
+        accepted: [p.answer, ...(Array.isArray(p.accepted_answers) ? p.accepted_answers : [])],
         answer: p.answer,
         tolerance: p.tolerance,
         explanation: p.explanation,
