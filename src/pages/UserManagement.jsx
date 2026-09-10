@@ -183,14 +183,16 @@ export default function UserManagement() {
               <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${ROLE_STYLE[u.role] || ROLE_STYLE.user}`}>
                 {ROLE_LABEL[u.role] || 'Estudiante'}
               </span>
-              <button
-                onClick={() => generateCode(u)}
-                disabled={generatingFor === u.id}
-                title="Generar un código para que este usuario se ponga una contraseña nueva"
-                className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5 flex items-center gap-1 disabled:opacity-40"
-              >
-                <KeyRound className="w-3.5 h-3.5" /> {generatingFor === u.id ? 'Generando...' : 'Código de acceso'}
-              </button>
+              {(u.role === 'user' || (u.role === 'admin' && isSuperAdmin)) && (
+                <button
+                  onClick={() => generateCode(u)}
+                  disabled={generatingFor === u.id}
+                  title="Generar un código para que este usuario se ponga una contraseña nueva"
+                  className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5 flex items-center gap-1 disabled:opacity-40"
+                >
+                  <KeyRound className="w-3.5 h-3.5" /> {generatingFor === u.id ? 'Generando...' : 'Código de acceso'}
+                </button>
+              )}
               {isSuperAdmin && u.role !== 'superadmin' && (
                 <button
                   onClick={() => toggleRole(u)}

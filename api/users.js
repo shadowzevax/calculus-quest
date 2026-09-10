@@ -63,8 +63,18 @@ export default async function handler(req, res) {
   if (req.method === 'POST' && req.query.action === 'reset_code') {
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id requerido' });
-    const [user] = await sql`SELECT id, email, full_name FROM users WHERE id = ${id}`;
+    const [user] = await sql`SELECT id, email, full_name, role FROM users WHERE id = ${id}`;
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Un docente solo puede generar códigos para estudiantes; solo el administrador puede
+    // generarle uno a otro docente. El propio administrador nunca recibe código por aquí
+    // (si el administrador pierde su acceso, se resuelve directo en la base de datos).
+    if (user.role === 'superadmin') {
+      return res.status(403).json({ error: 'No se puede generar un código para el administrador' });
+    }
+    if (user.role === 'admin' && admin.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Solo el administrador puede generar un código para un docente' });
+    }
 
     // Invalida codigos anteriores sin usar de este usuario, para que solo el mas reciente sirva.
     await sql`UPDATE password_reset_codes SET used_at = now() WHERE user_id = ${id} AND used_at IS NULL`;
