@@ -216,6 +216,7 @@ export default function MissionDetail() {
           xp_earned: (exercise.xp_value || 10) + bonus,
           answers: answers || [],
           within_budget: withinBudget,
+          elapsed_ms: elapsedMs,
         })
         // El XP/nivel del usuario vive en el AuthContext (se usa en Dashboard, la barra
         // lateral, etc.) — sin este refresh, se quedaba desactualizado hasta el próximo login.

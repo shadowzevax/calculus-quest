@@ -119,11 +119,24 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { exercise_id, answer_given, hint_used, answers, within_budget } = req.body || {};
+    const { exercise_id, answer_given, hint_used, answers, within_budget, elapsed_ms } = req.body || {};
     if (!exercise_id) return res.status(400).json({ error: 'exercise_id requerido' });
 
     const [exercise] = await sql`SELECT * FROM exercises WHERE id = ${exercise_id}`;
     if (!exercise) return res.status(404).json({ error: 'Ejercicio no existe' });
+
+    // Tiempo dedicado a este intento (en segundos), acumulado en user_progress.time_spent sin
+    // importar si acertó o no — antes esta columna se leía en Analytics pero nunca se escribía
+    // en ningún lado, así que siempre mostraba 0.
+    const elapsedSeconds = Math.max(0, Math.round((Number(elapsed_ms) || 0) / 1000));
+    if (elapsedSeconds > 0) {
+      await sql`
+        INSERT INTO user_progress (user_id, mission_id, time_spent, started_date)
+        VALUES (${user.id}, ${exercise.mission_id}, ${elapsedSeconds}, now())
+        ON CONFLICT (user_id, mission_id) DO UPDATE SET
+          time_spent = user_progress.time_spent + ${elapsedSeconds}
+      `;
+    }
 
     // is_correct/xp_earned se recalculan aquí, del lado servidor, a partir de las respuestas
     // realmente dadas (answers) contra exercise.metadata — nunca se confía en lo que mande el
@@ -134,8 +147,8 @@ export default async function handler(req, res) {
     const xpEarned = isCorrect ? (exercise.xp_value || 10) + bonus : 0;
 
     await sql`
-      INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned, hint_used)
-      VALUES (${user.id}, ${exercise_id}, ${answer_given || ''}, ${isCorrect}, ${xpEarned}, ${!!hint_used})
+      INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned, hint_used, time_taken)
+      VALUES (${user.id}, ${exercise_id}, ${answer_given || ''}, ${isCorrect}, ${xpEarned}, ${!!hint_used}, ${elapsedSeconds || null})
     `;
 
     if (isCorrect) {

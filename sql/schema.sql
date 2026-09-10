@@ -161,6 +161,12 @@ CREATE TABLE forum_replies (
 -- mision 14, "Escape Room: Crisis en el Data Center") en vez del flujo individual normal.
 ALTER TABLE missions ADD COLUMN IF NOT EXISTS is_collaborative BOOLEAN NOT NULL DEFAULT false;
 
+-- Mecánica de minijuego especifica de cada mision (martillo, ruleta, terminal, ahorcado,
+-- etc. — cada una de las 13 misiones individuales tiene la suya, ver
+-- src/components/exercises/games/). NULL/vacio usa el selector generico por tipo de
+-- ejercicio en vez de una mecanica dedicada.
+ALTER TABLE missions ADD COLUMN IF NOT EXISTS game_type TEXT;
+
 -- Sala de escape cooperativa: cualquier estudiante crea una sala para una mision
 -- colaborativa y comparte el codigo con companeros. Reutilizable (no se "gasta" al
 -- jugarla) y se borra sola cuando queda vacia, para no acumular filas huerfanas.
