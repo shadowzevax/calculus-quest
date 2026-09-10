@@ -125,7 +125,9 @@ export default async function handler(req, res) {
   try {
     if (!isTeacher && avatar && !removingAvatar) {
       await requireMissionOrder(11, 'La foto de perfil personalizada');
-      if (avatar.length > MAX_AVATAR_LENGTH) throw new Error('La imagen es demasiado grande');
+    }
+    if (avatar && !removingAvatar && avatar.length > MAX_AVATAR_LENGTH) {
+      throw new Error('La imagen es demasiado grande');
     }
     if (!isTeacher && avatar_glow) await requireBadge(12, 'El aro del avatar');
     if (!isTeacher && dark_bubble) await requireBadge(13, 'La burbuja oscura');
