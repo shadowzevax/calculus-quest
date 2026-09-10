@@ -102,7 +102,10 @@ export default function MatchingExercise({ exercise, onComplete }) {
   const submit = () => {
     setSubmitted(true)
     const correctCount = pairs.filter((_, i) => connections[i] === i).length
-    onComplete({ isCorrect: correctCount === pairs.length })
+    // connections manda que pareja de la derecha se conecto con cada indice de la izquierda —
+    // el servidor lo usa para recalcular is_correct por su cuenta (correcto si connections[i]
+    // === i para todos, ya que las parejas vienen emparejadas por indice en exercise.metadata).
+    onComplete({ isCorrect: correctCount === pairs.length, answers: connections })
   }
 
   return (

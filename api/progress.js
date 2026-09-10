@@ -5,6 +5,77 @@ import { requireAuth } from './_auth.js';
 import { checkAndAwardBadges } from './_badges.js';
 import { checkAndUnlockAvatarPieces, incrementSpeedBonusCount } from './_avatar.js';
 
+// Debe coincidir con BONUS_XP en src/pages/MissionDetail.jsx.
+const BONUS_XP = 5;
+
+function normalizeText(str) {
+  return String(str).trim().toLowerCase().replace(/\s+/g, '');
+}
+
+// Recalcula si las respuestas REALMENTE dadas (answers, mandadas por el cliente junto con el
+// intento) serían correctas para este ejercicio — replica del lado servidor la misma lógica de
+// corrección que ya usa src/lib/exerciseItems.js / MatchingExercise.jsx del lado cliente. Antes
+// is_correct/xp_earned llegaban del cliente sin ninguna validación: cualquiera podía llamar esta
+// API directo con is_correct:true y xp_earned inventado sin haber resuelto nada. Ahora el
+// servidor decide por su cuenta a partir de exercise.metadata + answers; is_correct/xp_earned
+// que manda el cliente ya no se usan para nada.
+function evaluateAnswers(exercise, answers) {
+  const meta = exercise.metadata || {};
+
+  if (exercise.type === 'matching') {
+    const pairs = meta.pairs || [];
+    if (!pairs.length) return { isCorrect: false };
+    const connections = answers && typeof answers === 'object' && !Array.isArray(answers) ? answers : {};
+    const correctCount = pairs.filter((_, i) => connections[i] === i).length;
+    return { isCorrect: correctCount === pairs.length };
+  }
+
+  let kind = null;
+  let list = null;
+  const threshold = 0.6;
+  if (Array.isArray(meta.questions) && meta.questions.length) {
+    kind = 'choice';
+    list = meta.questions.map((q) => ({ correctIndex: q.correct_index }));
+  } else if (Array.isArray(meta.statements) && meta.statements.length) {
+    kind = 'choice';
+    list = meta.statements.map((s) => ({ correctIndex: s.answer ? 0 : 1 }));
+  } else if (Array.isArray(meta.problems) && meta.problems.length) {
+    kind = 'text';
+    list = meta.problems.map((p) => ({
+      accepted: [p.answer, ...(Array.isArray(p.accepted_answers) ? p.accepted_answers : [])],
+      answer: p.answer,
+      tolerance: p.tolerance,
+    }));
+  }
+  if (!list || !list.length) return { isCorrect: false };
+
+  // Puede haber varios intentos para la misma sub-pregunta (reintentos) — se toma el ÚLTIMO
+  // valor mandado por cada índice, que es el intento final del estudiante.
+  const finalByIndex = new Map();
+  (Array.isArray(answers) ? answers : []).forEach((a) => {
+    if (a && typeof a.index === 'number') finalByIndex.set(a.index, a.value);
+  });
+
+  let correctCount = 0;
+  list.forEach((item, i) => {
+    const value = finalByIndex.get(i);
+    if (value === undefined) return;
+    if (kind === 'choice') {
+      if (value === item.correctIndex) correctCount++;
+      return;
+    }
+    let ok = item.accepted.some((a) => normalizeText(a) === normalizeText(value));
+    if (!ok && item.tolerance !== undefined) {
+      const num = parseFloat(String(value).replace(',', '.'));
+      const target = parseFloat(item.answer);
+      if (!isNaN(num) && !isNaN(target) && Math.abs(num - target) <= item.tolerance) ok = true;
+    }
+    if (ok) correctCount++;
+  });
+
+  return { isCorrect: correctCount / list.length >= threshold };
+}
+
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
@@ -48,18 +119,26 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { exercise_id, answer_given, is_correct, xp_earned, hint_used } = req.body || {};
+    const { exercise_id, answer_given, hint_used, answers, within_budget } = req.body || {};
     if (!exercise_id) return res.status(400).json({ error: 'exercise_id requerido' });
 
     const [exercise] = await sql`SELECT * FROM exercises WHERE id = ${exercise_id}`;
     if (!exercise) return res.status(404).json({ error: 'Ejercicio no existe' });
 
+    // is_correct/xp_earned se recalculan aquí, del lado servidor, a partir de las respuestas
+    // realmente dadas (answers) contra exercise.metadata — nunca se confía en lo que mande el
+    // cliente para decidir esto (antes cualquiera podía llamar esta API directo con
+    // is_correct:true y xp_earned inventado sin haber resuelto nada).
+    const { isCorrect } = evaluateAnswers(exercise, answers);
+    const bonus = isCorrect && within_budget ? BONUS_XP : 0;
+    const xpEarned = isCorrect ? (exercise.xp_value || 10) + bonus : 0;
+
     await sql`
       INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned, hint_used)
-      VALUES (${user.id}, ${exercise_id}, ${answer_given || ''}, ${!!is_correct}, ${xp_earned || 0}, ${!!hint_used})
+      VALUES (${user.id}, ${exercise_id}, ${answer_given || ''}, ${isCorrect}, ${xpEarned}, ${!!hint_used})
     `;
 
-    if (is_correct) {
+    if (isCorrect) {
       // El XP solo se otorga la primera vez que se acierta este ejercicio.
       const priorCorrect = await sql`
         SELECT id FROM exercise_attempts
@@ -67,14 +146,11 @@ export default async function handler(req, res) {
       `;
       const firstTime = priorCorrect.length <= 1;
 
-      if (firstTime && xp_earned) {
-        await sql`UPDATE users SET xp = xp + ${xp_earned} WHERE id = ${user.id}`;
-        // El bono de velocidad va incluido en xp_earned (base + 5) — si supera el valor base
-        // del ejercicio, esta vez sí lo gano, y cuenta para desbloquear piezas del avatar.
-        if (xp_earned > (exercise.xp_value || 0)) await incrementSpeedBonusCount(user.id);
+      if (firstTime && xpEarned) {
+        await sql`UPDATE users SET xp = xp + ${xpEarned} WHERE id = ${user.id}`;
+        if (bonus > 0) await incrementSpeedBonusCount(user.id);
       }
 
-      const [mission] = await sql`SELECT * FROM missions WHERE id = ${exercise.mission_id}`;
       const totalExercises = await sql`
         SELECT COUNT(*)::int AS count FROM exercises
         WHERE mission_id = ${exercise.mission_id} AND parent_exercise_id IS NULL AND is_active = true
@@ -104,8 +180,8 @@ export default async function handler(req, res) {
       `;
     }
 
-    const newBadges = is_correct ? await checkAndAwardBadges(user.id) : [];
-    const newAvatarPieces = is_correct ? await checkAndUnlockAvatarPieces(user.id) : [];
+    const newBadges = isCorrect ? await checkAndAwardBadges(user.id) : [];
+    const newAvatarPieces = isCorrect ? await checkAndUnlockAvatarPieces(user.id) : [];
 
     return res.status(200).json({ ok: true, new_badges: newBadges, new_avatar_pieces: newAvatarPieces });
   }

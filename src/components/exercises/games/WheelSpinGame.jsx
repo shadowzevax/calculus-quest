@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Dices, ThumbsUp, ThumbsDown, CheckCircle2, XCircle } from 'lucide-react'
 import { getExerciseItems } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
@@ -32,6 +32,7 @@ function buildPool(exercises) {
     items.list.forEach((it, i) => {
       entries.push({
         id: `${ex.id}-${i}`,
+        itemIndex: i,
         sourceExercise: ex,
         kind: items.kind,
         prompt: it.prompt,
@@ -62,6 +63,9 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
   const [landedId, setLandedId] = useState(null)
   const [selected, setSelected] = useState(null)
   const [feedback, setFeedback] = useState(null)
+  // Respuestas dadas por ejercicio de origen (id real de exercises) — el servidor las usa para
+  // recalcular is_correct por su cuenta en vez de confiar en lo que mande el cliente.
+  const answersByExercise = useRef({})
 
   const wedgeAngle = 360 / Math.max(pool.length, 1)
   const current = pool.find((e) => e.id === landedId) || null
@@ -82,8 +86,12 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
   // ejercicio de origen, se avisa hacia arriba (XP, progreso) para ese ejercicio real.
   const removeSolved = () => {
     const nextPool = pool.filter((e) => e.id !== current.id)
-    const exerciseStillPending = nextPool.some((e) => e.sourceExercise.id === current.sourceExercise.id)
-    if (!exerciseStillPending) onExerciseComplete?.(current.sourceExercise)
+    const exId = current.sourceExercise.id
+    const exerciseStillPending = nextPool.some((e) => e.sourceExercise.id === exId)
+    if (!exerciseStillPending) {
+      onExerciseComplete?.(current.sourceExercise, answersByExercise.current[exId] || [])
+      delete answersByExercise.current[exId]
+    }
     setPool(nextPool)
   }
 
@@ -91,6 +99,8 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
     if (feedback) return
     setSelected(optionIndex)
     const isCorrect = optionIndex === current.correctIndex
+    const exId = current.sourceExercise.id
+    answersByExercise.current[exId] = [...(answersByExercise.current[exId] || []), { index: current.itemIndex, value: optionIndex }]
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }
@@ -104,6 +114,8 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
       const target = parseFloat(current.answer)
       if (!isNaN(num) && !isNaN(target) && Math.abs(num - target) <= current.tolerance) isCorrect = true
     }
+    const exId = current.sourceExercise.id
+    answersByExercise.current[exId] = [...(answersByExercise.current[exId] || []), { index: current.itemIndex, value }]
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }

@@ -198,17 +198,24 @@ export default function MissionDetail() {
     setTimerPaused(isPaused)
   }
 
-  const handleComplete = async ({ isCorrect }) => {
+  const handleComplete = async ({ isCorrect, answers }) => {
     const elapsedMs = Date.now() - exerciseStartRef.current - pausedMsRef.current
     const withinBudget = elapsedMs <= speedBonusBudget(exercise, mission) * 1000
     const bonus = isCorrect && withinBudget ? BONUS_XP : 0
     if (isCorrect) {
       try {
+        // answers va con las respuestas reales dadas — el servidor recalcula is_correct/xp por
+        // su cuenta a partir de eso (ver api/progress.js), en vez de confiar en is_correct/
+        // xp_earned que manda este mismo request (que ya no se usan para decidir nada, solo
+        // quedan para no romper el resto de esta función que asume que "isCorrect" ya se sabe
+        // localmente, que es lo que decide si avanzar de ejercicio en la UI).
         await api.progress.submit({
           exercise_id: exercise.id,
           answer_given: 'completed',
           is_correct: true,
           xp_earned: (exercise.xp_value || 10) + bonus,
+          answers: answers || [],
+          within_budget: withinBudget,
         })
         // El XP/nivel del usuario vive en el AuthContext (se usa en Dashboard, la barra
         // lateral, etc.) — sin este refresh, se quedaba desactualizado hasta el próximo login.
@@ -234,13 +241,14 @@ export default function MissionDetail() {
   // uno por uno — los ejercicios se completan en el orden en que la ruleta los va vaciando.
   // Cada vez que se termina uno de verdad (todas sus preguntas resueltas), se le da su XP y se
   // suma a los resultados; cuando ya se completaron todos, se muestra el resumen de la misión.
-  const handleWheelExerciseComplete = async (ex) => {
+  const handleWheelExerciseComplete = async (ex, answers) => {
     try {
       await api.progress.submit({
         exercise_id: ex.id,
         answer_given: 'completed',
         is_correct: true,
         xp_earned: ex.xp_value || 10,
+        answers: answers || [],
       })
       await refresh()
       api.ranking.list().then((rows) => {

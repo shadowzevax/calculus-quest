@@ -71,6 +71,11 @@ export function useStepper(items, onComplete, onFeedback) {
   const [selected, setSelected] = useState(null) // indice de opcion elegida (choice) o texto (text)
   const [feedback, setFeedback] = useState(null)
   const [correctCount, setCorrectCount] = useState(0)
+  // Guarda lo que el estudiante respondió en cada sub-pregunta (no solo si acertó) — el
+  // servidor lo necesita para poder recalcular is_correct por su cuenta en vez de confiar en
+  // lo que mande el cliente (antes cualquiera podía llamar la API directo con is_correct:true
+  // y xp_earned inventado sin haber resuelto nada).
+  const [answers, setAnswers] = useState([])
 
   const current = items.list[index]
   const total = items.list.length
@@ -80,6 +85,7 @@ export function useStepper(items, onComplete, onFeedback) {
     setSelected(optionIndex)
     const isCorrect = optionIndex === current.correctIndex
     if (isCorrect) setCorrectCount((c) => c + 1)
+    setAnswers((a) => [...a, { index, value: optionIndex }])
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }
@@ -94,6 +100,7 @@ export function useStepper(items, onComplete, onFeedback) {
       if (!isNaN(num) && !isNaN(target) && Math.abs(num - target) <= current.tolerance) isCorrect = true
     }
     if (isCorrect) setCorrectCount((c) => c + 1)
+    setAnswers((a) => [...a, { index, value }])
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }
@@ -105,7 +112,7 @@ export function useStepper(items, onComplete, onFeedback) {
     if (index < total - 1) {
       setIndex(index + 1)
     } else {
-      onComplete({ isCorrect: correctCount / total >= items.threshold })
+      onComplete({ isCorrect: correctCount / total >= items.threshold, answers })
     }
   }
 
