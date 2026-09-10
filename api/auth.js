@@ -81,7 +81,8 @@ export default async function handler(req, res) {
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
 
-    const [user] = await sql`SELECT * FROM users WHERE email = ${email}`;
+    const normalizedEmail = email.trim().toLowerCase();
+    const [user] = await sql`SELECT * FROM users WHERE email = ${normalizedEmail}`;
     if (!user) return res.status(401).json({ error: 'Credenciales inválidas' });
 
     const valid = await bcrypt.compare(password, user.password_hash);
