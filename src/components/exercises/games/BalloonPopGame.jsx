@@ -125,7 +125,9 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
       )}
 
       {!feedback && items.kind === 'choice' && (
-        <p className="text-[11px] text-ink/30 font-mono-lab -mt-2 mb-2">Pincha 3 globos: el que quede sin pinchar es tu respuesta.</p>
+        <p className="text-[11px] text-ink/30 font-mono-lab -mt-2 mb-2">
+          {`Pincha ${current.options.length - 1} globo${current.options.length - 1 === 1 ? '' : 's'}: el que quede sin pinchar es tu respuesta.`}
+        </p>
       )}
 
       <FeedbackBanner feedback={feedback} />
