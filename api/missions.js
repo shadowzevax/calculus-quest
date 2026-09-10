@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
     const { id, title, description, difficulty, xp_reward, estimated_time, is_active } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id requerido' });

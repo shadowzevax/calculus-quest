@@ -49,7 +49,7 @@ async function handleAnalytics(req, res) {
 }
 
 export default async function handler(req, res) {
-  const admin = requireAdmin(req, res);
+  const admin = await requireAdmin(req, res);
   if (!admin) return;
 
   if (req.query.action === 'analytics') return handleAnalytics(req, res);

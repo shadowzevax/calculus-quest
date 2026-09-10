@@ -1,6 +1,7 @@
 // Funciones de sesión (JWT + cookie) compartidas por los endpoints.
 // Empieza con "_" para que Vercel NO lo trate como una ruta pública.
 import jwt from 'jsonwebtoken';
+import { sql } from './_db.js';
 
 const COOKIE_NAME = 'cq_token';
 
@@ -53,25 +54,32 @@ export function isStaffRole(role) {
 }
 
 // Igual que requireAuth pero exige rol docente o administrador (endpoints de staff).
-export function requireAdmin(req, res) {
+// A diferencia de requireAuth, revalida el rol contra la base de datos en vez de confiar
+// ciegamente en el que venía en el JWT (que puede durar hasta 30 días) — así, si un
+// administrador le cambia el rol a alguien, el cambio aplica de inmediato en estos endpoints
+// de baja frecuencia en vez de esperar a que expire la sesión vieja.
+export async function requireAdmin(req, res) {
   const user = requireAuth(req, res);
   if (!user) return null;
-  if (!isStaffRole(user.role)) {
+  const [row] = await sql`SELECT role FROM users WHERE id = ${user.id}`;
+  if (!row || !isStaffRole(row.role)) {
     res.status(403).json({ error: 'Requiere rol docente' });
     return null;
   }
-  return user;
+  return { ...user, role: row.role };
 }
 
 // Solo para el rol tope (administrador) — hoy en día, únicamente cambiar de rol a otro
 // usuario. El propio rol 'superadmin' nunca se asigna desde la interfaz, solo a mano en la
 // base de datos, así que no hay riesgo de que alguien se auto-ascienda por aquí.
-export function requireSuperAdmin(req, res) {
+// Igual que requireAdmin, revalida el rol real en la base de datos en vez de confiar en el JWT.
+export async function requireSuperAdmin(req, res) {
   const user = requireAuth(req, res);
   if (!user) return null;
-  if (user.role !== 'superadmin') {
+  const [row] = await sql`SELECT role FROM users WHERE id = ${user.id}`;
+  if (!row || row.role !== 'superadmin') {
     res.status(403).json({ error: 'Requiere rol administrador' });
     return null;
   }
-  return user;
+  return { ...user, role: row.role };
 }

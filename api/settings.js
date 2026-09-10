@@ -4,14 +4,14 @@ import { getCurrentCode, regenerateCode, REG_CODE_ROTATE_MS } from './_regcode.j
 
 export default async function handler(req, res) {
   if (req.query.action === 'reg_code' && req.method === 'GET') {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
     const state = await getCurrentCode(sql);
     return res.status(200).json({ code: state.code, expires_at: state.generated_at + REG_CODE_ROTATE_MS });
   }
 
   if (req.query.action === 'reg_code' && req.method === 'POST') {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
     const state = await regenerateCode(sql);
     return res.status(200).json({ code: state.code, expires_at: state.generated_at + REG_CODE_ROTATE_MS });
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
     const { key, value } = req.body || {};
     if (!key) return res.status(400).json({ error: 'key requerido' });

@@ -14,7 +14,7 @@ function generateCode() {
 }
 
 export default async function handler(req, res) {
-  const admin = requireAdmin(req, res);
+  const admin = await requireAdmin(req, res);
   if (!admin) return;
 
   if (req.method === 'GET') {
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   // Cambiar de rol es exclusivo del administrador (superadmin) — un docente no puede
   // ascenderse a sí mismo ni a otro. El rol 'superadmin' nunca se asigna desde aquí.
   if (req.method === 'PATCH') {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!(await requireSuperAdmin(req, res))) return;
     const { id, role } = req.body || {};
     if (!id || !['user', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'id y role (user|admin) requeridos' });
