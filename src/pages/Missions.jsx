@@ -57,7 +57,7 @@ export default function Missions() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [openInfo, setOpenInfo] = useState(null)
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin')
   const navigate = useNavigate()
 
   useEffect(() => {

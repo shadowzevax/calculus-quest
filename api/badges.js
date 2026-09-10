@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     `;
     // El docente no "juega", así que ve todas las insignias ya desbloqueadas
     // (puede usarlas para mostrarle a los estudiantes cómo se ven, sin tener que jugar la plataforma).
-    const isTeacher = user.role === 'admin';
+    const isTeacher = isStaffRole(user.role);
     return res.status(200).json(
       rows.map((b) => ({ ...b, earned: isTeacher || !!b.earned_date, equipped: !!b.equipped_at }))
     );
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const { badge_id } = req.body || {};
     if (!badge_id) return res.status(400).json({ error: 'badge_id requerido' });
 
-    const isTeacher = user.role === 'admin';
+    const isTeacher = isStaffRole(user.role);
     const [existing] = await sql`SELECT equipped_at FROM user_badges WHERE user_id = ${user.id} AND badge_id = ${badge_id}`;
 
     if (!existing) {

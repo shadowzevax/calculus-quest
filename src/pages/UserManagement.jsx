@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Users, KeyRound, RefreshCw, Search, Copy, X } from 'lucide-react'
+import { Users, KeyRound, RefreshCw, Search, Copy, X, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/AuthContext'
+
+const ROLE_LABEL = { superadmin: 'Administrador', admin: 'Docente', user: 'Estudiante' }
+const ROLE_STYLE = {
+  superadmin: 'bg-blueprint/15 text-blueprint',
+  admin: 'bg-gold/15 text-gold',
+  user: 'bg-ink/5 text-ink/50',
+}
 
 function RegistrationCodeCard() {
   const [state, setState] = useState(null) // { code, expires_at }
@@ -93,10 +101,13 @@ function ResetCodeBanner({ result, onClose }) {
 }
 
 export default function UserManagement() {
+  const { user: viewer } = useAuth()
+  const isSuperAdmin = viewer?.role === 'superadmin'
   const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
   const [resetResult, setResetResult] = useState(null)
   const [generatingFor, setGeneratingFor] = useState(null)
+  const [deletingFor, setDeletingFor] = useState(null)
 
   const load = () => api.users.list().then(setUsers).catch(() => {})
   useEffect(() => { load() }, [])
@@ -114,6 +125,19 @@ export default function UserManagement() {
       setResetResult(result)
     } finally {
       setGeneratingFor(null)
+    }
+  }
+
+  const deleteStudent = async (u) => {
+    if (!confirm(`¿Eliminar la cuenta de ${u.full_name} (${u.email})? Esto borra todo su progreso y no se puede deshacer.`)) return
+    setDeletingFor(u.id)
+    try {
+      await api.users.remove(u.id)
+      load()
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setDeletingFor(null)
     }
   }
 
@@ -156,8 +180,8 @@ export default function UserManagement() {
               <div className="text-xs text-ink/40">{u.email}</div>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${u.role === 'admin' ? 'bg-gold/15 text-gold' : 'bg-ink/5 text-ink/50'}`}>
-                {u.role === 'admin' ? 'Docente' : 'Estudiante'}
+              <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${ROLE_STYLE[u.role] || ROLE_STYLE.user}`}>
+                {ROLE_LABEL[u.role] || 'Estudiante'}
               </span>
               <button
                 onClick={() => generateCode(u)}
@@ -167,12 +191,24 @@ export default function UserManagement() {
               >
                 <KeyRound className="w-3.5 h-3.5" /> {generatingFor === u.id ? 'Generando...' : 'Código de acceso'}
               </button>
-              <button
-                onClick={() => toggleRole(u)}
-                className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5"
-              >
-                Cambiar Rol
-              </button>
+              {isSuperAdmin && u.role !== 'superadmin' && (
+                <button
+                  onClick={() => toggleRole(u)}
+                  className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5"
+                >
+                  Cambiar Rol
+                </button>
+              )}
+              {u.role === 'user' && (
+                <button
+                  onClick={() => deleteStudent(u)}
+                  disabled={deletingFor === u.id}
+                  title="Eliminar esta cuenta de estudiante"
+                  className="text-xs border border-red-200 rounded px-2 py-1 text-red-500 hover:bg-red-50 flex items-center gap-1 disabled:opacity-40"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> {deletingFor === u.id ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              )}
             </div>
           </div>
         ))}

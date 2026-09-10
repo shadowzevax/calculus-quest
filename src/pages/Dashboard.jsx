@@ -141,7 +141,7 @@ export default function Dashboard() {
   const [recommendation, setRecommendation] = useState(null)
   const [badges, setBadges] = useState([])
   const [ranking, setRanking] = useState([])
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin')
 
   useEffect(() => {
     Promise.all([

@@ -1,5 +1,5 @@
 import { sql } from './_db.js';
-import { requireAdmin } from './_auth.js';
+import { requireAdmin, requireSuperAdmin } from './_auth.js';
 
 // Sin caracteres ambiguos (0/O, 1/I/L) para que un estudiante lo pueda copiar bien a mano
 // desde el tablero o desde un papel.
@@ -25,13 +25,36 @@ export default async function handler(req, res) {
     return res.status(200).json(rows);
   }
 
+  // Cambiar de rol es exclusivo del administrador (superadmin) — un docente no puede
+  // ascenderse a sí mismo ni a otro. El rol 'superadmin' nunca se asigna desde aquí.
   if (req.method === 'PATCH') {
+    if (!requireSuperAdmin(req, res)) return;
     const { id, role } = req.body || {};
     if (!id || !['user', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'id y role (user|admin) requeridos' });
     }
+    const [target] = await sql`SELECT role FROM users WHERE id = ${id}`;
+    if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (target.role === 'superadmin') {
+      return res.status(403).json({ error: 'No se puede cambiar el rol del administrador' });
+    }
     const [updated] = await sql`UPDATE users SET role = ${role} WHERE id = ${id} RETURNING id, email, role`;
     return res.status(200).json({ user: updated });
+  }
+
+  // Eliminar una cuenta — solo de estudiante, sin importar quién lo pida (ni el propio
+  // administrador puede borrar a otro docente o a sí mismo por aquí). Docente y administrador
+  // pueden hacerlo por igual (ya pasaron por requireAdmin arriba).
+  if (req.method === 'DELETE') {
+    const { id } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'id requerido' });
+    const [target] = await sql`SELECT role FROM users WHERE id = ${id}`;
+    if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (target.role !== 'user') {
+      return res.status(403).json({ error: 'Solo se pueden eliminar cuentas de estudiante' });
+    }
+    await sql`DELETE FROM users WHERE id = ${id}`;
+    return res.status(200).json({ ok: true });
   }
 
   // Genera un código temporal de acceso: el docente se lo da al estudiante (verbalmente, por

@@ -45,12 +45,32 @@ export function requireAuth(req, res) {
   return user;
 }
 
-// Igual que requireAuth pero exige rol admin (endpoints de docente).
+// 'admin' (docente) y 'superadmin' (administrador) tienen exactamente los mismos permisos de
+// docente en toda la plataforma — la única diferencia es que solo superadmin puede cambiar
+// roles (ver requireSuperAdmin más abajo). Se les llama "staff" en conjunto.
+export function isStaffRole(role) {
+  return role === 'admin' || role === 'superadmin';
+}
+
+// Igual que requireAuth pero exige rol docente o administrador (endpoints de staff).
 export function requireAdmin(req, res) {
   const user = requireAuth(req, res);
   if (!user) return null;
-  if (user.role !== 'admin') {
+  if (!isStaffRole(user.role)) {
     res.status(403).json({ error: 'Requiere rol docente' });
+    return null;
+  }
+  return user;
+}
+
+// Solo para el rol tope (administrador) — hoy en día, únicamente cambiar de rol a otro
+// usuario. El propio rol 'superadmin' nunca se asigna desde la interfaz, solo a mano en la
+// base de datos, así que no hay riesgo de que alguien se auto-ascienda por aquí.
+export function requireSuperAdmin(req, res) {
+  const user = requireAuth(req, res);
+  if (!user) return null;
+  if (user.role !== 'superadmin') {
+    res.status(403).json({ error: 'Requiere rol administrador' });
     return null;
   }
   return user;

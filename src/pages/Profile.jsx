@@ -58,7 +58,7 @@ export default function Profile() {
     })
   }
 
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin')
   const rainbowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 14 && b.earned)
   const darkBubbleUnlocked = isAdmin || badges.some((b) => b.requirement_value === 13 && b.earned)
   const avatarGlowUnlocked = isAdmin || badges.some((b) => b.requirement_value === 12 && b.earned)

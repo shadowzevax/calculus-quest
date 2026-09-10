@@ -8,7 +8,9 @@ CREATE TABLE users (
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   full_name TEXT,
-  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  -- 'admin' (docente) y 'superadmin' (administrador) tienen los mismos permisos en toda la
+  -- plataforma; superadmin ademas puede cambiar roles y nunca se asigna desde la interfaz.
+  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'superadmin')),
   avatar TEXT,
   bio TEXT,
   xp INTEGER NOT NULL DEFAULT 0,

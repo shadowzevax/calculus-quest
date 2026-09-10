@@ -98,6 +98,11 @@ export const api = {
       }),
     generateResetCode: (id) =>
       request('/users?action=reset_code', { method: 'POST', body: JSON.stringify({ id }) }),
+    remove: (id) =>
+      request('/users', { method: 'DELETE', body: JSON.stringify({ id }) }).then((r) => {
+        invalidate('/users');
+        return r;
+      }),
   },
   messages: {
     list: () => request('/messages'),

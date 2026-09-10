@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { sql } from './_db.js';
-import { requireAuth } from './_auth.js';
+import { requireAuth, isStaffRole } from './_auth.js';
 import { grantStarterColors } from './_avatar.js';
 
 const MAX_AVATAR_LENGTH = 400_000; // ~300KB de imagen en base64, ya redimensionada en el navegador
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     // Catalogo del avatar armable: solo las piezas unisex + las del genero elegido por el
     // usuario, marcando cuales ya desbloqueo (las "starter" siempre cuentan como desbloqueadas).
-    const isTeacher = user.role === 'admin';
+    const isTeacher = isStaffRole(user.role);
     const [{ avatar_config, speed_bonus_count, avatar_gender }] = await sql`SELECT avatar_config, speed_bonus_count, avatar_gender FROM users WHERE id = ${user.id}`;
     const gender = avatar_gender || 'unisex';
     // El orden debe reflejar que tan pronto se consigue cada pieza en la practica: starter
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
   // El nombre arcoiris, la burbuja oscura y el aro del avatar son recompensas cosmeticas por
   // progreso: solo se activan tras alcanzar la insignia correspondiente.
   // (Equipar/desequipar insignias vive en api/badges.js, ahora que se pueden llevar varias a la vez.)
-  const isTeacher = user.role === 'admin';
+  const isTeacher = isStaffRole(user.role);
   const requireBadge = async (value, label) => {
     const [owned] = await sql`
       SELECT 1 FROM user_badges ub JOIN badges b ON b.id = ub.badge_id

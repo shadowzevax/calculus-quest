@@ -164,7 +164,7 @@ export default function MissionDetail() {
   // Posición en el ranking y XP total, en vivo — para darle más emoción mientras
   // resuelve, mostrando qué tan cerca (o lejos) está de subir un puesto.
   useEffect(() => {
-    if (!user || user.role === 'admin') return
+    if (!user || (user.role === 'admin' || user.role === 'superadmin')) return
     let cancelled = false
     const poll = () => {
       api.ranking.list().then((rows) => {

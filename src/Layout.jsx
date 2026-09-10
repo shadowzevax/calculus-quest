@@ -48,7 +48,7 @@ function NavItem({ to, label, icon: Icon }) {
 export default function Layout({ children }) {
   const { user, isLoadingAuth, logout } = useAuth()
   const navigate = useNavigate()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin')
 
   // Sin sesión: se muestra el login sin importar qué ruta se haya pedido
   // (antes se mostraba "children", es decir la página de esa ruta, lo que

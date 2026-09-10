@@ -1,5 +1,5 @@
 import { sql } from './_db.js';
-import { requireAuth, requireAdmin } from './_auth.js';
+import { requireAuth, requireAdmin, isStaffRole } from './_auth.js';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     if (!user) return;
 
     const [setting] = await sql`SELECT value FROM app_settings WHERE key = 'chat_enabled'`;
-    if (setting?.value === 'false' && user.role !== 'admin') {
+    if (setting?.value === 'false' && !isStaffRole(user.role)) {
       return res.status(403).json({ error: 'El chat está desactivado por el docente' });
     }
 

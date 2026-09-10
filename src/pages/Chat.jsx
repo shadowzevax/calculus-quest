@@ -6,7 +6,7 @@ import { AvatarCircle } from '@/components/ui/avatar-circle'
 
 export default function Chat() {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin')
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
   const [enabled, setEnabled] = useState(true)
@@ -105,7 +105,7 @@ export default function Chat() {
                 )}
                 <div className="flex items-baseline gap-1.5 mb-0.5">
                   <span className={`text-sm font-bold ${m.name_rainbow ? 'name-rainbow' : ''}`}>{m.author_name}</span>
-                  {m.role === 'admin' && (
+                  {(m.role === 'admin' || m.role === 'superadmin') && (
                     <span className="text-[10px] font-mono-lab opacity-60 uppercase tracking-wide">Docente</span>
                   )}
                 </div>
