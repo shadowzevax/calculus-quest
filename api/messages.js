@@ -30,6 +30,16 @@ export default async function handler(req, res) {
 
     const { content } = req.body || {};
     if (!content || !content.trim()) return res.status(400).json({ error: 'Mensaje vacío' });
+    if (content.trim().length > 500) {
+      return res.status(400).json({ error: 'El mensaje no puede superar los 500 caracteres' });
+    }
+
+    const [lastMsg] = await sql`
+      SELECT created_at FROM messages WHERE user_id = ${user.id} ORDER BY created_at DESC LIMIT 1
+    `;
+    if (lastMsg && Date.now() - new Date(lastMsg.created_at).getTime() < 2000) {
+      return res.status(429).json({ error: 'Espera un momento antes de enviar otro mensaje' });
+    }
 
     const [dbUser] = await sql`SELECT full_name FROM users WHERE id = ${user.id}`;
     const [msg] = await sql`
@@ -41,7 +51,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'DELETE') {
-    const admin = requireAdmin(req, res);
+    const admin = await requireAdmin(req, res);
     if (!admin) return;
     await sql`DELETE FROM messages`;
     return res.status(200).json({ ok: true });
