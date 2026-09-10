@@ -14,7 +14,7 @@ import ChainCalculatorGame from '@/components/exercises/games/ChainCalculatorGam
 import RaceLimitGame from '@/components/exercises/games/RaceLimitGame'
 import DiagramDragGame from '@/components/exercises/games/DiagramDragGame'
 import WhackMoleGame from '@/components/exercises/games/WhackMoleGame'
-import PuzzlePieceGame from '@/components/exercises/games/PuzzlePieceGame'
+import DataTerminalGame from '@/components/exercises/games/DataTerminalGame'
 import ErrorDetectiveGame from '@/components/exercises/games/ErrorDetectiveGame'
 import BalloonPopGame from '@/components/exercises/games/BalloonPopGame'
 import WheelSpinGame from '@/components/exercises/games/WheelSpinGame'
@@ -43,7 +43,7 @@ const GAME_COMPONENTS = {
   race_limit: RaceLimitGame,
   diagram_drag: DiagramDragGame,
   whack_mole: WhackMoleGame,
-  puzzle_piece: PuzzlePieceGame,
+  puzzle_piece: DataTerminalGame,
   error_detective: ErrorDetectiveGame,
   balloon_pop: BalloonPopGame,
   // wheel_spin no está aquí: a diferencia de los demás juegos (que envuelven UN ejercicio a
