@@ -154,9 +154,10 @@ export default function Login() {
           <input
             className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
             type="password"
-            placeholder="Contraseña"
+            placeholder={mode === 'register' ? 'Contraseña (mín. 6 caracteres)' : 'Contraseña'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            minLength={mode === 'register' ? 6 : undefined}
             required
           />
         )}
