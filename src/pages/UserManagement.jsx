@@ -23,8 +23,24 @@ function RegistrationCodeCard() {
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000)
     const poll = setInterval(load, 20_000)
-    return () => { clearInterval(tick); clearInterval(poll) }
+    // Los navegadores frenan los setInterval de una pestaña en segundo plano (a veces a
+    // solo 1 vez por minuto), así que si alguien deja la pestaña abierta y vuelve justo
+    // cuando el código ya venció, se veía "congelado" en 00:00 con el código viejo hasta
+    // que por fin corría el siguiente poll — a veces mucho después de los 20s esperados.
+    // Al volver a la pestaña se pide el código de una vez, sin esperar al temporizador.
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearInterval(tick); clearInterval(poll); document.removeEventListener('visibilitychange', onVisible) }
   }, [])
+
+  const secondsLeft = state ? Math.max(0, Math.floor((state.expires_at - now) / 1000)) : 0
+
+  // En cuanto la cuenta regresiva llega a 0 (mientras la pestaña sigue abierta y visible),
+  // se pide el código nuevo de inmediato en vez de esperar al próximo poll de 20s.
+  useEffect(() => {
+    if (state && secondsLeft === 0) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft === 0])
 
   const regenerate = async () => {
     setRegenerating(true)
@@ -35,7 +51,6 @@ function RegistrationCodeCard() {
     }
   }
 
-  const secondsLeft = state ? Math.max(0, Math.floor((state.expires_at - now) / 1000)) : 0
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
   const ss = String(secondsLeft % 60).padStart(2, '0')
 
