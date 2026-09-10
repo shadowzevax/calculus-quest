@@ -15,6 +15,13 @@ export default function EscapeRoomGame({ mission }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const pollRef = useRef(null)
+  // El intervalo de sondeo se crea una sola vez (ver startPolling) y su closure quedaria con
+  // el "feedback" de ese momento, por eso se lee desde un ref siempre actualizado en vez de
+  // depender del valor capturado al armar el setInterval.
+  const feedbackRef = useRef(null)
+  useEffect(() => {
+    feedbackRef.current = feedback
+  }, [feedback])
 
   // Estado del tablero de memoria del Sistema 6 (es local a cada jugador — cada quien
   // baraja y juega su propio tablero, solo el tiempo total se manda al servidor).
@@ -40,7 +47,11 @@ export default function EscapeRoomGame({ mission }) {
   const refreshState = async (roomId) => {
     try {
       const state = await api.rooms.state(roomId)
-      setRoom(state)
+      // Mientras se está mostrando el feedback de una respuesta, se ignora el resultado del
+      // sondeo — si se aplicara igual, la sala podría saltar al siguiente sistema mientras el
+      // jugador todavía está viendo el resultado del anterior. El avance real solo ocurre
+      // cuando el jugador confirma "Siguiente" (ver handleNext).
+      if (feedbackRef.current === null) setRoom(state)
       // No se deja de sondear al llegar a "done" — la sala puede seguir avanzando al
       // Sistema 6 si el anfitrión lo inicia, y hay que enterarse aunque no sea el host.
       if (state.status === 'done' || state.status === 'cards_done') await refresh()
