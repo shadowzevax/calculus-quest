@@ -10,7 +10,7 @@ import MatchingExercise from '@/components/exercises/MatchingExercise'
 import EscapeRoomGame from '@/components/EscapeRoomGame'
 import GroupSortGame from '@/components/exercises/games/GroupSortGame'
 import OpenBoxGame from '@/components/exercises/games/OpenBoxGame'
-import PacManGame from '@/components/exercises/games/PacManGame'
+import ChainCalculatorGame from '@/components/exercises/games/ChainCalculatorGame'
 import RaceLimitGame from '@/components/exercises/games/RaceLimitGame'
 import DiagramDragGame from '@/components/exercises/games/DiagramDragGame'
 import WhackMoleGame from '@/components/exercises/games/WhackMoleGame'
@@ -39,7 +39,7 @@ const EXERCISE_COMPONENTS = {
 const GAME_COMPONENTS = {
   group_sort: GroupSortGame,
   open_box: OpenBoxGame,
-  order_steps: PacManGame,
+  order_steps: ChainCalculatorGame,
   race_limit: RaceLimitGame,
   diagram_drag: DiagramDragGame,
   whack_mole: WhackMoleGame,
