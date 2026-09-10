@@ -26,8 +26,9 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
   const areaRef = useRef(null)
 
   const trackMallet = (e) => {
+    const point = e.touches ? e.touches[0] : e
     const rect = areaRef.current.getBoundingClientRect()
-    setMalletPos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    setMalletPos({ x: point.clientX - rect.left, y: point.clientY - rect.top })
   }
   const swing = () => {
     setPhase('strike')
@@ -56,6 +57,8 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
           ref={areaRef}
           onMouseMove={trackMallet}
           onMouseEnter={trackMallet}
+          onTouchStart={trackMallet}
+          onTouchMove={trackMallet}
           className="relative grid grid-cols-2 gap-4 [&_*]:cursor-none cursor-none"
         >
           {/* mazo: siempre en su propia capa, sigue el mouse sin depender del elemento bajo el cursor */}
