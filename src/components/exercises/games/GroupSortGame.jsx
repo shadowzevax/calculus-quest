@@ -90,8 +90,11 @@ function GroupSortBoard({ options, correctIndex, onSubmit }) {
       <div
         draggable={!submitted}
         onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move' }}
-        onClick={() => {
+        onClick={(e) => {
           if (submitted) return
+          // Evita que el clic también le llegue al canasto contenedor (que movería ahí
+          // cualquier bloque que hubiera quedado seleccionado antes de este toque).
+          e.stopPropagation()
           if (inBin) { setPlacement((p) => ({ ...p, [i]: null })); return }
           setSelectedId((cur) => (cur === i ? null : i))
         }}
