@@ -27,6 +27,28 @@ export default function TeacherAnalytics() {
     surveyByQuestion[r.order].count += 1
   }
 
+  // Puntaje SUS (System Usability Scale, Brooke 1986): las preguntas impares (1,3,5,7,9) son
+  // afirmaciones positivas, las pares (2,4,6,8,10) son negativas. Formula estandar: se suma
+  // (valor-1) de las impares + (5-valor) de las pares, y ese total (0-40) se multiplica por
+  // 2.5 para llevarlo a una escala de 0-100. Se calcula por estudiante (solo si respondio las
+  // 10) y se promedia — el punto de referencia comunmente citado para "aceptable" es 68.
+  const byUser = {}
+  for (const r of surveyRows) {
+    if (r.value == null || r.order > 10) continue
+    if (!byUser[r.user_id]) byUser[r.user_id] = {}
+    byUser[r.user_id][r.order] = r.value
+  }
+  const susScores = []
+  for (const answers of Object.values(byUser)) {
+    if (Object.keys(answers).length < 10) continue
+    let total = 0
+    for (let order = 1; order <= 10; order++) {
+      total += order % 2 !== 0 ? answers[order] - 1 : 5 - answers[order]
+    }
+    susScores.push(total * 2.5)
+  }
+  const susAverage = susScores.length ? susScores.reduce((a, b) => a + b, 0) / susScores.length : null
+
   return (
     <div>
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
@@ -79,7 +101,23 @@ export default function TeacherAnalytics() {
         </table>
       </div>
 
-      <h2 className="font-display font-semibold text-ink mb-3">Encuesta de percepción — promedio por pregunta (escala 1-5)</h2>
+      <h2 className="font-display font-semibold text-ink mb-3">Encuesta de usabilidad (SUS)</h2>
+      <div className="bg-white rounded-xl border border-ink/10 p-5 mb-6 flex items-center gap-6 flex-wrap">
+        <div>
+          <div className="text-[11px] font-mono-lab text-ink/40 uppercase tracking-wide mb-1">Puntaje SUS promedio</div>
+          <div className="text-4xl font-display font-bold text-coral">
+            {susAverage != null ? susAverage.toFixed(1) : '—'}
+            <span className="text-lg text-ink/30 font-normal"> / 100</span>
+          </div>
+        </div>
+        <p className="text-xs text-ink/40 flex-1 min-w-[220px]">
+          Calculado según la fórmula estándar del System Usability Scale (Brooke, 1986), sobre
+          {' '}{susScores.length} estudiante{susScores.length === 1 ? '' : 's'} que respondió{susScores.length === 1 ? '' : 'ron'} las 10 preguntas.
+          El punto de referencia de la literatura para considerar un sistema "aceptable" es ~68.
+        </p>
+      </div>
+
+      <h3 className="font-display font-semibold text-ink mb-3 text-sm">Promedio por pregunta (escala 1-5)</h3>
       <div className="bg-white rounded-xl border border-ink/10 divide-y divide-ink/5">
         {Object.entries(surveyByQuestion).sort(([a], [b]) => a - b).map(([, q], i) => (
           <div key={i} className="px-5 py-3.5 flex items-center justify-between gap-4">

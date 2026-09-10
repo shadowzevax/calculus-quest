@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { MessagesSquare, CheckCircle2 } from 'lucide-react'
 import { api } from '@/lib/api'
 
+// Etiquetas exactas del System Usability Scale (SUS, Brooke 1986) — escala Likert de 5 puntos.
 const LIKERT = [
-  { value: 1, label: 'Muy en desacuerdo' },
+  { value: 1, label: 'Totalmente en desacuerdo' },
   { value: 2, label: 'En desacuerdo' },
   { value: 3, label: 'Neutral' },
   { value: 4, label: 'De acuerdo' },
-  { value: 5, label: 'Muy de acuerdo' },
+  { value: 5, label: 'Totalmente de acuerdo' },
 ]
 
 export default function Survey() {
@@ -45,9 +46,13 @@ export default function Survey() {
     <div className="max-w-3xl">
       <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-2">TU OPINIÓN</div>
       <h1 className="text-3xl font-display font-bold text-ink mb-1 flex items-center gap-2">
-        <MessagesSquare className="w-6 h-6 text-blueprint" /> Encuesta de experiencia
+        <MessagesSquare className="w-6 h-6 text-blueprint" /> Encuesta de usabilidad (SUS)
       </h1>
-      <p className="text-ink/50 mb-6">Cuéntanos qué te pareció aprender funciones con FuncionLab. Tus respuestas son anónimas para el análisis de la investigación.</p>
+      <p className="text-ink/50 mb-6">
+        Estas 10 preguntas son el <em>System Usability Scale</em>, un instrumento estándar para medir qué tan usable te
+        pareció FuncionLab. No hay respuestas correctas o incorrectas: responde según tu experiencia real. Tus
+        respuestas son anónimas para el análisis de la investigación.
+      </p>
 
       {(done || existing) && (
         <div className="bg-white rounded-xl border border-ink/10 p-4 mb-6 flex items-center gap-3">
