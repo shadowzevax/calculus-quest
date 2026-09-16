@@ -96,7 +96,7 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
                 <DiscontinuityGraph type={previewType} accent={feedback ? (feedback.isCorrect ? '#2A9D8F' : '#E76F51') : '#FF6B4A'} />
               </div>
             ) : (
-              <p className="text-xs font-mono-lab text-ink/30">Toca una opción para ver su gráfica</p>
+              <p className="text-xs font-mono-lab text-ink/70">Toca una opción para ver su gráfica</p>
             )}
           </div>
 

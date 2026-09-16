@@ -6,8 +6,17 @@ import { GameHeader, FeedbackBanner, TextAnswer, Prompt, MathText } from './Game
 
 const WEDGE_COLORS = ['#F0A93C', '#457B9D', '#3FBFAD', '#FF6B4A', '#9B5DE5', '#2A9D8F', '#E76F51', '#264653']
 
+const DIACRITICS = /[̀-ͯ]/g
+// Quita acentos y normaliza el signo menos de KaTeX (U+2212) al guion ASCII — mismo
+// tratamiento que src/lib/exerciseItems.js y api/progress.js (ver D8 de la auditoría).
 function normalizeText(str) {
-  return String(str).trim().toLowerCase().replace(/\s+/g, '')
+  return String(str)
+    .normalize('NFD')
+    .replace(DIACRITICS, '')
+    .replace(/−/g, '-')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
 }
 
 // Etiqueta corta del gajo: un adelanto de la pregunta real, para saber que actividad hay ahi
@@ -196,7 +205,7 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
           >
             {spinning ? 'Girando...' : pool.length === 1 ? '¡Último ejercicio! Toca para jugarlo' : 'Girar la ruleta'}
           </button>
-          <p className="text-[11px] text-ink/30 font-mono-lab mt-3">
+          <p className="text-[11px] text-ink/70 font-mono-lab mt-3">
             {pool.length} de {total} ejercicio{total === 1 ? '' : 's'} por resolver en la ruleta
           </p>
         </div>

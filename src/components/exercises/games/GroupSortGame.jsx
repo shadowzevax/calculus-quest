@@ -139,11 +139,11 @@ function GroupSortBoard({ options, correctIndex, onSubmit }) {
         onDrop={(e) => handleDrop(e, null)}
         className="min-h-[3rem] flex flex-wrap gap-2 border-2 border-dashed border-ink/15 rounded-xl p-3 mb-4 bg-ink/[0.02]"
       >
-        {pool.length === 0 && <span className="text-xs text-ink/30 font-mono-lab">Arrastraste todos los bloques ↓</span>}
+        {pool.length === 0 && <span className="text-xs text-ink/70 font-mono-lab">Arrastraste todos los bloques ↓</span>}
         {pool.map((i) => <Block key={i} i={i} inBin={null} />)}
       </div>
       {!submitted && (
-        <p className="text-[11px] text-ink/30 font-mono-lab mb-3">Arrastra cada bloque a un canasto, o tócalo y luego toca el canasto.</p>
+        <p className="text-[11px] text-ink/70 font-mono-lab mb-3">Arrastra cada bloque a un canasto, o tócalo y luego toca el canasto.</p>
       )}
 
       <div className="flex gap-3">

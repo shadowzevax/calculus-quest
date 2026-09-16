@@ -59,8 +59,19 @@ export function getExerciseItems(exercise) {
   return { kind: 'empty', list: [], threshold: 0.6 }
 }
 
+const DIACRITICS = /[̀-ͯ]/g
+// Quita acentos (NFD + strip de diacríticos, mismo patrón que stripAccents de
+// TowerClimbGame.jsx) y normaliza el signo menos tipográfico de KaTeX (U+2212) al guion
+// ASCII normal — antes "máximo"/"maximo" y "−3" (copiado de KaTeX) /"-3" se marcaban como
+// respuestas distintas, fallando injustamente a un estudiante que respondió bien.
 function normalizeText(str) {
-  return String(str).trim().toLowerCase().replace(/\s+/g, '')
+  return String(str)
+    .normalize('NFD')
+    .replace(DIACRITICS, '')
+    .replace(/−/g, '-')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
 }
 
 // Maquina de estados compartida por los juegos de tipo "choice" y "text": avanza item por

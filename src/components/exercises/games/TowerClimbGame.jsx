@@ -104,7 +104,7 @@ function HangmanBody({ target, current, index, total, feedback, onWin, onLose, o
       <Prompt text={current.prompt} />
 
       <HangmanFigure wrong={Math.min(wrongCount, MAX_WRONG)} />
-      <p className="text-center text-xs font-mono-lab text-ink/40 mb-4">Errores: {wrongCount} / {MAX_WRONG}</p>
+      <p className="text-center text-xs font-mono-lab text-ink/70 mb-4">Errores: {wrongCount} / {MAX_WRONG}</p>
 
       <div className="flex flex-wrap justify-center gap-2 mb-5">
         {target.split('').map((ch, i) => {

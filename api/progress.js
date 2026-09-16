@@ -8,8 +8,18 @@ import { checkAndUnlockAvatarPieces, incrementSpeedBonusCount } from './_avatar.
 // Debe coincidir con BONUS_XP en src/pages/MissionDetail.jsx.
 const BONUS_XP = 5;
 
+const DIACRITICS = /[̀-ͯ]/g;
+// Quita acentos y normaliza el signo menos de KaTeX (U+2212) al guion ASCII — debe quedar
+// funcionalmente idéntica a normalizeText de src/lib/exerciseItems.js y WheelSpinGame.jsx,
+// ya que el servidor valida las respuestas de forma independiente del cliente (ver D8).
 function normalizeText(str) {
-  return String(str).trim().toLowerCase().replace(/\s+/g, '');
+  return String(str)
+    .normalize('NFD')
+    .replace(DIACRITICS, '')
+    .replace(/−/g, '-')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
 }
 
 // Recalcula si las respuestas REALMENTE dadas (answers, mandadas por el cliente junto con el

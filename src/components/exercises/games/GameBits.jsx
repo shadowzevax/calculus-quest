@@ -5,13 +5,23 @@ import SymbolToolbar from '@/components/SymbolToolbar'
 
 // Cabecera comun: numero de item actual + XP del ejercicio, igual en los 13 juegos.
 export function GameHeader({ index, total, label }) {
-  return <p className="text-xs font-mono-lab text-ink/35 mb-3">{label} {index + 1} / {total}</p>
+  return <p className="text-xs font-mono-lab text-ink/70 mb-3">{label} {index + 1} / {total}</p>
 }
 
+// Colores explícitos (no los tokens planos "teal"/"gold" de Tailwind) porque a esa opacidad
+// reducida el contraste real contra el fondo era de ~2.0-2.3:1 (muy por debajo del mínimo
+// WCAG AA de 4.5:1) para el mensaje más importante de cada ejercicio. #0F766E (verde/teal
+// oscuro, ~4.7:1 sobre bg-teal/10) y #B91C1C (rojo, ~5.5:1 sobre bg-coral/10) sí cumplen.
+// El error usa "coral" en vez de "gold" para no confundirse con el dorado que ya significa
+// bono de velocidad en MissionDetail.jsx.
 export function FeedbackBanner({ feedback }) {
   if (!feedback) return null
   return (
-    <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-teal/10 text-teal' : 'bg-gold/10 text-gold'}`}>
+    <div
+      role="status"
+      aria-live="polite"
+      className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${feedback.isCorrect ? 'bg-teal/10 text-[#0F766E]' : 'bg-coral/10 text-[#B91C1C]'}`}
+    >
       {feedback.isCorrect ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
       <span>{feedback.isCorrect ? '¡Correcto!' : 'Buen intento.'} {feedback.explanation}</span>
     </div>

@@ -63,7 +63,7 @@ export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
             className="w-full accent-coral"
           />
         </div>
-        <p className="text-[11px] font-mono-lab text-ink/40 text-center mt-1">Desliza hasta que la curva coincida con la transformación pedida</p>
+        <p className="text-[11px] font-mono-lab text-ink/70 text-center mt-1">Desliza hasta que la curva coincida con la transformación pedida</p>
       </div>
 
       <Prompt text={current.prompt} />
