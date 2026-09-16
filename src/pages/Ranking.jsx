@@ -3,12 +3,19 @@ import { Trophy } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import { AvatarCircle } from '@/components/ui/avatar-circle'
+import { SkeletonBlock } from '@/components/Skeleton'
 
 export default function Ranking() {
   const { user } = useAuth()
   const [rows, setRows] = useState([])
+  // Antes rows arrancaba en [] y "Aún no hay estudiantes en el ranking" se mostraba igual
+  // mientras cargaba que cuando de verdad no había nadie — con loading explícito se
+  // distingue una cosa de la otra.
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { api.ranking.list().then(setRows).catch(() => {}) }, [])
+  useEffect(() => {
+    api.ranking.list().then(setRows).catch(() => {}).finally(() => setLoading(false))
+  }, [])
 
   return (
     <div>
@@ -18,7 +25,15 @@ export default function Ranking() {
       </h1>
       <p className="text-ink/50 mb-6">Los mejores estudiantes por XP acumulado.</p>
       <div className="bg-white rounded-xl border border-ink/10 divide-y divide-ink/5">
-        {rows.map((r, i) => (
+        {loading && Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-5 py-3.5">
+            <SkeletonBlock className="w-6 h-4" />
+            <SkeletonBlock className="w-9 h-9 rounded-full" />
+            <SkeletonBlock className="h-4 flex-1" />
+            <SkeletonBlock className="w-16 h-4" />
+          </div>
+        ))}
+        {!loading && rows.map((r, i) => (
           <div key={r.id} className={`flex items-center gap-4 px-5 py-3.5 ${r.id === user?.id ? 'bg-coral/5' : ''}`}>
             <span className="w-6 text-center font-display font-bold text-ink/30 shrink-0">{i + 1}</span>
             <AvatarCircle
@@ -47,7 +62,7 @@ export default function Ranking() {
             </div>
           </div>
         ))}
-        {rows.length === 0 && <p className="p-5 text-ink/35 text-sm">Aún no hay estudiantes en el ranking.</p>}
+        {!loading && rows.length === 0 && <p className="p-5 text-ink/35 text-sm">Aún no hay estudiantes en el ranking.</p>}
       </div>
     </div>
   )

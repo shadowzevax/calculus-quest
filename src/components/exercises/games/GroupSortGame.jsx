@@ -50,6 +50,70 @@ export default function GroupSortGame({ exercise, onComplete, onFeedback }) {
 
 const BLOCK_COLORS = ['#FF6B4A', '#457B9D', '#3FBFAD', '#F0A93C']
 
+// Block y Bin viven a nivel de módulo (no dentro de GroupSortBoard como antes): declarados
+// dentro del padre, React los trataba como un tipo de componente NUEVO en cada render de
+// GroupSortBoard, así que los desmontaba y remontaba en vez de actualizarlos — y con eso
+// las clases `transition-*` nunca alcanzaban a animar (no hay "antes" que comparar, el
+// elemento siempre es "nuevo"). A nivel de módulo, React los reconoce como el mismo
+// componente entre renders y las transiciones sí se ven.
+function Block({ i, text, inBin, submitted, correctIndex, selectedId, onSelect, onMove }) {
+  const isRightHere = submitted && ((inBin === 'correct') === (i === correctIndex))
+  return (
+    <div
+      draggable={!submitted}
+      onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move' }}
+      onClick={(e) => {
+        if (submitted) return
+        // Evita que el clic también le llegue al canasto contenedor (que movería ahí
+        // cualquier bloque que hubiera quedado seleccionado antes de este toque).
+        e.stopPropagation()
+        if (inBin) { onMove(i, null); return }
+        onSelect(i)
+      }}
+      className={`select-none flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-mono-lab shadow-sm transition-all ${
+        submitted ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+      } ${
+        inBin
+          ? `bg-white border ${submitted ? (isRightHere ? 'border-teal bg-teal/10' : 'border-red-400 bg-red-50') : 'border-ink/10'}`
+          : 'text-white'
+      } ${selectedId === i ? 'ring-2 ring-offset-1 ring-coral scale-105' : ''}`}
+      style={!inBin ? { backgroundColor: BLOCK_COLORS[i % BLOCK_COLORS.length] } : undefined}
+    >
+      {submitted && inBin && (isRightHere ? <CheckCircle2 className="w-3.5 h-3.5 text-teal shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />)}
+      {text}
+    </div>
+  )
+}
+
+function Bin({ id, label, accent, items, submitted, correctIndex, selectedId, onSelect, onMove, dragOverBin, onDragOver, onDragLeave }) {
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); onDragOver(id) }}
+      onDragLeave={() => onDragLeave(id)}
+      onDrop={(e) => {
+        e.preventDefault()
+        onDragOver(null)
+        const dragged = Number(e.dataTransfer.getData('text/plain'))
+        if (!isNaN(dragged)) onMove(dragged, id)
+      }}
+      onClick={() => { if (selectedId !== null) onMove(selectedId, id) }}
+      className={`flex-1 min-h-[8rem] rounded-xl border-2 border-dashed p-3 transition-colors ${dragOverBin === id ? 'brightness-95' : ''} ${
+        selectedId !== null ? 'cursor-pointer' : ''
+      }`}
+      style={{ borderColor: accent, backgroundColor: `${accent}10` }}
+    >
+      <div className="flex items-center gap-1.5 text-xs font-mono-lab uppercase mb-2" style={{ color: accent }}>
+        <Inbox className="w-4 h-4" /> {label}
+      </div>
+      <div className="space-y-2">
+        {items.map(({ i, text }) => (
+          <Block key={i} i={i} text={text} inBin={id} submitted={submitted} correctIndex={correctIndex} selectedId={selectedId} onSelect={onSelect} onMove={onMove} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Tablero real de clasificar en grupos: un cajon con los bloques sin ubicar, y dos canastos
 // ("Correcto" / "Incorrecto") donde se sueltan. Soporta arrastrar-y-soltar nativo (mouse) y
 // tocar-para-colocar (tactil): tocar un bloque lo resalta, tocar un canasto lo mueve ahi.
@@ -60,8 +124,11 @@ function GroupSortBoard({ options, correctIndex, onSubmit }) {
   const [dragOverBin, setDragOverBin] = useState(null)
 
   const pool = options.map((_, i) => i).filter((i) => placement[i] === null)
-  const binItems = (bin) => options.map((_, i) => i).filter((i) => placement[i] === bin)
+  const binItems = (bin) => options.map((_, i) => i).filter((i) => placement[i] === bin).map((i) => ({ i, text: options[i] }))
   const allPlaced = pool.length === 0
+
+  const toggleSelect = (i) => setSelectedId((cur) => (cur === i ? null : i))
+  const onDragLeave = (id) => setDragOverBin((cur) => (cur === id ? null : cur))
 
   const moveTo = (i, bin) => {
     if (submitted) return
@@ -78,59 +145,10 @@ function GroupSortBoard({ options, correctIndex, onSubmit }) {
 
   const submit = () => {
     setSubmitted(true)
-    const correctBin = binItems('correct')
+    const correctBin = binItems('correct').map((b) => b.i)
     const isCorrect = correctBin.length === 1 && correctBin[0] === correctIndex
     onSubmit(isCorrect ? correctIndex : -1)
   }
-
-  const Block = ({ i, inBin }) => {
-    const isRightHere = submitted && ((inBin === 'correct') === (i === correctIndex))
-    return (
-      <div
-        draggable={!submitted}
-        onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move' }}
-        onClick={(e) => {
-          if (submitted) return
-          // Evita que el clic también le llegue al canasto contenedor (que movería ahí
-          // cualquier bloque que hubiera quedado seleccionado antes de este toque).
-          e.stopPropagation()
-          if (inBin) { setPlacement((p) => ({ ...p, [i]: null })); return }
-          setSelectedId((cur) => (cur === i ? null : i))
-        }}
-        className={`select-none flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-mono-lab shadow-sm transition-all ${
-          submitted ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
-        } ${
-          inBin
-            ? `bg-white border ${submitted ? (isRightHere ? 'border-teal bg-teal/10' : 'border-red-400 bg-red-50') : 'border-ink/10'}`
-            : 'text-white'
-        } ${selectedId === i ? 'ring-2 ring-offset-1 ring-coral scale-105' : ''}`}
-        style={!inBin ? { backgroundColor: BLOCK_COLORS[i % BLOCK_COLORS.length] } : undefined}
-      >
-        {submitted && inBin && (isRightHere ? <CheckCircle2 className="w-3.5 h-3.5 text-teal shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />)}
-        {options[i]}
-      </div>
-    )
-  }
-
-  const Bin = ({ id, label, accent }) => (
-    <div
-      onDragOver={(e) => { e.preventDefault(); setDragOverBin(id) }}
-      onDragLeave={() => setDragOverBin((cur) => (cur === id ? null : cur))}
-      onDrop={(e) => handleDrop(e, id)}
-      onClick={() => { if (selectedId !== null) moveTo(selectedId, id) }}
-      className={`flex-1 min-h-[8rem] rounded-xl border-2 border-dashed p-3 transition-colors ${dragOverBin === id ? 'brightness-95' : ''} ${
-        selectedId !== null ? 'cursor-pointer' : ''
-      }`}
-      style={{ borderColor: accent, backgroundColor: `${accent}10` }}
-    >
-      <div className="flex items-center gap-1.5 text-xs font-mono-lab uppercase mb-2" style={{ color: accent }}>
-        <Inbox className="w-4 h-4" /> {label}
-      </div>
-      <div className="space-y-2">
-        {binItems(id).map((i) => <Block key={i} i={i} inBin={id} />)}
-      </div>
-    </div>
-  )
 
   return (
     <div>
@@ -140,15 +158,25 @@ function GroupSortBoard({ options, correctIndex, onSubmit }) {
         className="min-h-[3rem] flex flex-wrap gap-2 border-2 border-dashed border-ink/15 rounded-xl p-3 mb-4 bg-ink/[0.02]"
       >
         {pool.length === 0 && <span className="text-xs text-ink/70 font-mono-lab">Arrastraste todos los bloques ↓</span>}
-        {pool.map((i) => <Block key={i} i={i} inBin={null} />)}
+        {pool.map((i) => (
+          <Block key={i} i={i} text={options[i]} inBin={null} submitted={submitted} correctIndex={correctIndex} selectedId={selectedId} onSelect={toggleSelect} onMove={moveTo} />
+        ))}
       </div>
       {!submitted && (
         <p className="text-[11px] text-ink/70 font-mono-lab mb-3">Arrastra cada bloque a un canasto, o tócalo y luego toca el canasto.</p>
       )}
 
       <div className="flex gap-3">
-        <Bin id="correct" label="Correcto" accent="#2A9D8F" />
-        <Bin id="incorrect" label="Incorrecto" accent="#E76F51" />
+        <Bin
+          id="correct" label="Correcto" accent="#2A9D8F" items={binItems('correct')}
+          submitted={submitted} correctIndex={correctIndex} selectedId={selectedId}
+          onSelect={toggleSelect} onMove={moveTo} dragOverBin={dragOverBin} onDragOver={setDragOverBin} onDragLeave={onDragLeave}
+        />
+        <Bin
+          id="incorrect" label="Incorrecto" accent="#E76F51" items={binItems('incorrect')}
+          submitted={submitted} correctIndex={correctIndex} selectedId={selectedId}
+          onSelect={toggleSelect} onMove={moveTo} dragOverBin={dragOverBin} onDragOver={setDragOverBin} onDragLeave={onDragLeave}
+        />
       </div>
 
       {!submitted && (

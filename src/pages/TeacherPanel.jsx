@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { SkeletonBlock } from '@/components/Skeleton'
 
 export default function TeacherPanel() {
   const [stats, setStats] = useState(null)
   const [users, setUsers] = useState([])
+  // users arrancaba en [] y "Aún no hay estudiantes registrados" se mostraba igual mientras
+  // cargaba que cuando de verdad no había nadie — loading explícito distingue los dos casos.
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     api.stats.get().then(setStats).catch(() => {})
-    api.users.list().then(setUsers).catch(() => {})
+    api.users.list().then(setUsers).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   return (
@@ -36,7 +40,16 @@ export default function TeacherPanel() {
 
       <h2 className="font-display font-semibold text-ink mb-3">Estudiantes</h2>
       <div className="bg-white rounded-xl border border-ink/10 divide-y divide-ink/5">
-        {users.filter((u) => u.role === 'user').map((u) => (
+        {loading && Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center justify-between px-5 py-3.5">
+            <div className="flex-1">
+              <SkeletonBlock className="h-4 w-40 mb-1.5" />
+              <SkeletonBlock className="h-3 w-52" />
+            </div>
+            <SkeletonBlock className="h-4 w-24" />
+          </div>
+        ))}
+        {!loading && users.filter((u) => u.role === 'user').map((u) => (
           <div key={u.id} className="flex items-center justify-between px-5 py-3.5">
             <div>
               <div className="font-medium text-ink">{u.full_name}</div>
@@ -45,7 +58,7 @@ export default function TeacherPanel() {
             <div className="text-sm font-mono-lab text-ink/50">{u.xp} XP · Nivel {u.level}</div>
           </div>
         ))}
-        {users.filter((u) => u.role === 'user').length === 0 && (
+        {!loading && users.filter((u) => u.role === 'user').length === 0 && (
           <p className="p-5 text-ink/35 text-sm">Aún no hay estudiantes registrados.</p>
         )}
       </div>

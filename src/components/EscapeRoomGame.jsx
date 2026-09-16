@@ -22,6 +22,11 @@ export default function EscapeRoomGame({ mission }) {
   useEffect(() => {
     feedbackRef.current = feedback
   }, [feedback])
+  // Guarda el último status conocido para detectar la TRANSICIÓN a 'done'/'cards_done', no
+  // solo el estado actual — sin esto, refresh() (que trae el XP/nivel actualizado del usuario)
+  // se disparaba en cada sondeo (cada 3s) para siempre después de terminar, en vez de una
+  // sola vez al momento en que la sala realmente llega a ese estado.
+  const lastStatusRef = useRef(null)
 
   // Estado del tablero de memoria del Sistema 6 (es local a cada jugador — cada quien
   // baraja y juega su propio tablero, solo el tiempo total se manda al servidor).
@@ -53,8 +58,11 @@ export default function EscapeRoomGame({ mission }) {
       // cuando el jugador confirma "Siguiente" (ver handleNext).
       if (feedbackRef.current === null) setRoom(state)
       // No se deja de sondear al llegar a "done" — la sala puede seguir avanzando al
-      // Sistema 6 si el anfitrión lo inicia, y hay que enterarse aunque no sea el host.
-      if (state.status === 'done' || state.status === 'cards_done') await refresh()
+      // Sistema 6 si el anfitrión lo inicia, y hay que enterarse aunque no sea el host. Pero
+      // refresh() solo se llama la primera vez que se detecta la transición a ese estado.
+      const justArrived = (state.status === 'done' || state.status === 'cards_done') && lastStatusRef.current !== state.status
+      lastStatusRef.current = state.status
+      if (justArrived) await refresh()
     } catch {
       setRoom(null)
       stopPolling()
@@ -219,6 +227,11 @@ export default function EscapeRoomGame({ mission }) {
   const autoCardsRef = useRef(false)
   useEffect(() => {
     autoCardsRef.current = false
+  }, [room?.id])
+  // Al cambiar de sala (crear/unirse a otra) se olvida el último status conocido, para que la
+  // detección de transición de refreshState no compare contra el de una partida anterior.
+  useEffect(() => {
+    lastStatusRef.current = null
   }, [room?.id])
   useEffect(() => {
     const amHost = room?.host_user_id === user?.id
@@ -473,7 +486,7 @@ export default function EscapeRoomGame({ mission }) {
   // Jugando: acertijo actual, solo el que tiene el turno puede responder.
   const myTurn = room.my_turn
   return (
-    <div className="flex gap-5">
+    <div className="flex flex-col sm:flex-row gap-5">
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-mono-lab text-ink/40">SISTEMA {room.current_puzzle_index + 1} / {room.total_puzzles}</span>
@@ -532,7 +545,7 @@ export default function EscapeRoomGame({ mission }) {
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-3 shrink-0 pt-1">
+      <div className="flex flex-row sm:flex-col items-center justify-center gap-3 shrink-0 pt-1">
         {room.members.map((m) => {
           const onTurn = m.user_id === room.turn_user_id
           const initials = (m.full_name || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase()

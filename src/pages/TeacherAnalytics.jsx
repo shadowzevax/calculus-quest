@@ -11,8 +11,15 @@ function fmtTime(seconds) {
 
 export default function TeacherAnalytics() {
   const [data, setData] = useState(null)
+  // Antes el denominador de "Misiones" era un 14 fijo en el JSX; se trae el total real de
+  // misiones activas del módulo 'misiones' (mismo endpoint que ya usa MissionManagement) para
+  // que la fracción no quede mal si algún día se activan/desactivan misiones.
+  const [totalMissions, setTotalMissions] = useState(null)
 
-  useEffect(() => { api.analytics.get().then(setData).catch(() => {}) }, [])
+  useEffect(() => {
+    api.analytics.get().then(setData).catch(() => {})
+    api.missions.list('misiones').then((ms) => setTotalMissions(ms.length)).catch(() => {})
+  }, [])
 
   if (!data) return <p className="text-ink/40 font-mono-lab text-sm">Cargando...</p>
 
@@ -88,7 +95,7 @@ export default function TeacherAnalytics() {
                     <div className="text-xs text-ink/40">{s.email}</div>
                   </td>
                   <td className="px-4 py-3 font-mono-lab text-ink/70">{s.xp} · N{s.level}</td>
-                  <td className="px-4 py-3 font-mono-lab text-ink/70">{s.missions_completed}/14</td>
+                  <td className="px-4 py-3 font-mono-lab text-ink/70">{s.missions_completed}/{totalMissions ?? '—'}</td>
                   <td className="px-4 py-3 font-mono-lab text-ink/70">{fmtTime(s.total_time_seconds)}</td>
                   <td className="px-4 py-3 font-mono-lab text-ink/70">{pct != null ? `${pct}%` : '—'}</td>
                 </tr>

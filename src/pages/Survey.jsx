@@ -19,6 +19,7 @@ export default function Survey() {
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     api.survey.get().then(({ questions, response }) => {
@@ -32,9 +33,14 @@ export default function Survey() {
 
   const submit = async () => {
     setSubmitting(true)
+    setError('')
     try {
       await api.survey.submit(answers, comment)
       setDone(true)
+    } catch (err) {
+      // Antes no había catch: si el envío fallaba, el estudiante no se enteraba y podía
+      // creer que ya había respondido la encuesta SUS cuando en realidad no se guardó nada.
+      setError(err.message || 'No se pudo enviar la encuesta. Intenta de nuevo.')
     } finally {
       setSubmitting(false)
     }
@@ -106,6 +112,7 @@ export default function Survey() {
         >
           {submitting ? 'Enviando...' : existing ? 'Actualizar respuestas' : 'Enviar respuestas'}
         </button>
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
       </div>
     </div>
   )

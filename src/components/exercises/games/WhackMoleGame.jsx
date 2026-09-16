@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
@@ -21,7 +21,28 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [malletPos, setMalletPos] = useState({ x: 0, y: 0 })
   const [phase, setPhase] = useState('idle')
+  // Antes los topos eran estáticos (siempre asomados) — un "whack-a-mole" real los esconde y
+  // saca en momentos aleatorios. `visible[i]` controla si el topo del agujero i está afuera.
+  const [visible, setVisible] = useState([])
   const areaRef = useRef(null)
+  const optionCount = items.kind === 'choice' ? current.options.length : 0
+
+  // Reinicia todos los topos visibles al entrar a una pregunta nueva.
+  useEffect(() => {
+    setVisible(Array.from({ length: optionCount }, () => true))
+  }, [index, optionCount])
+
+  // Ciclo de aparición/ocultamiento: cada topo decide de nuevo, al azar, si se asoma o se
+  // esconde. Se detiene mientras se muestra retroalimentación (para no ocultar el topo que
+  // acaba de indicar si la respuesta fue correcta) y se limpia siempre al desmontar.
+  useEffect(() => {
+    if (!optionCount || feedback) return
+    const id = setInterval(() => {
+      setVisible((v) => v.map(() => Math.random() > 0.35))
+    }, 900)
+    return () => clearInterval(id)
+  }, [optionCount, feedback, index])
+
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   const trackMallet = (e) => {
@@ -79,6 +100,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
             const isRight = feedback && i === current.correctIndex
             const missed = hit && !isRight
             const showSpark = phase === 'strike' && selected === i
+            const peeking = !!feedback || visible[i] !== false
             return (
               <button
                 key={i}
@@ -97,7 +119,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
                   <img
                     src={topoIcon}
                     alt=""
-                    className={`w-14 h-14 object-contain mb-1 transition-transform ${missed ? 'translate-y-6 opacity-0' : hit ? '-translate-y-1' : ''}`}
+                    className={`w-14 h-14 object-contain mb-1 transition-transform duration-300 ${missed ? 'translate-y-6 opacity-0' : hit ? '-translate-y-1' : !peeking ? 'translate-y-7 opacity-0' : ''}`}
                     style={{ filter: isRight ? 'drop-shadow(0 0 6px #2A9D8F)' : hit ? 'drop-shadow(0 0 6px #E76F51)' : 'none' }}
                   />
                   {showSpark && (

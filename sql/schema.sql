@@ -247,6 +247,46 @@ CREATE TABLE password_reset_codes (
 );
 CREATE INDEX idx_password_reset_codes_user ON password_reset_codes(user_id);
 
+-- Configuracion clave/valor genera de la plataforma (todo como texto, se parsea segun la
+-- clave). Hoy se usa para el codigo de registro rotativo (key='reg_code', ver api/_regcode.js)
+-- y para activar/desactivar el chat (key='chat_enabled', ver api/settings.js y api/messages.js).
+CREATE TABLE app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+-- Chat general entre estudiantes y docentes (pestaña "Comunidad"). Se traen los ultimos 100
+-- mensajes por created_at y se pueden borrar todos de una vez (boton "Limpiar Chat" del
+-- docente) — ver api/messages.js.
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  author_name TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_messages_created_at ON messages(created_at);
+CREATE INDEX idx_messages_user ON messages(user_id);
+
+-- Encuesta de usabilidad SUS (System Usability Scale, Brooke 1986), aplicada al finalizar,
+-- solo para quienes SI usaron la plataforma. Escala Likert 1-5. (Definidas originalmente en
+-- sql/migration_assessment.sql; se agregan aqui tambien porque TeacherAnalytics y Survey.jsx
+-- ya las usan en produccion.)
+CREATE TABLE survey_questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "order" INTEGER NOT NULL,
+  text TEXT NOT NULL
+);
+
+CREATE TABLE survey_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+  answers JSONB NOT NULL, -- { question_id: 1-5 }
+  comment TEXT,
+  submitted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX idx_exercises_mission ON exercises(mission_id);
 CREATE INDEX idx_exercises_parent ON exercises(parent_exercise_id);
 CREATE INDEX idx_progress_user ON user_progress(user_id);

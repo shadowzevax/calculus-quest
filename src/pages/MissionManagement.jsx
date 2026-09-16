@@ -12,8 +12,16 @@ function EditModal({ mission, onClose, onSaved }) {
   })
   const [saving, setSaving] = useState(false)
 
+  // Si el docente borra el campo antes de guardar, Number('') da 0 y sobreescribiría el XP o
+  // los minutos reales de la misión sin que nadie lo note — por eso se bloquea el guardado
+  // mientras cualquiera de los dos quede vacío, en vez de aceptar 0 en silencio.
+  const xpEmpty = String(form.xp_reward).trim() === ''
+  const timeEmpty = String(form.estimated_time).trim() === ''
+  const hasEmptyField = xpEmpty || timeEmpty
+
   const save = async (e) => {
     e.preventDefault()
+    if (hasEmptyField) return
     setSaving(true)
     try {
       await api.missions.update({ id: mission.id, ...form, xp_reward: Number(form.xp_reward), estimated_time: Number(form.estimated_time) })
@@ -58,7 +66,10 @@ function EditModal({ mission, onClose, onSaved }) {
               <input type="number" className="w-full border border-ink/15 rounded-lg px-2 py-2 mt-1 text-sm" value={form.estimated_time} onChange={(e) => setForm({ ...form, estimated_time: e.target.value })} />
             </div>
           </div>
-          <button type="submit" disabled={saving} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">
+          {hasEmptyField && (
+            <p className="text-xs text-red-500">El XP y los minutos no pueden quedar vacíos.</p>
+          )}
+          <button type="submit" disabled={saving || hasEmptyField} className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50">
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </form>

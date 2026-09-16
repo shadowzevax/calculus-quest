@@ -41,13 +41,23 @@ export default function Chat() {
 
   const clearChat = async () => {
     if (!confirm('¿Borrar todos los mensajes del chat?')) return
-    await api.messages.clear()
-    load()
+    setError('')
+    try {
+      await api.messages.clear()
+      load()
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   const toggleChat = async () => {
-    await api.settings.set('chat_enabled', enabled ? 'false' : 'true')
-    load()
+    setError('')
+    try {
+      await api.settings.set('chat_enabled', enabled ? 'false' : 'true')
+      load()
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   return (

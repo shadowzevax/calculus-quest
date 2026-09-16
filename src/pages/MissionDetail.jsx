@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import confetti from 'canvas-confetti'
 import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Zap, TrendingUp } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
@@ -177,6 +178,19 @@ export default function MissionDetail() {
     const interval = setInterval(poll, 12000)
     return () => { cancelled = true; clearInterval(interval) }
   }, [user])
+
+  // Celebración con canvas-confetti (misma librería que ya usa BalloonPopGame) al terminar una
+  // misión con todos los ejercicios correctos — antes no había ninguna señal festiva al llegar
+  // a "showDone". Se calcula "allOk" adentro del efecto (no con la variable derivada de más
+  // abajo) para no tener que llamar este hook después de un return condicional.
+  useEffect(() => {
+    if (!showDone) return
+    const allOk = results.length > 0 && results.every((r) => r.isCorrect)
+    if (!allOk) return
+    confetti({ particleCount: 120, spread: 100, startVelocity: 45, origin: { y: 0.6 } })
+    confetti({ particleCount: 60, spread: 140, startVelocity: 55, origin: { x: 0.2, y: 0.5 } })
+    confetti({ particleCount: 60, spread: 140, startVelocity: 55, origin: { x: 0.8, y: 0.5 } })
+  }, [showDone, results])
 
   if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misión...</p>
   if (!mission) return <p className="text-red-500 text-sm">Misión no encontrada.</p>

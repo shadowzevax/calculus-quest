@@ -180,8 +180,12 @@ export default function UserManagement() {
 
   const toggleRole = async (u) => {
     const newRole = u.role === 'admin' ? 'user' : 'admin'
-    await api.users.setRole(u.id, newRole)
-    load()
+    try {
+      await api.users.setRole(u.id, newRole)
+      load()
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   const generateCode = async (u) => {
@@ -189,6 +193,8 @@ export default function UserManagement() {
     try {
       const result = await api.users.generateResetCode(u.id)
       setResetResult(result)
+    } catch (err) {
+      alert(err.message)
     } finally {
       setGeneratingFor(null)
     }
