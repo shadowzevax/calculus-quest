@@ -27,9 +27,17 @@ export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
 
   const nOptions = items.kind === 'choice' ? current.options.length : 1
   const maxPos = Math.max(nOptions - 1, 1)
-  // desplazamiento vertical de la curva segun la posicion del deslizador (0..1 normalizado a -30..30)
-  const shift = (sliderPos / maxPos) * 60 - 30
   const snapped = Math.round(sliderPos)
+  // Antes el desplazamiento se repartía uniformemente entre 0 y maxPos (0..1 normalizado a
+  // -30..30 px) SIN mirar cuál opción era la correcta: la curva nunca llegaba a coincidir con
+  // la curva gris de referencia (:44) en ninguna posición del slider, así que "desliza hasta
+  // que coincida" no tenía ninguna posición donde eso fuera cierto. Ahora el desplazamiento es
+  // la distancia real (con signo) entre la posición del deslizador y la posición de la opción
+  // CORRECTA: por construcción llega exactamente a 0 (curva naranja superpuesta a la gris) si y
+  // solo si el deslizador está en la opción correcta, y se aleja proporcionalmente en cualquier
+  // otra posición — ya no es un valor decorativo, está atado a la respuesta real del ejercicio.
+  const correctIndex = items.kind === 'choice' ? current.correctIndex : 0
+  const shift = (sliderPos - correctIndex) * 12
 
   const confirm = () => checkChoice(snapped)
 

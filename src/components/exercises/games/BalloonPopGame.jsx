@@ -48,8 +48,12 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
   }
 
   const trackNeedle = (e) => {
+    // Igual que WhackMoleGame: en táctil el evento no trae clientX/clientY directamente, sino
+    // en e.touches[0]. Antes solo se manejaba onMouseMove/onMouseEnter, así que en celular
+    // `needle` nunca se actualizaba y la aguja quedaba clavada en (0,0).
+    const point = e.touches ? e.touches[0] : e
     const rect = areaRef.current.getBoundingClientRect()
-    setNeedle({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    setNeedle({ x: point.clientX - rect.left, y: point.clientY - rect.top })
   }
 
   // Se pinchan globos sin importar si son la respuesta correcta o no; la respuesta que
@@ -78,6 +82,8 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
           ref={areaRef}
           onMouseMove={trackNeedle}
           onMouseEnter={trackNeedle}
+          onTouchStart={trackNeedle}
+          onTouchMove={trackNeedle}
           className="relative grid grid-cols-2 gap-x-4 gap-y-6 cursor-none [&_*]:cursor-none py-4"
         >
           <img

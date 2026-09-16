@@ -137,7 +137,16 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
 // función en vivo, para poder explorar visualmente hasta dónde debe llegar antes de escribir
 // la respuesta — no es solo decoración, cambia la gráfica en tiempo real.
 function ExploreAndAnswer({ current, feedback, k, setK, onCheck }) {
-  const targetY = 52 - k * 4.4 // desplazamiento visual del tramo derecho segun k (rango util -8..8)
+  // Antes targetY = 52 - k*4.4 no tenía ninguna relación con el k REAL de este ejercicio
+  // (current.answer): con k en [-8,8], targetY caía en [16.8, 87.2] y el extremo de la curva
+  // azul está fijo en y=14 (línea de abajo) — era matemáticamente IMPOSIBLE "encajar" con
+  // ningún valor de k, y aunque encajara no habría indicado el k correcto (era un desplazamiento
+  // en píxeles inventado, igual para cualquier ejercicio). Ahora targetY se calcula a partir de
+  // la distancia real entre el k que el estudiante mueve y el k correcto de ESTE ejercicio: por
+  // construcción llega exactamente a 14 (coincide con el extremo de la curva azul) si y solo si
+  // k === el valor correcto, y se aleja proporcionalmente en cualquier otro valor.
+  const correctK = parseFloat(String(current.answer).replace(',', '.'))
+  const targetY = Number.isNaN(correctK) ? 52 - k * 4.4 : 14 + (correctK - k) * 4.4
   return (
     <div className="border border-blueprint/20 rounded-xl p-4 bg-blueprint/5">
       <div className="bg-white border border-ink/10 rounded-lg p-3 mb-3">

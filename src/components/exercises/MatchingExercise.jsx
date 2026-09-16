@@ -21,6 +21,7 @@ export default function MatchingExercise({ exercise, onComplete }) {
   const [selectedLeft, setSelectedLeft] = useState(null)
   const [connections, setConnections] = useState({}) // leftIndex -> rightPairIndex
   const [submitted, setSubmitted] = useState(false)
+  const [result, setResult] = useState(null) // { isCorrect, answers } — se calcula en submit(), pero onComplete solo se llama al pulsar "Siguiente"
   const [lines, setLines] = useState([])
 
   const containerRef = useRef(null)
@@ -99,13 +100,26 @@ export default function MatchingExercise({ exercise, onComplete }) {
 
   const allConnected = Object.keys(connections).length === pairs.length
 
+  // Antes esta función llamaba onComplete() en el mismo instante en que se mostraba el banner
+  // de resultado, y el padre (MissionDetail/WheelSpinGame) avanza de inmediato al recibir
+  // onComplete — el estudiante nunca alcanzaba a ver qué líneas quedaron en rojo. Ahora submit()
+  // solo calcula y muestra el feedback visual; onComplete se dispara aparte, cuando el
+  // estudiante pulsa "Siguiente" (ver más abajo), y si falló puede "Reintentar" sin perder el
+  // ejercicio de una vez.
   const submit = () => {
     setSubmitted(true)
     const correctCount = pairs.filter((_, i) => connections[i] === i).length
     // connections manda que pareja de la derecha se conecto con cada indice de la izquierda —
     // el servidor lo usa para recalcular is_correct por su cuenta (correcto si connections[i]
     // === i para todos, ya que las parejas vienen emparejadas por indice en exercise.metadata).
-    onComplete({ isCorrect: correctCount === pairs.length, answers: connections })
+    setResult({ isCorrect: correctCount === pairs.length, answers: connections })
+  }
+
+  const retry = () => {
+    setSubmitted(false)
+    setResult(null)
+    setConnections({})
+    setSelectedLeft(null)
   }
 
   return (
@@ -168,22 +182,43 @@ export default function MatchingExercise({ exercise, onComplete }) {
         </div>
       </div>
 
-      {submitted && (
-        <div className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${
-          pairs.every((_, i) => connections[i] === i) ? 'bg-teal/10 text-teal' : 'bg-gold/10 text-gold'
-        }`}>
+      {result && (
+        <div
+          className={`mt-4 p-3 rounded-lg text-sm flex gap-2 ${result.isCorrect ? 'bg-teal/10 text-teal' : 'bg-gold/10 text-gold'}`}
+          role="status"
+          aria-live="polite"
+        >
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{pairs.every((_, i) => connections[i] === i) ? '¡Todas las conexiones son correctas!' : 'Algunas conexiones no son correctas, revisa en rojo.'}</span>
+          <span>{result.isCorrect ? '¡Todas las conexiones son correctas!' : 'Algunas conexiones no son correctas, revisa en rojo.'}</span>
         </div>
       )}
 
-      <button
-        onClick={submit}
-        disabled={!allConnected || submitted}
-        className="mt-4 bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-30"
-      >
-        Verificar conexiones
-      </button>
+      {!submitted ? (
+        <button
+          onClick={submit}
+          disabled={!allConnected}
+          className="mt-4 bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-30"
+        >
+          Verificar conexiones
+        </button>
+      ) : (
+        <div className="mt-4 flex gap-2">
+          {!result.isCorrect && (
+            <button
+              onClick={retry}
+              className="bg-ink/10 hover:bg-ink/20 transition-colors text-ink rounded-lg px-4 py-2 text-sm font-medium"
+            >
+              Reintentar
+            </button>
+          )}
+          <button
+            onClick={() => onComplete(result)}
+            className="bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-4 py-2 text-sm font-medium"
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
     </div>
   )
 }

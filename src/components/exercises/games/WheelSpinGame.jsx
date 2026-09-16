@@ -215,7 +215,22 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
             <Dices className="w-5 h-5" />
             <span className="text-xs font-mono-lab uppercase tracking-wide">Encuentra cada pareja</span>
           </div>
-          <MatchingExercise exercise={current.sourceExercise} onComplete={() => { removeSolved(); setLandedId(null); setRotation(0) }} />
+          <MatchingExercise
+            exercise={current.sourceExercise}
+            onComplete={({ isCorrect, answers }) => {
+              // Antes se llamaba removeSolved() sin mirar isCorrect: el gajo se eliminaba (y se
+              // avisaba como resuelto) aunque las conexiones estuvieran mal, mientras el servidor
+              // (que recalcula is_correct por su cuenta) lo registraba como fallado -> el
+              // estudiante creía haber ganado XP y no la ganaba. Ahora solo se quita el gajo si
+              // MatchingExercise reporta un acierto real, y se guardan las conexiones reales
+              // (objeto, no []) para que el servidor las evalúe correctamente.
+              const exId = current.sourceExercise.id
+              answersByExercise.current[exId] = answers
+              if (isCorrect) removeSolved()
+              setLandedId(null)
+              setRotation(0)
+            }}
+          />
         </div>
       ) : (
         <div>
