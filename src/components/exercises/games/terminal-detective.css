@@ -1,0 +1,128 @@
+/* Animaciones de las Misiones 7 (terminal de datos) y 8 (detective de errores).
+   Vive aparte de index.css porque solo la usan estos dos juegos; se importa desde
+   DataTerminalGame.jsx y ErrorDetectiveGame.jsx. */
+
+/* ---------- Misión 7: consola ---------- */
+
+/* Cursor de bloque parpadeante del terminal: sin esto la consola se ve muerta. */
+@keyframes term-caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.term-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  vertical-align: text-bottom;
+  background: #3FBFAD;
+  animation: term-caret 1s step-end infinite;
+}
+
+/* Cada línea nueva del log entra empujando un poco desde abajo, como una impresora. */
+@keyframes term-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.term-line {
+  animation: term-line-in 150ms ease-out both;
+}
+
+/* Barrido de fósforo (CRT) que recorre la pantalla muy sutilmente. */
+@keyframes term-scan {
+  from { transform: translateY(-120%); }
+  to { transform: translateY(520%); }
+}
+.term-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(63, 191, 173, 0) 0%, rgba(63, 191, 173, 0.07) 50%, rgba(63, 191, 173, 0) 100%);
+  animation: term-scan 6s linear infinite;
+}
+
+/* Parpadeo de "conexión establecida" del led del encabezado. */
+@keyframes term-led {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px 1px rgba(63, 191, 173, 0.8); }
+  50% { opacity: 0.35; box-shadow: 0 0 2px 0 rgba(63, 191, 173, 0.4); }
+}
+.term-led {
+  animation: term-led 1.6s ease-in-out infinite;
+}
+
+/* ---------- Misión 8: tablero de investigación ---------- */
+
+/* Cada baldosa de niebla que la lupa barre se disuelve hacia arriba y no vuelve. */
+@keyframes fog-clear {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.45) translateY(-6px); }
+}
+.fog-tile-clear {
+  animation: fog-clear 340ms ease-out forwards;
+}
+
+/* Sello de tinta: cae grande y torcido, y se asienta. */
+@keyframes stamp-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(2.8) rotate(-26deg); }
+  55% { opacity: 1; transform: translate(-50%, -50%) scale(0.92) rotate(-12deg); }
+  75% { transform: translate(-50%, -50%) scale(1.06) rotate(-9deg); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-11deg); }
+}
+.stamp-in {
+  animation: stamp-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* Las fichas de evidencia se reparten sobre el tablero una tras otra.
+   El fotograma final se deja SIN declarar a propósito: así interpola hacia la inclinación
+   real de la ficha (la clase rotate-*) y, con fill-mode `backwards`, al terminar devuelve
+   el control a las clases de Tailwind — si se usara `forwards` la animación congelaría el
+   transform y la ficha quedaría derecha y sin reaccionar al toque. */
+@keyframes evidence-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.92); }
+}
+.evidence-in {
+  animation: evidence-in 320ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+
+/* Sacudida corta del expediente cuando la acusación es equivocada. */
+@keyframes case-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  45% { transform: translateX(4px); }
+  70% { transform: translateX(-2px); }
+}
+.case-shake {
+  animation: case-shake 320ms ease-in-out both;
+}
+
+/* Destello de vidrio que recorre la lupa mientras se mueve. */
+@keyframes lens-glint {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.65; }
+}
+.lens-glint {
+  animation: lens-glint 2.4s ease-in-out infinite;
+}
+
+/* Barra de avance del examen del expediente. */
+.exam-bar {
+  transition: width 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-caret,
+  .term-line,
+  .term-scanline,
+  .term-led,
+  .fog-tile-clear,
+  .stamp-in,
+  .evidence-in,
+  .case-shake,
+  .lens-glint {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .term-caret { opacity: 1; }
+  .exam-bar { transition: none; }
+}
