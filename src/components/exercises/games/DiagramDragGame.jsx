@@ -4,9 +4,48 @@ import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
 
-// Misión 5 — Simulador gráfico: un control deslizante mueve la curva sobre el plano en vivo;
-// cada posición del control corresponde a una de las opciones (transformación de la gráfica).
-// El estudiante desliza hasta que la curva se vea como la transformación pedida y confirma.
+// Interpreta el texto REAL de cada opción del banco de ejercicios (revisado contra los datos
+// reales en producción: mezclan traslaciones con magnitud, reflexiones y compresiones, ej.
+// "Traslacion 3 a la izquierda y 2 abajo", "Reflexion sobre el eje x", "Compresion horizontal")
+// y lo convierte en una transformación CSS real — así lo que se ve en el SVG es la
+// transformación que el texto describe de verdad, no un desplazamiento arbitrario por índice.
+function parseTransform(text) {
+  const t = String(text || '').toLowerCase()
+  const nums = (t.match(/\d+(\.\d+)?/g) || []).map(Number)
+
+  if (t.includes('reflex')) {
+    if (t.includes('eje x')) return { css: 'scaleY(-1)' }
+    if (t.includes('eje y')) return { css: 'scaleX(-1)' }
+    return { css: 'none' }
+  }
+  if (t.includes('compres') || t.includes('estiramiento') || t.includes('estirar')) {
+    const isCompress = t.includes('compres')
+    const factor = isCompress ? 0.55 : 1.8
+    if (t.includes('horizontal')) return { css: `scaleX(${factor})` }
+    if (t.includes('vertical')) return { css: `scaleY(${factor})` }
+    return { css: 'none' }
+  }
+  if (t.includes('traslac') || t.includes('desplaz')) {
+    let dx = 0
+    let dy = 0
+    if (t.includes('izquierda')) dx = -(nums[0] ?? 3) * 6
+    else if (t.includes('derecha')) dx = (nums[0] ?? 3) * 6
+    else if (t.includes('horizontal')) dx = 20 // genérico: sin magnitud/dirección en el texto
+
+    if (t.includes('abajo')) dy = (nums[nums.length - 1] ?? 2) * 8
+    else if (t.includes('arriba')) dy = -(nums[nums.length - 1] ?? 2) * 8
+    else if (t.includes('vertical') && dx === 0) dy = -16 // genérico
+
+    return { css: `translate(${dx}px, ${dy}px)` }
+  }
+  return { css: 'none' }
+}
+
+// Misión 5 — Simulador gráfico: el deslizante recorre las opciones de la pregunta actual; para
+// cada una, la curva naranja se transforma en el plano según lo que esa opción describe de
+// verdad (reflexión, traslación con su magnitud real, o compresión/estiramiento), comparándose
+// contra la curva base gris — así el estudiante puede VER cada transformación antes de elegir,
+// en vez de solo leer el texto de la opción.
 export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
@@ -25,19 +64,11 @@ export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
     )
   }
 
-  const nOptions = items.kind === 'choice' ? current.options.length : 1
+  const isChoice = items.kind === 'choice'
+  const nOptions = isChoice ? current.options.length : 1
   const maxPos = Math.max(nOptions - 1, 1)
   const snapped = Math.round(sliderPos)
-  // Antes el desplazamiento se repartía uniformemente entre 0 y maxPos (0..1 normalizado a
-  // -30..30 px) SIN mirar cuál opción era la correcta: la curva nunca llegaba a coincidir con
-  // la curva gris de referencia (:44) en ninguna posición del slider, así que "desliza hasta
-  // que coincida" no tenía ninguna posición donde eso fuera cierto. Ahora el desplazamiento es
-  // la distancia real (con signo) entre la posición del deslizador y la posición de la opción
-  // CORRECTA: por construcción llega exactamente a 0 (curva naranja superpuesta a la gris) si y
-  // solo si el deslizador está en la opción correcta, y se aleja proporcionalmente en cualquier
-  // otra posición — ya no es un valor decorativo, está atado a la respuesta real del ejercicio.
-  const correctIndex = items.kind === 'choice' ? current.correctIndex : 0
-  const shift = (sliderPos - correctIndex) * 12
+  const activeTransform = isChoice ? parseTransform(current.options[snapped]) : { css: 'none' }
 
   const confirm = () => checkChoice(snapped)
 
@@ -45,34 +76,36 @@ export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
     <div>
       <GameHeader index={index} total={total} label="ESCENA" />
 
-      <div className="relative bg-blueprint/5 border border-blueprint/15 rounded-xl p-4 mb-3 overflow-hidden">
-        <svg width="100%" height="110" viewBox="0 0 200 110">
-          <line x1="0" y1="55" x2="200" y2="55" stroke="#1B3A5C" strokeWidth="1" opacity="0.4" />
-          <line x1="100" y1="0" x2="100" y2="110" stroke="#1B3A5C" strokeWidth="1" opacity="0.4" />
-          <path d="M 20 90 Q 100 10 180 40" fill="none" stroke="#1B3A5C" strokeOpacity="0.25" strokeWidth="2" />
-          <path
-            d="M 20 90 Q 100 10 180 40"
-            fill="none"
-            stroke={feedback ? (feedback.isCorrect ? '#2A9D8F' : '#E76F51') : '#FF6B4A'}
-            strokeWidth="2.5"
-            style={{ transform: `translateY(${-shift}px)`, transition: 'transform 60ms linear' }}
-          />
-        </svg>
-        <div className="flex items-center gap-2 mt-1">
-          <SlidersHorizontal className="w-4 h-4 text-blueprint/50 shrink-0" />
-          <input
-            type="range"
-            min="0"
-            max={maxPos}
-            step="0.02"
-            value={sliderPos}
-            disabled={!!feedback}
-            onChange={(e) => setSliderPos(Number(e.target.value))}
-            className="w-full accent-coral"
-          />
+      {isChoice && (
+        <div className="relative bg-blueprint/5 border border-blueprint/15 rounded-xl p-4 mb-3 overflow-hidden">
+          <svg width="100%" height="110" viewBox="0 0 200 110">
+            <line x1="0" y1="55" x2="200" y2="55" stroke="#1B3A5C" strokeWidth="1" opacity="0.4" />
+            <line x1="100" y1="0" x2="100" y2="110" stroke="#1B3A5C" strokeWidth="1" opacity="0.4" />
+            <path d="M 20 90 Q 100 10 180 40" fill="none" stroke="#1B3A5C" strokeOpacity="0.25" strokeWidth="2" />
+            <path
+              d="M 20 90 Q 100 10 180 40"
+              fill="none"
+              stroke={feedback ? (feedback.isCorrect ? '#2A9D8F' : '#E76F51') : '#FF6B4A'}
+              strokeWidth="2.5"
+              style={{ transformOrigin: '100px 55px', transform: activeTransform.css, transition: 'transform 150ms ease' }}
+            />
+          </svg>
+          <div className="flex items-center gap-2 mt-1">
+            <SlidersHorizontal className="w-4 h-4 text-blueprint/50 shrink-0" />
+            <input
+              type="range"
+              min="0"
+              max={maxPos}
+              step="1"
+              value={sliderPos}
+              disabled={!!feedback}
+              onChange={(e) => setSliderPos(Number(e.target.value))}
+              className="w-full accent-coral"
+            />
+          </div>
+          <p className="text-[11px] font-mono-lab text-ink/70 text-center mt-1">Desliza para ver cómo se transforma la curva con cada opción</p>
         </div>
-        <p className="text-[11px] font-mono-lab text-ink/70 text-center mt-1">Desliza hasta que la curva coincida con la transformación pedida</p>
-      </div>
+      )}
 
       <Prompt text={current.prompt} />
 
