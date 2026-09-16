@@ -229,6 +229,23 @@ export default function MissionDetail() {
         }).catch(() => {})
         if (bonus > 0) setSpeedBonusCount((c) => c + 1)
       } catch {}
+    } else {
+      try {
+        // Antes, un intento fallido nunca llegaba al backend: la UI avanzaba pero
+        // exercise_attempts se quedaba sin la fila, así que la dificultad adaptativa
+        // (GET /progress?recommend=1) nunca veía fallos y el % de aciertos de
+        // TeacherAnalytics quedaba inflado a ~100%. is_correct/xp_earned se mandan solo
+        // de forma informativa: el servidor los recalcula él mismo con evaluateAnswers.
+        await api.progress.submit({
+          exercise_id: exercise.id,
+          answer_given: 'completed',
+          is_correct: false,
+          xp_earned: 0,
+          answers: answers || [],
+          within_budget: withinBudget,
+          elapsed_ms: elapsedMs,
+        })
+      } catch {}
     }
     setResults((r) => [...r, { exercise, isCorrect, bonus }])
     if (current < exercises.length - 1) {

@@ -245,7 +245,13 @@ export default async function handler(req, res) {
           SELECT id FROM exercise_attempts WHERE user_id = ${m.user_id} AND exercise_id = ${exercise.id} AND is_correct = true
         `;
         if (priorCorrect.length <= 1 && exercise.xp_value) {
-          await sql`UPDATE users SET xp = xp + ${exercise.xp_value} WHERE id = ${m.user_id}`;
+          // Misma fórmula de nivel que progress.js y que el frontend (XP_PER_LEVEL = 500),
+          // para que el nivel no quede desincronizado entre misiones normales y salas de escape.
+          await sql`
+            UPDATE users
+            SET xp = xp + ${exercise.xp_value}, level = FLOOR((xp + ${exercise.xp_value}) / 500) + 1
+            WHERE id = ${m.user_id}
+          `;
         }
         await sql`
           INSERT INTO user_progress (user_id, mission_id, status, progress_percentage, exercises_completed, total_exercises, started_date, completed_date)

@@ -160,7 +160,13 @@ export default async function handler(req, res) {
       const firstTime = priorCorrect.length <= 1;
 
       if (firstTime && xpEarned) {
-        await sql`UPDATE users SET xp = xp + ${xpEarned} WHERE id = ${user.id}`;
+        // Recalcula level junto con xp en el mismo UPDATE (misma fórmula que usa el
+        // frontend en Dashboard.jsx: XP_PER_LEVEL = 500) para que no se quede en 1 para siempre.
+        await sql`
+          UPDATE users
+          SET xp = xp + ${xpEarned}, level = FLOOR((xp + ${xpEarned}) / 500) + 1
+          WHERE id = ${user.id}
+        `;
         if (bonus > 0) await incrementSpeedBonusCount(user.id);
       }
 
