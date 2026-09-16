@@ -1,0 +1,149 @@
+/* Animaciones propias de los juegos de las Misiones 2 (Abre la caja), 3 (Cadena de
+   maquinas) y 4 (Carrera hacia el limite). Viven aqui y no en src/index.css porque solo
+   las usan esos tres componentes; cada uno importa este archivo.
+   Todo lo que se puede resolver con clases de tailwindcss-animate (fade-in, zoom-in,
+   slide-in) se resuelve alla; aqui solo esta lo que Tailwind no cubre: rotacion de la
+   tapa de la caja, atasco de la cadena, chispa que recorre la cadena, trote del corredor
+   y flotacion del fantasma. */
+
+/* ---------- Mision 2: Abre la caja ---------- */
+
+/* La tapa gira sobre su borde trasero, como una tapa de carton de verdad. */
+.caja-tapa {
+  transform-origin: 50% 100%;
+  transition: transform 450ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 300ms ease-out;
+}
+.caja-tapa--abierta {
+  transform: rotate(-46deg) translate(-14%, -34%);
+}
+
+/* Rebote corto de la caja justo cuando se abre. */
+@keyframes caja-rebote {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-10px) scale(1.06); }
+  70% { transform: translateY(2px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+.caja-rebote {
+  animation: caja-rebote 480ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* El contenido (el texto de la opcion) sale de adentro de la caja. */
+@keyframes caja-contenido {
+  from { opacity: 0; transform: translateY(14px) scale(0.55); }
+  60% { opacity: 1; transform: translateY(-4px) scale(1.04); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.caja-contenido {
+  animation: caja-contenido 420ms 120ms cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+}
+
+/* Las cajas que siguen cerradas "respiran" para invitar a tocarlas. */
+@keyframes caja-late {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.caja-late {
+  animation: caja-late 2.4s ease-in-out infinite;
+}
+
+/* ---------- Mision 3: Cadena de maquinas ---------- */
+
+@keyframes cadena-atasco {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-7px) rotate(-2deg); }
+  35% { transform: translateX(6px) rotate(2deg); }
+  55% { transform: translateX(-5px) rotate(-1.5deg); }
+  75% { transform: translateX(4px) rotate(1deg); }
+}
+.cadena-atasco {
+  animation: cadena-atasco 420ms ease-in-out;
+}
+
+@keyframes engranaje-gira {
+  to { transform: rotate(360deg); }
+}
+.engranaje-gira {
+  animation: engranaje-gira 1.6s linear infinite;
+}
+
+/* La chispa recorre la cadena de izquierda a derecha ANTES de responder: es el valor
+   entrando por x y saliendo por el resultado. */
+@keyframes chispa-viaja {
+  0% { left: 0%; opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  88% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { left: 100%; opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+}
+.chispa-viaja {
+  animation: chispa-viaja 1.1s ease-in-out;
+}
+
+@keyframes maquina-enciende {
+  from { transform: scale(0.82); box-shadow: 0 0 0 0 rgba(255, 107, 74, 0.55); }
+  to { transform: scale(1); box-shadow: 0 0 0 14px rgba(255, 107, 74, 0); }
+}
+.maquina-enciende {
+  animation: maquina-enciende 520ms ease-out;
+}
+
+/* ---------- Mision 4: Carrera hacia el limite ---------- */
+
+/* Rayas de la pista desplazandose: da sensacion de velocidad sin mover nada pesado. */
+@keyframes pista-avanza {
+  to { background-position-x: -36px; }
+}
+.pista-rayas {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(20, 32, 46, 0.09) 0px,
+    rgba(20, 32, 46, 0.09) 10px,
+    transparent 10px,
+    transparent 36px
+  );
+  animation: pista-avanza 900ms linear infinite;
+}
+
+@keyframes corredor-trote {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-4px) rotate(3deg); }
+}
+.corredor-trote {
+  animation: corredor-trote 420ms ease-in-out infinite;
+}
+
+@keyframes fantasma-flota {
+  0%, 100% { transform: translateY(0); opacity: 0.75; }
+  50% { transform: translateY(-5px); opacity: 1; }
+}
+.fantasma-flota {
+  animation: fantasma-flota 1.6s ease-in-out infinite;
+}
+
+@keyframes meta-ondea {
+  0%, 100% { transform: skewX(0deg) scaleX(1); }
+  50% { transform: skewX(-10deg) scaleX(0.94); }
+}
+.meta-ondea {
+  animation: meta-ondea 1.2s ease-in-out infinite;
+}
+
+/* Accesibilidad: quien pide menos movimiento en su sistema no recibe bucles infinitos. */
+@media (prefers-reduced-motion: reduce) {
+  .caja-rebote,
+  .caja-contenido,
+  .caja-late,
+  .cadena-atasco,
+  .engranaje-gira,
+  .chispa-viaja,
+  .maquina-enciende,
+  .pista-rayas,
+  .corredor-trote,
+  .fantasma-flota,
+  .meta-ondea {
+    animation: none !important;
+  }
+  .caja-tapa {
+    transition: none !important;
+  }
+}
