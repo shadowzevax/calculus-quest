@@ -9,9 +9,19 @@ import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './Ga
 // "reconocer la forma de la gráfica correcta", que es justo la habilidad que mide esta misión.
 function classify(label) {
   const l = String(label).toLowerCase()
+  // --- Discontinuidades (se conservan: otras misiones podrian reutilizar este juego) ---
   if (l.includes('evitable')) return 'hole'
   if (l.includes('salto')) return 'jump'
   if (l.includes('infinit') || l.includes('esencial') || l.includes('asint')) return 'asymptote'
+  // --- Analisis grafico (Mision 11) ---
+  // EL ORDEN DE ESTAS COMPROBACIONES ES CRITICO, ver nota abajo.
+  if (l.includes('inflexion')) return 'inflection'
+  if (l.includes('concava hacia arriba') || l.includes('concava arriba')) return 'concaveUp'
+  if (l.includes('concava hacia abajo') || l.includes('concava abajo')) return 'concaveDown'
+  if (l.includes('maximo')) return 'maxLocal'
+  if (l.includes('minimo')) return 'minLocal'
+  if (l.includes('decreciente')) return 'decreasing'
+  if (l.includes('creciente')) return 'increasing'
   return 'continuous'
 }
 
@@ -44,6 +54,36 @@ function DiscontinuityGraph({ type, accent = '#1B3A5C' }) {
         <>
           <path d="M12,58 Q45,52 57,10" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
           <path d="M63,62 Q75,20 108,14" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+        </>
+      )}
+      {type === 'concaveUp' && (
+        <path d="M12,16 Q60,64 108,16" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+      )}
+      {type === 'concaveDown' && (
+        <path d="M12,56 Q60,8 108,56" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+      )}
+      {type === 'inflection' && (
+        <>
+          <path d="M12,62 C34,60 46,44 60,36 C74,28 86,12 108,10" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+          <circle cx="60" cy="36" r="3.5" fill="white" stroke={accent} strokeWidth="2.5" />
+        </>
+      )}
+      {type === 'increasing' && (
+        <path d="M12,60 Q60,48 108,12" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+      )}
+      {type === 'decreasing' && (
+        <path d="M12,12 Q60,24 108,60" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+      )}
+      {type === 'maxLocal' && (
+        <>
+          <path d="M14,58 Q60,4 106,58" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+          <circle cx="60" cy="31" r="3.5" fill={accent} />
+        </>
+      )}
+      {type === 'minLocal' && (
+        <>
+          <path d="M14,14 Q60,68 106,14" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+          <circle cx="60" cy="41" r="3.5" fill={accent} />
         </>
       )}
     </svg>
