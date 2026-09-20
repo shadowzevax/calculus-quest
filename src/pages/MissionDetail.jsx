@@ -402,7 +402,17 @@ export default function MissionDetail() {
             <span className="text-xs font-mono-lab font-semibold text-coral">+{exercise.xp_value} XP</span>
           </div>
           {Component ? (
-            <Component key={`${exercise.id}-${retryKey}`} exercise={exercise} onComplete={handleComplete} onFeedback={handleFeedback} />
+            <Component
+              key={`${exercise.id}-${retryKey}`}
+              exercise={exercise}
+              onComplete={handleComplete}
+              onFeedback={handleFeedback}
+              // Reloj real del bono de velocidad. Los juegos que lo necesitan (la carrera de la
+              // Misión 4) lo usan para que su rival corra contra el MISMO reloj que decide el
+              // bono, en vez de contra un presupuesto propio aproximado; los demás lo ignoran.
+              secondsLeft={secondsLeft}
+              totalSeconds={speedBonusBudget(exercise, mission)}
+            />
           ) : (
             <p className="text-red-500 text-sm">Tipo de ejercicio no soportado: {exercise.type}</p>
           )}

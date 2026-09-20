@@ -1,20 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import confetti from 'canvas-confetti'
-import { Flag, PersonStanding, Ghost, MapPin } from 'lucide-react'
+import { Flag, PersonStanding, Ghost, MapPin, Brush, Zap, ZapOff } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt, MathText } from './GameBits'
 import './missionGames234.css'
 
-// Presupuesto del fantasma. NO es un número inventado: 12 s por sub-pregunta es exactamente
-// el término "subItems * 12" de speedBonusBudget() en MissionDetail.jsx, y los 20 s extra de
-// los ítems de escribir caben de sobra dentro del término base de ese mismo cálculo (35 s
-// para fill_blank). Como el presupuesto real del bono siempre es MAYOR que el del fantasma
-// (le suma la base por tipo de ejercicio y el extra por dificultad de la misión), ganarle al
-// fantasma implica con certeza haber respondido dentro de la ventana del bono. Al revés no
-// vale, y por eso el juego nunca afirma que perder la carrera signifique perder el bono.
-const SEGUNDOS_FANTASMA_POR_ITEM = 12
-const COLCHON_ESCRITURA = 20
+// A partir de este porcentaje de pista recorrido por el fantasma, los postes de señalización
+// empiezan a descolorarse a su paso. Antes de eso la pista está intacta.
+const BORRADO_DESDE_PCT = 60
+const BLUR_MAX_ALCANZANDO = 2.2 // px, mientras el fantasma se acerca: molesta, no impide leer
+const BLUR_ADELANTADO = 3.6 // px, cuando ya cruzó: obliga a despejar o a leer con esfuerzo
 
 function llegadaConfetti() {
   confetti({
@@ -28,41 +24,59 @@ function llegadaConfetti() {
   })
 }
 
-// Misión 4 — Carrera hacia el límite (rediseñada).
-// ANTES: el corredor avanzaba con el ÍNDICE de la pregunta, así que avanzaba igual aunque el
-// estudiante fallara todo, y como el índice arranca en 0 nunca llegaba a la bandera (con 3
-// preguntas se quedaba en 67%). No había rival, ni reloj, ni carrera: era una barra de
-// progreso con un ícono de persona.
-// AHORA: (a) el corredor avanza con los ACIERTOS y cruza la meta al completar; (b) corre
-// contra un FANTASMA que avanza con el tiempo real de respuesta, con el mismo presupuesto
-// por sub-pregunta que usa el bono de velocidad de MissionDetail.jsx. El bono, que antes era
-// un número abstracto en la cabecera, ahora se ve como alguien pisándote los talones.
-export default function RaceLimitGame({ exercise, onComplete, onFeedback }) {
+function barajar(n) {
+  const a = Array.from({ length: n }, (_, i) => i)
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+// Misión 4 — Carrera hacia el límite.
+//
+// HISTORIAL DE ESTE ARCHIVO (dos correcciones distintas):
+//
+// 1º arreglo: el corredor avanzaba con el ÍNDICE de la pregunta, así que avanzaba igual
+//    aunque el estudiante fallara todo, y como el índice arranca en 0 nunca llegaba a la
+//    bandera. Se cambió para que avance con los ACIERTOS y se le puso un fantasma rival.
+//
+// 2º arreglo (este): el fantasma corría contra un presupuesto INVENTADO dentro del propio
+//    componente (12 s por sub-pregunta), porque el reloj real del bono vivía en
+//    MissionDetail.jsx y nunca llegaba hasta aquí. Como el componente no sabía si el bono
+//    se había perdido de verdad, no podía permitirse ninguna consecuencia: el fantasma
+//    cruzaba la meta y lo único que cambiaba era una frase. Era, con razón, "un juego de
+//    opción múltiple disfrazado". Ahora MissionDetail pasa `secondsLeft` y `totalSeconds`,
+//    así que el fantasma ES el reloj del bono, y su adelantamiento tiene efecto real:
+//
+//    a) el bono de velocidad se pierde de verdad (no es una amenaza decorativa);
+//    b) al pasar, el fantasma va BORRANDO los postes de señalización: se descoloran cada vez
+//       más a medida que se acerca, y quedan casi ilegibles cuando cruza;
+//    c) al cruzar, baraja las opciones una vez: quien iba a responder de memoria por la
+//       posición pierde esa referencia; quien sabe el límite responde igual.
+//
+//    El borrado nunca deja una pregunta sin responder: siempre hay un botón para repintar los
+//    letreros, y el XP por acertar queda intacto. Lo único que está en juego es el bono.
+//
+//    (La metáfora es deliberadamente distinta de la niebla + lupa de la Misión 8: allí la
+//    niebla es la mecánica central y se despeja barriendo; aquí es el rastro de un rival.)
+export default function RaceLimitGame({ exercise, onComplete, onFeedback, secondsLeft, totalSeconds }) {
   const items = getExerciseItems(exercise)
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
   const [aciertos, setAciertos] = useState(0)
-  const [msFantasma, setMsFantasma] = useState(0) // tiempo efectivo de respuesta acumulado
-  const acumuladoRef = useRef(0)
+  const [orden, setOrden] = useState(null) // orden de visualización tras el barajado
+  const [letrerosRepintados, setLetrerosRepintados] = useState(false)
   const feedbackContadoRef = useRef(null)
   const confettiRef = useRef(false)
 
-  const jugable = items.kind === 'choice' || items.kind === 'text'
   const totalItems = items.list.length || 1
-  const presupuestoFantasmaMs =
-    (SEGUNDOS_FANTASMA_POR_ITEM * totalItems + (items.kind === 'text' ? COLCHON_ESCRITURA : 0)) * 1000
 
-  // Cronómetro del fantasma: corre solo mientras el estudiante está respondiendo y se
-  // congela mientras lee la retroalimentación — igual que el cronómetro del bono real, que
-  // MissionDetail.jsx pausa con onFeedback. Se limpia siempre al desmontar.
-  useEffect(() => {
-    if (!jugable || feedback) return
-    const inicio = Date.now()
-    const id = setInterval(() => setMsFantasma(acumuladoRef.current + (Date.now() - inicio)), 120)
-    return () => {
-      clearInterval(id)
-      acumuladoRef.current += Date.now() - inicio
-    }
-  }, [index, feedback, jugable])
+  // El fantasma ES el cronómetro del bono, no una aproximación suya. Si por lo que sea no
+  // llega un reloj válido, no se dibuja rival: es preferible una carrera ausente a una
+  // carrera que miente sobre lo que está en juego.
+  const hayCarrera = Number.isFinite(totalSeconds) && totalSeconds > 0 && Number.isFinite(secondsLeft)
+  const pctFantasma = hayCarrera ? Math.min(100, Math.max(0, (1 - secondsLeft / totalSeconds) * 100)) : 0
+  const fantasmaCruzo = hayCarrera && secondsLeft <= 0
 
   // Un acierto = un tramo avanzado. Cada objeto `feedback` es nuevo por ítem, así que este
   // efecto cuenta exactamente una vez por respuesta.
@@ -80,6 +94,19 @@ export default function RaceLimitGame({ exercise, onComplete, onFeedback }) {
     }
   }, [aciertos, totalItems])
 
+  // Barajado: solo cuando el fantasma ya cruzó, solo en preguntas de opción, y solo sobre
+  // una pregunta todavía sin responder (barajar después de contestar movería la opción que
+  // el estudiante acaba de marcar y haría ilegible la retroalimentación).
+  const nOpciones = items.kind === 'choice' ? (current?.options?.length ?? 0) : 0
+  useEffect(() => {
+    if (items.kind !== 'choice' || !nOpciones) return
+    if (fantasmaCruzo && !feedback) setOrden(barajar(nOpciones))
+    else if (!fantasmaCruzo) setOrden(null)
+    // `index` entra en las dependencias para rebarajar en cada pregunta nueva mientras el
+    // fantasma siga delante; `feedback` no, para no rebarajar al responder.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, fantasmaCruzo, nOpciones, items.kind])
+
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
   if (items.kind === 'matching') {
@@ -95,19 +122,35 @@ export default function RaceLimitGame({ exercise, onComplete, onFeedback }) {
   }
 
   const pctEstudiante = Math.min(100, (aciertos / totalItems) * 100)
-  const pctFantasma = Math.min(100, (msFantasma / presupuestoFantasmaMs) * 100)
   const vasAdelante = pctEstudiante > pctFantasma
   const enMeta = aciertos === totalItems
   const ultimoRespondido = index === totalItems - 1 && !!feedback
-  const ganasteCarrera = enMeta && pctFantasma < 100
+  const bonoVivo = hayCarrera && !fantasmaCruzo
+
+  // Cuánto se han borrado los letreros. Crece de 0 a BLUR_MAX_ALCANZANDO entre
+  // BORRADO_DESDE_PCT y la meta, y salta a BLUR_ADELANTADO al ser adelantado. Se desactiva al
+  // responder (hay que poder leer la corrección) y con el botón de repintar.
+  let blur = 0
+  if (!letrerosRepintados && !feedback && hayCarrera) {
+    if (fantasmaCruzo) blur = BLUR_ADELANTADO
+    else if (pctFantasma > BORRADO_DESDE_PCT) {
+      blur = ((pctFantasma - BORRADO_DESDE_PCT) / (100 - BORRADO_DESDE_PCT)) * BLUR_MAX_ALCANZANDO
+    }
+  }
+  const hayBorrado = blur > 0.15
+  const ordenVisible = orden && orden.length === nOpciones ? orden : null
 
   return (
     <div>
       <GameHeader index={index} total={total} label="TRAMO" />
 
       {/* la pista: dos carriles, tú y el fantasma, misma meta */}
-      <div className="relative rounded-2xl border-2 border-ink/10 bg-ink/[0.03] px-6 py-3 mb-5 overflow-hidden">
-        <div className={`absolute inset-0 ${feedback ? '' : 'pista-rayas'}`} aria-hidden="true" />
+      <div
+        className={`relative rounded-2xl border-2 px-6 py-3 mb-3 overflow-hidden transition-colors duration-500 ${
+          fantasmaCruzo ? 'border-blueprint/40 bg-blueprint/[0.07]' : 'border-ink/10 bg-ink/[0.03]'
+        }`}
+      >
+        <div className={`absolute inset-0 ${feedback || fantasmaCruzo ? '' : 'pista-rayas'}`} aria-hidden="true" />
         <div className="relative">
           {/* carril del estudiante */}
           <div className="relative h-9">
@@ -124,61 +167,96 @@ export default function RaceLimitGame({ exercise, onComplete, onFeedback }) {
             </div>
           </div>
           {/* carril del fantasma */}
-          <div className="relative h-8">
-            <div className="absolute inset-y-0 left-0 right-0 my-auto h-1 bg-ink/10 rounded-full" />
-            <div
-              className="absolute top-0 transition-[left] duration-150 ease-linear"
-              style={{ left: `${pctFantasma}%`, transform: 'translateX(-50%)' }}
-            >
-              <Ghost className={`w-7 h-7 text-blueprint ${feedback ? '' : 'fantasma-flota'}`} />
+          {hayCarrera && (
+            <div className="relative h-8">
+              <div className="absolute inset-y-0 left-0 right-0 my-auto h-1 bg-ink/10 rounded-full" />
+              <div
+                className="absolute top-0 transition-[left] duration-500 ease-linear"
+                style={{ left: `${pctFantasma}%`, transform: 'translateX(-50%)' }}
+              >
+                <Ghost
+                  className={`w-7 h-7 text-blueprint ${feedback ? '' : 'fantasma-flota'} ${fantasmaCruzo ? 'fantasma-adelanta' : ''}`}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <div className="absolute right-1.5 inset-y-0 flex items-center">
           <Flag className={`w-6 h-6 text-gold ${enMeta ? 'meta-ondea' : ''}`} />
         </div>
       </div>
 
-      <p className={`text-xs font-mono-lab mb-4 ${vasAdelante ? 'text-[#0F766E]' : 'text-[#B91C1C]'}`}>
-        {enMeta
-          ? ganasteCarrera
-            ? '¡Cruzaste la meta antes que el fantasma! El bono de velocidad es tuyo.'
-            : 'Cruzaste la meta, pero el fantasma llegó primero. La próxima, gánale.'
-          : vasAdelante
-            ? 'Vas adelante del fantasma — cada acierto te adelanta un tramo.'
-            : pctFantasma >= 100
-              ? 'El fantasma ya cruzó la meta, pero la carrera sigue: responder bien vale más que responder rápido.'
-              : 'El fantasma te viene pisando los talones: responde antes de que te alcance.'}
-      </p>
+      {/* Estado del bono: lo que realmente está en juego en la carrera */}
+      {hayCarrera && (
+        <div
+          className={`flex items-center gap-2 text-xs font-mono-lab mb-4 ${
+            bonoVivo ? 'text-gold' : 'text-ink/40'
+          }`}
+        >
+          {bonoVivo ? <Zap className="w-4 h-4" /> : <ZapOff className="w-4 h-4 rayo-se-apaga" />}
+          <span>
+            {enMeta
+              ? bonoVivo
+                ? '¡Cruzaste la meta antes que el fantasma! El bono de velocidad es tuyo.'
+                : 'Cruzaste la meta, pero el fantasma llegó primero: esta vez sin bono de velocidad.'
+              : fantasmaCruzo
+                ? 'El fantasma te adelantó y borró los letreros a su paso: el bono se perdió, el XP por acertar no.'
+                : vasAdelante
+                  ? 'Vas adelante del fantasma — cada acierto te adelanta un tramo.'
+                  : 'El fantasma te viene pisando los talones: el bono de velocidad se va con él.'}
+          </span>
+        </div>
+      )}
 
       <Prompt text={current.prompt} />
 
       {items.kind === 'choice' ? (
-        // Postes de señalización: una rejilla que se adapta al número de opciones (antes eran
-        // anchos fijos de 1/4 que se desbordaban con 5 opciones y quedaban ilegibles en un
-        // celular de 360 px).
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {current.options.map((opt, i) => {
-            const isRight = feedback && i === current.correctIndex
-            const isWrongPick = feedback && selected === i && i !== current.correctIndex
-            return (
-              <button
-                key={i}
-                onClick={() => checkChoice(i)}
-                disabled={!!feedback}
-                className={`min-h-[52px] flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-left text-sm font-mono-lab transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
-                  isRight ? 'border-teal bg-teal/10 text-teal font-semibold' : ''
-                } ${isWrongPick ? 'border-red-400 bg-red-50 text-red-500' : ''} ${
-                  !isRight && !isWrongPick ? 'border-ink/15 text-ink' : ''
-                } ${feedback && !isRight && !isWrongPick ? 'opacity-50' : ''}`}
-              >
-                <MapPin className={`w-5 h-5 shrink-0 ${isRight ? 'text-teal' : 'text-coral'}`} fill={selected === i ? 'currentColor' : 'none'} />
-                <span className="leading-snug"><MathText text={opt} /></span>
-              </button>
-            )
-          })}
-        </div>
+        <>
+          {hayBorrado && (
+            <button
+              type="button"
+              onClick={() => setLetrerosRepintados(true)}
+              className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-blueprint/30 bg-blueprint/5 px-3 py-1.5 text-xs font-mono-lab text-blueprint transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blueprint"
+            >
+              <Brush className="w-4 h-4" />
+              Repintar los letreros
+            </button>
+          )}
+
+          {/* Postes de señalización. Tras el adelantamiento se dibujan en el orden barajado, pero cada
+              botón conserva su índice original para responder: se mueve la posición, nunca
+              la correspondencia entre opción y respuesta. */}
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 gap-3 transition-[filter] duration-500 ${
+              hayBorrado ? 'letrero-descolora' : ''
+            }`}
+            style={hayBorrado ? { filter: `blur(${blur.toFixed(2)}px) saturate(0.55)` } : undefined}
+          >
+            {(ordenVisible ?? current.options.map((_, i) => i)).map((i) => {
+              const opt = current.options[i]
+              const isRight = feedback && i === current.correctIndex
+              const isWrongPick = feedback && selected === i && i !== current.correctIndex
+              return (
+                <button
+                  key={i}
+                  onClick={() => checkChoice(i)}
+                  disabled={!!feedback}
+                  className={`min-h-[52px] flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-left text-sm font-mono-lab transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral ${
+                    isRight ? 'border-teal bg-teal/10 text-teal font-semibold' : ''
+                  } ${isWrongPick ? 'border-red-400 bg-red-50 text-red-500' : ''} ${
+                    !isRight && !isWrongPick ? 'border-ink/15 text-ink' : ''
+                  } ${feedback && !isRight && !isWrongPick ? 'opacity-50' : ''}`}
+                >
+                  <MapPin className={`w-5 h-5 shrink-0 ${isRight ? 'text-teal' : 'text-coral'}`} fill={selected === i ? 'currentColor' : 'none'} />
+                  <span className="leading-snug"><MathText text={opt} /></span>
+                </button>
+              )
+            })}
+          </div>
+        </>
       ) : (
+        // En las preguntas de escribir no se borra nada: emborronar un campo de texto no crea
+        // tensión, solo estorba. Aquí la consecuencia del fantasma es la pérdida del bono.
         <div className="border-t-4 border-dashed border-coral/30 pt-4">
           <TextAnswer key={index} feedback={feedback} onCheck={checkText} />
         </div>
