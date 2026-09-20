@@ -63,18 +63,39 @@ const SPEED_BONUS_GROUP = 5
 // Cuanto dura la ventana de "bono de velocidad": varia segun el tipo de ejercicio (no es lo
 // mismo elegir una opcion que escribir una respuesta abierta, que exige calcular en papel) y
 // segun la dificultad de la mision (una derivada necesita mas tiempo que una suma), mas un
-// poco extra por cada sub-pregunta/par que tenga el ejercicio.
+// costo por cada sub-pregunta/par que tenga el ejercicio, que TAMBIEN varia por tipo (una
+// sub-pregunta extra de completar es un problema nuevo de principio a fin; una sub-pregunta
+// extra de verdadero/falso es una revisión rápida).
+//
+// RECALIBRADO el 2026-09-19: los números anteriores (base 15-35s, +12s fijo por sub-ítem sin
+// importar el tipo, +10/20/30s por dificultad) estaban pensados para "leer y hacer clic", no
+// para un estudiante resolviendo con lápiz y papel — Sebastian reportó que el cronómetro se
+// agotaba a media misión para un ritmo normal, no solo para uno lento. Se verificó contra los
+// datos reales de las 14 misiones en la base de datos (consulta directa a Neon el
+// 2026-09-19): la mayoría de ejercicios tiene 2-5 sub-preguntas, y las misiones de derivadas
+// (9, 12, 13) son "dificil" con `fill_blank` de hasta 3 problemas cada uno — ahí es donde el
+// presupuesto viejo (35 + 20 + 3*12 = 91s para 3 derivadas escritas a mano) más se quedaba
+// corto. El bono debe ser para quien responde genuinamente rápido, no un cronómetro que un
+// estudiante concentrado y normal pierde por default.
 const BASE_SECONDS_BY_TYPE = {
-  multiple_choice: 20, // solo hay que leer y reconocer la opción correcta
-  true_false: 15, // la decisión más rápida de todas
-  fill_blank: 35, // exige calcular/despejar antes de poder escribir la respuesta
-  matching: 25, // hay que leer varios elementos y relacionarlos, pero no calcular desde cero
+  true_false: 20, // overhead fijo: leer el enunciado general y orientarse en el ejercicio
+  multiple_choice: 25,
+  matching: 30, // hay que ver el set completo de elementos antes de relacionar el primero
+  fill_blank: 45, // el enunciado suele traer más contexto/datos que hay que leer antes de calcular
+}
+// Costo de CADA sub-pregunta del ejercicio (se multiplica por el total, no por "las extra" —
+// el overhead de arriba es aparte, por leer el ejercicio una sola vez).
+const SUBITEM_SECONDS_BY_TYPE = {
+  true_false: 15, // una revisión rápida por afirmación
+  multiple_choice: 20, // puede exigir un cálculo antes de comparar opciones
+  matching: 18, // un par más que leer y relacionar
+  fill_blank: 35, // un problema completo, de cero, a mano
 }
 const SECONDS_BY_DIFFICULTY = {
   facil: 0,
-  intermedio: 10,
-  dificil: 20,
-  experto: 30,
+  intermedio: 15,
+  dificil: 35, // derivadas con regla del producto/cociente/cadena: no es "10s más", es pensar distinto
+  experto: 55, // Escape Room: síntesis de varios temas a la vez
 }
 function speedBonusBudget(exercise, mission) {
   const subItems = exercise?.metadata?.questions?.length
@@ -82,9 +103,11 @@ function speedBonusBudget(exercise, mission) {
     || exercise?.metadata?.statements?.length
     || exercise?.metadata?.pairs?.length
     || 1
-  const base = BASE_SECONDS_BY_TYPE[exercise?.type] ?? 20
+  const type = exercise?.type
+  const base = BASE_SECONDS_BY_TYPE[type] ?? 25
+  const perSubItem = SUBITEM_SECONDS_BY_TYPE[type] ?? 20
   const extra = SECONDS_BY_DIFFICULTY[mission?.difficulty] ?? 0
-  return base + extra + subItems * 12
+  return base + extra + subItems * perSubItem
 }
 
 export default function MissionDetail() {
