@@ -63,6 +63,14 @@ export function TextAnswer({ feedback, onCheck }) {
           </button>
         )}
       </div>
+      {/* Los botones son un atajo, no una exigencia: normalizeText() en exerciseItems.js
+          acepta por igual ² y ^2, ÷ y /, × y *, ∞ e inf/infinito — así que escribir desde el
+          teclado normal (como se haría en una calculadora) nunca cuenta como error. */}
+      {!feedback && (
+        <p className="text-[11px] font-mono-lab text-ink/40 mt-1.5">
+          Los botones son un atajo — también vale escribir desde el teclado (ej. ^2 en vez de ², / en vez de ÷).
+        </p>
+      )}
     </div>
   )
 }

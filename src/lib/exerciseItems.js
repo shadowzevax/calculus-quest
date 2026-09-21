@@ -60,15 +60,38 @@ export function getExerciseItems(exercise) {
 }
 
 const DIACRITICS = /[̀-ͯ]/g
+
+// Los símbolos del SymbolToolbar (√ ∞ ≤ ≥ ≠ π × ÷ ² ³) se canonicalizan a su equivalente de
+// teclado/texto plano. Se revisaron las 40 respuestas reales del banco el 2026-09-20 y NINGUNA
+// usa estos caracteres unicode: los exponentes se escriben "^2" (no "²"), el infinito se
+// escribe "inf"/"infinito" (no "∞"), las fracciones se escriben con "/" (no "÷"). Sin este
+// mapa, el propio botón "²" del toolbar podía marcar como incorrecta una respuesta como
+// "x^2-25" con el exponente bien escrito, solo por haber usado el botón en vez del teclado.
+const SYMBOL_TO_TEXT = {
+  '×': '*',
+  '÷': '/',
+  '≤': '<=',
+  '≥': '>=',
+  '≠': '!=',
+  '∞': 'inf',
+  'π': 'pi',
+  '²': '^2',
+  '³': '^3',
+}
+const SYMBOL_RE = new RegExp(Object.keys(SYMBOL_TO_TEXT).join('|'), 'g')
+
 // Quita acentos (NFD + strip de diacríticos, mismo patrón que stripAccents de
-// TowerClimbGame.jsx) y normaliza el signo menos tipográfico de KaTeX (U+2212) al guion
-// ASCII normal — antes "máximo"/"maximo" y "−3" (copiado de KaTeX) /"-3" se marcaban como
-// respuestas distintas, fallando injustamente a un estudiante que respondió bien.
+// TowerClimbGame.jsx), normaliza el signo menos tipográfico de KaTeX (U+2212) al guion
+// ASCII normal, y los símbolos del toolbar a su forma de texto — antes "máximo"/"maximo" y
+// "−3" (copiado de KaTeX) /"-3" se marcaban como respuestas distintas, fallando injustamente
+// a un estudiante que respondió bien. Se aplica por igual a la respuesta del banco y a la del
+// estudiante, así que da lo mismo cuál de las dos formas use cualquiera de las dos partes.
 function normalizeText(str) {
   return String(str)
     .normalize('NFD')
     .replace(DIACRITICS, '')
     .replace(/−/g, '-')
+    .replace(SYMBOL_RE, (m) => SYMBOL_TO_TEXT[m])
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '')
