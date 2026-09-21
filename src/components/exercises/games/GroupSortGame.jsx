@@ -38,7 +38,7 @@ export default function GroupSortGame({ exercise, onComplete, onFeedback }) {
           <div className="flex items-center gap-2 mb-2 text-coral text-xs font-mono-lab uppercase">
             <Inbox className="w-4 h-4" /> Escribe la respuesta y guárdala en el canasto
           </div>
-          <TextAnswer feedback={feedback} onCheck={checkText} />
+          <TextAnswer key={index} feedback={feedback} onCheck={checkText} />
         </div>
       )}
 

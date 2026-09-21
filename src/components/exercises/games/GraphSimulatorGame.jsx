@@ -189,7 +189,7 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
           )}
         </div>
       ) : (
-        <ExploreAndAnswer current={current} feedback={feedback} k={k} setK={setK} onCheck={checkText} />
+        <ExploreAndAnswer index={index} current={current} feedback={feedback} k={k} setK={setK} onCheck={checkText} />
       )}
 
       <FeedbackBanner feedback={feedback} />
@@ -201,7 +201,7 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
 // Para el ejercicio de "hallar k": un deslizante mueve de verdad el segundo tramo de la
 // función en vivo, para poder explorar visualmente hasta dónde debe llegar antes de escribir
 // la respuesta — no es solo decoración, cambia la gráfica en tiempo real.
-function ExploreAndAnswer({ current, feedback, k, setK, onCheck }) {
+function ExploreAndAnswer({ index, current, feedback, k, setK, onCheck }) {
   // Antes targetY = 52 - k*4.4 no tenía ninguna relación con el k REAL de este ejercicio
   // (current.answer): con k en [-8,8], targetY caía en [16.8, 87.2] y el extremo de la curva
   // azul está fijo en y=14 (línea de abajo) — era matemáticamente IMPOSIBLE "encajar" con
@@ -239,7 +239,7 @@ function ExploreAndAnswer({ current, feedback, k, setK, onCheck }) {
           Mueve el tramo naranja hasta que encaje con la curva azul, luego escribe ese valor de k
         </p>
       </div>
-      <TextAnswer feedback={feedback} onCheck={onCheck} />
+      <TextAnswer key={index} feedback={feedback} onCheck={onCheck} />
     </div>
   )
 }

@@ -156,7 +156,7 @@ export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
         </div>
       ) : (
         <div className="border border-blueprint/20 rounded-xl p-4 bg-blueprint/5">
-          <TextAnswer feedback={feedback} onCheck={checkText} />
+          <TextAnswer key={index} feedback={feedback} onCheck={checkText} />
         </div>
       )}
 

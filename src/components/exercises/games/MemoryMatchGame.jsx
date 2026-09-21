@@ -77,7 +77,7 @@ export default function MemoryMatchGame({ exercise, onComplete, onFeedback }) {
           </div>
         </div>
       ) : (
-        <TextAnswer feedback={feedback} onCheck={checkText} />
+        <TextAnswer key={index} feedback={feedback} onCheck={checkText} />
       )}
 
       <FeedbackBanner feedback={feedback} />

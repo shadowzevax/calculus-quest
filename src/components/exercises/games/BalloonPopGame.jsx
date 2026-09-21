@@ -139,7 +139,7 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
         </div>
       ) : (
         <div className="border-2 border-coral/25 rounded-[2rem] p-4 bg-coral/5">
-          <TextAnswer feedback={feedback} onCheck={checkText} />
+          <TextAnswer key={index} feedback={feedback} onCheck={checkText} />
         </div>
       )}
 

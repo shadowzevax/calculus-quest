@@ -137,7 +137,7 @@ export default function WhackMoleGame({ exercise, onComplete, onFeedback }) {
         </div>
       ) : (
         <div className="border-2 rounded-2xl p-4" style={{ borderColor: '#7a5236', backgroundColor: '#7a523612' }}>
-          <TextAnswer feedback={feedback} onCheck={checkText} />
+          <TextAnswer key={index} feedback={feedback} onCheck={checkText} />
         </div>
       )}
 

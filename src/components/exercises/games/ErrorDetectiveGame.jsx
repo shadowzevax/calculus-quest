@@ -336,7 +336,7 @@ export default function ErrorDetectiveGame({ exercise, onComplete, onFeedback })
       ) : (
         <div className="bg-[#fdf6e3] border border-ink/15 shadow-sm rounded-lg p-4 mt-5">
           <p className="text-[10px] font-mono-lab uppercase tracking-[0.2em] text-ink/70 mb-2">Informe del detective</p>
-          <TextAnswer feedback={feedback} onCheck={checkText} />
+          <TextAnswer key={index} feedback={feedback} onCheck={checkText} />
         </div>
       )}
 

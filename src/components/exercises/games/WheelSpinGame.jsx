@@ -290,7 +290,7 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
             )
           ) : (
             <div className="border-4 border-gold/25 rounded-2xl p-4 bg-gold/5">
-              <TextAnswer feedback={feedback} onCheck={checkText} />
+              <TextAnswer key={current.id} feedback={feedback} onCheck={checkText} />
             </div>
           )}
 
