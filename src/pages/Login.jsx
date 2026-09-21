@@ -79,6 +79,22 @@ export default function Login() {
   // Ya hay sesión: el efecto de arriba está redirigiendo, no hay nada que mostrar mientras tanto.
   if (user) return null
 
+  // Antes, cambiar de modo (login/registro/recuperar) no limpiaba nada: una contraseña escrita
+  // en un modo seguía apareciendo en el campo del siguiente, dando la falsa impresión de que
+  // "quedó guardada de antes" (hallazgo de la auditoría de calidad, 2026-09-21). El correo sí
+  // se conserva a propósito — es común querer registrarse o recuperar acceso con el mismo
+  // correo que se acaba de escribir en otro modo.
+  const switchMode = (next) => {
+    setError('')
+    setPassword('')
+    setFullName('')
+    setRegCode('')
+    setPresetId('')
+    setResetCode('')
+    setNewPassword('')
+    setMode(next)
+  }
+
   const submit = async (e) => {
     e.preventDefault()
     setError('')
@@ -230,7 +246,7 @@ export default function Login() {
         {mode !== 'reset' && (
           <button
             className="text-sm text-coral font-medium"
-            onClick={() => { setError(''); setMode(mode === 'login' ? 'register' : 'login') }}
+            onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
           >
             {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
           </button>
@@ -238,7 +254,7 @@ export default function Login() {
         {mode === 'login' && (
           <button
             className="text-sm text-ink/40 hover:text-ink/60 transition-colors"
-            onClick={() => { setError(''); setMode('reset') }}
+            onClick={() => switchMode('reset')}
           >
             ¿Olvidaste tu contraseña? Tengo un código
           </button>
@@ -246,7 +262,7 @@ export default function Login() {
         {mode === 'reset' && (
           <button
             className="text-sm text-ink/40 hover:text-ink/60 transition-colors"
-            onClick={() => { setError(''); setMode('login') }}
+            onClick={() => switchMode('login')}
           >
             ← Volver a iniciar sesión
           </button>
