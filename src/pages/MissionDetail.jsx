@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Zap, TrendingUp } from 'lucide-react'
+import { ChevronLeft, Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Zap, TrendingUp, WifiOff } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/AuthContext'
 import MultipleChoiceExercise from '@/components/exercises/MultipleChoiceExercise'
@@ -121,6 +121,13 @@ export default function MissionDetail() {
   const [current, setCurrent] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showDone, setShowDone] = useState(false)
+  // Antes, si api.progress.submit fallaba (sesión vencida, sin red, error del servidor), el
+  // catch quedaba vacío: el estudiante veía la animación de acierto y avanzaba de ejercicio
+  // como si nada, pero el servidor nunca se enteró — ni el XP, ni el intento, ni el progreso
+  // quedaban guardados, sin ningún aviso (hallazgo de la auditoría de calidad, 2026-09-21).
+  // Ahora se avisa de forma visible pero sin bloquear: el estudiante puede seguir jugando, y
+  // el aviso desaparece solo cuando el siguiente guardado sí funciona.
+  const [saveError, setSaveError] = useState(false)
   const [results, setResults] = useState([]) // [{exercise, isCorrect, bonus}] de este intento
   const [retryKey, setRetryKey] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(0)
@@ -255,6 +262,7 @@ export default function MissionDetail() {
           within_budget: withinBudget,
           elapsed_ms: elapsedMs,
         })
+        setSaveError(false)
         // El XP/nivel del usuario vive en el AuthContext (se usa en Dashboard, la barra
         // lateral, etc.) — sin este refresh, se quedaba desactualizado hasta el próximo login.
         await refresh()
@@ -265,7 +273,9 @@ export default function MissionDetail() {
           if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
         }).catch(() => {})
         if (bonus > 0) setSpeedBonusCount((c) => c + 1)
-      } catch {}
+      } catch {
+        setSaveError(true)
+      }
     } else {
       try {
         // Antes, un intento fallido nunca llegaba al backend: la UI avanzaba pero
@@ -282,7 +292,10 @@ export default function MissionDetail() {
           within_budget: withinBudget,
           elapsed_ms: elapsedMs,
         })
-      } catch {}
+        setSaveError(false)
+      } catch {
+        setSaveError(true)
+      }
     }
     setResults((r) => [...r, { exercise, isCorrect, bonus }])
     if (current < exercises.length - 1) {
@@ -305,12 +318,15 @@ export default function MissionDetail() {
         xp_earned: ex.xp_value || 10,
         answers: answers || [],
       })
+      setSaveError(false)
       await refresh()
       api.ranking.list().then((rows) => {
         const idx = rows.findIndex((r) => r.id === user.id)
         if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
       }).catch(() => {})
-    } catch {}
+    } catch {
+      setSaveError(true)
+    }
     setResults((r) => {
       const updated = [...r, { exercise: ex, isCorrect: true, bonus: 0 }]
       if (updated.length >= exercises.length) setShowDone(true)
@@ -410,6 +426,19 @@ export default function MissionDetail() {
           )}
         </div>
       </div>
+
+      {saveError && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-xl border-2 border-red-300 bg-red-50 px-4 py-3 mb-4 text-sm text-[#B91C1C]">
+          <WifiOff className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Tu último intento no se guardó</p>
+            <p className="text-[#B91C1C]/80 mt-0.5">
+              Revisa tu conexión a internet. Puedes seguir jugando, pero ese XP y ese progreso todavía no
+              quedaron registrados — si vuelve a pasar seguido, avísale a tu docente.
+            </p>
+          </div>
+        </div>
+      )}
 
       {mission.is_collaborative ? (
         <div className="bg-white rounded-xl border border-ink/10 p-8">

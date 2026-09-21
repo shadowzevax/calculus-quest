@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
@@ -8,8 +8,12 @@ import { buildAvatarDataUri } from '@/lib/avatarBuilder'
 
 // Botón de mostrar/ocultar dentro del propio campo — el gesto típico de cualquier login, para
 // que el estudiante pueda revisar lo que escribió antes de enviarlo (sobre todo en celular,
-// donde es fácil tocar una tecla vecina sin darse cuenta).
-function PasswordInput({ value, onChange, placeholder, minLength, required }) {
+// donde es fácil tocar una tecla vecina sin darse cuenta). `autoComplete` explícito (no
+// autoComplete="off", que Chrome ignora en campos de contraseña) es necesario porque sin él el
+// navegador no sabe si ofrecer/guardar la del login o la de cambio de clave, y en el perfil de
+// pruebas de esta sesión llegó a autocompletar la contraseña real de otra cuenta guardada
+// (hallazgo de la auditoría de calidad, 2026-09-21).
+function PasswordInput({ value, onChange, placeholder, minLength, required, autoComplete }) {
   const [visible, setVisible] = useState(false)
   return (
     <div className="relative">
@@ -21,6 +25,7 @@ function PasswordInput({ value, onChange, placeholder, minLength, required }) {
         onChange={onChange}
         minLength={minLength}
         required={required}
+        autoComplete={autoComplete}
       />
       <button
         type="button"
@@ -43,8 +48,17 @@ const PRESETS = [
 ]
 
 export default function Login() {
-  const { login, register } = useAuth()
+  const { login, register, user } = useAuth()
   const navigate = useNavigate()
+
+  // Layout.jsx ya intercepta por completo cuando NO hay sesión (muestra este mismo componente
+  // sin sidebar), así que este efecto solo cubre el caso de alguien YA logueado navegando a
+  // /login a propósito (marcador guardado, historial del navegador, etc.) — antes se veía el
+  // sidebar normal CON el formulario de login superpuesto encima, logo duplicado y todo
+  // (hallazgo de la auditoría de calidad, 2026-09-21).
+  useEffect(() => {
+    if (user) navigate('/', { replace: true })
+  }, [user, navigate])
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -61,6 +75,9 @@ export default function Login() {
     () => PRESETS.map((p) => ({ ...p, uri: buildAvatarDataUri({ ...p, eyes: 'default', eyebrows: 'default', mouth: 'smile', seed: p.id }) })),
     []
   )
+
+  // Ya hay sesión: el efecto de arriba está redirigiendo, no hay nada que mostrar mientras tanto.
+  if (user) return null
 
   const submit = async (e) => {
     e.preventDefault()
@@ -158,6 +175,7 @@ export default function Login() {
           placeholder={mode === 'register' ? 'Correo institucional (@umariana.edu.co)' : 'Correo'}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete={mode === 'register' ? 'email' : 'username'}
           required
         />
         {mode === 'reset' ? (
@@ -175,6 +193,7 @@ export default function Login() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               minLength={6}
+              autoComplete="new-password"
               required
             />
           </>
@@ -184,6 +203,7 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={mode === 'register' ? 6 : undefined}
+            autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
             required
           />
         )}

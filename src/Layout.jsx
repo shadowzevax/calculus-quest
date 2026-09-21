@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
   Home, BookOpen, Trophy, MessageSquare, User, BarChart3,
   Users, Map, LogOut, Shield, MessagesSquare, BarChart2,
@@ -26,6 +26,13 @@ const adminNav = [
   // que se muestre de nuevo: { to: '/mission-management', label: 'Gestión Misiones', icon: Map },
 ]
 
+// Rutas que solo tienen sentido para docente/admin. El backend YA las protege de verdad (sin
+// fuga de datos posible), pero antes de esto un estudiante que llegaba aquí por curiosidad o
+// un enlace guardado veía la pantalla real, rota: "Aún no hay estudiantes registrados" (en
+// realidad un 403 silenciado) o un "Cargando..." infinito — hallazgo de la auditoría de
+// calidad, 2026-09-21. Ahora se le manda de vuelta al Dashboard sin exponer esa confusión.
+const STAFF_ONLY_PATHS = ['/teacher-panel', '/teacher-analytics', '/user-management', '/mission-management']
+
 function NavItem({ to, label, icon: Icon }) {
   return (
     <NavLink
@@ -48,6 +55,7 @@ function NavItem({ to, label, icon: Icon }) {
 export default function Layout({ children }) {
   const { user, isLoadingAuth, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin')
 
   // Sin sesión: se muestra el login sin importar qué ruta se haya pedido
@@ -62,6 +70,12 @@ export default function Layout({ children }) {
   }
 
   if (isLoadingAuth) return null
+
+  // Estudiante con sesión, en una ruta de docente/admin: de vuelta al Dashboard, sin mostrar
+  // la pantalla rota (ver comentario de STAFF_ONLY_PATHS arriba).
+  if (!isAdmin && STAFF_ONLY_PATHS.includes(location.pathname)) {
+    return <Navigate to="/" replace />
+  }
 
   // h-screen + overflow-hidden aquí y overflow-y-auto solo en <main>: así el
   // scroll queda contenido en el contenido y el sidebar no se mueve.

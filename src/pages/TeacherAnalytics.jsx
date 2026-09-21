@@ -158,7 +158,7 @@ export default function TeacherAnalytics() {
         </div>
         <p className="text-xs text-ink/40 flex-1 min-w-[220px]">
           Calculado según la fórmula estándar del System Usability Scale (Brooke, 1986), sobre
-          {' '}{susScores.length} estudiante{susScores.length === 1 ? '' : 's'} que respondió{susScores.length === 1 ? '' : 'ron'} las 10 preguntas.
+          {' '}{susScores.length} estudiante{susScores.length === 1 ? '' : 's'} que {susScores.length === 1 ? 'respondió' : 'respondieron'} las 10 preguntas.
           El punto de referencia de la literatura para considerar un sistema &ldquo;aceptable&rdquo; es ~68.
         </p>
       </div>
