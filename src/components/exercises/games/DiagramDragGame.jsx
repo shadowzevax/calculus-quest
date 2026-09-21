@@ -44,8 +44,12 @@ function parseTransform(text) {
 // Misión 5 — Simulador gráfico: el deslizante recorre las opciones de la pregunta actual; para
 // cada una, la curva naranja se transforma en el plano según lo que esa opción describe de
 // verdad (reflexión, traslación con su magnitud real, o compresión/estiramiento), comparándose
-// contra la curva base gris — así el estudiante puede VER cada transformación antes de elegir,
-// en vez de solo leer el texto de la opción.
+// contra la curva base f(x) (punteada) — así el estudiante puede VER cada transformación antes
+// de elegir, en vez de solo leer el texto de la opción. Las 3 preguntas reales de esta misión
+// son justamente comparaciones f/g o f/h ("g(x) = (x-3)^2 + 2", "h(x) = -f(x)", "h(x) = f(-x)"),
+// así que la curva de referencia no es decorativa: es la mitad de lo que hay que comparar.
+// Sebastian preguntó por ella el 2026-09-20 porque a simple vista, sin etiqueta, parecía un
+// resto gráfico — se le agregó la leyenda y el trazo punteado para que se lea como intencional.
 export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
@@ -81,7 +85,14 @@ export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
           <svg width="100%" height="110" viewBox="0 0 200 110">
             <line x1="0" y1="55" x2="200" y2="55" stroke="#1B3A5C" strokeWidth="1" opacity="0.4" />
             <line x1="100" y1="0" x2="100" y2="110" stroke="#1B3A5C" strokeWidth="1" opacity="0.4" />
-            <path d="M 20 90 Q 100 10 180 40" fill="none" stroke="#1B3A5C" strokeOpacity="0.25" strokeWidth="2" />
+            <path
+              d="M 20 90 Q 100 10 180 40"
+              fill="none"
+              stroke="#1B3A5C"
+              strokeOpacity="0.4"
+              strokeWidth="2"
+              strokeDasharray="4 3"
+            />
             <path
               d="M 20 90 Q 100 10 180 40"
               fill="none"
@@ -102,6 +113,16 @@ export default function DiagramDragGame({ exercise, onComplete, onFeedback }) {
               onChange={(e) => setSliderPos(Number(e.target.value))}
               className="w-full accent-coral"
             />
+          </div>
+          <div className="flex items-center justify-center gap-4 mt-1 text-[10px] font-mono-lab text-ink/60">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 border-t-2 border-dashed border-blueprint/50" />
+              f(x) original
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 border-t-2 border-coral" />
+              tras la transformación
+            </span>
           </div>
           <p className="text-[11px] font-mono-lab text-ink/70 text-center mt-1">Desliza para ver cómo se transforma la curva con cada opción</p>
         </div>
