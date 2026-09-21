@@ -8,6 +8,28 @@ import { checkAndUnlockAvatarPieces, incrementSpeedBonusCount } from './_avatar.
 // Debe coincidir con BONUS_XP en src/pages/MissionDetail.jsx.
 const BONUS_XP = 5;
 
+// Duplicado A PROPÓSITO de BASE_SECONDS_BY_TYPE / SUBITEM_SECONDS_BY_TYPE / SECONDS_BY_DIFFICULTY
+// en src/pages/MissionDetail.jsx — el servidor necesita poder calcular el MISMO presupuesto de
+// tiempo por su cuenta, porque antes de esto confiaba ciegamente en el booleano `within_budget`
+// que manda el cliente. La auditoría de seguridad del 2026-09-21 lo probó en vivo: un `curl`
+// directo con `elapsed_ms: 0, within_budget: true` acreditaba el bono igual, sin que el servidor
+// verificara nada — cualquiera con las herramientas de desarrollador podía inflar su XP y su
+// posición en el ranking sin resolver nada rápido de verdad. Si cambias los tiempos allá, cámbialos
+// aquí también (o el bono empezará a negarse/otorgarse de forma inconsistente con lo que ve el
+// estudiante en pantalla).
+const BASE_SECONDS_BY_TYPE = { true_false: 20, multiple_choice: 25, matching: 30, fill_blank: 45 };
+const SUBITEM_SECONDS_BY_TYPE = { true_false: 15, multiple_choice: 20, matching: 18, fill_blank: 35 };
+const SECONDS_BY_DIFFICULTY = { facil: 0, intermedio: 15, dificil: 35, experto: 55 };
+function speedBonusBudgetSeconds(exercise, missionDifficulty) {
+  const meta = exercise?.metadata || {};
+  const subItems = meta.questions?.length || meta.problems?.length || meta.statements?.length || meta.pairs?.length || 1;
+  const type = exercise?.type;
+  const base = BASE_SECONDS_BY_TYPE[type] ?? 25;
+  const perSubItem = SUBITEM_SECONDS_BY_TYPE[type] ?? 20;
+  const extra = SECONDS_BY_DIFFICULTY[missionDifficulty] ?? 0;
+  return base + extra + subItems * perSubItem;
+}
+
 const DIACRITICS = /[̀-ͯ]/g;
 // Quita acentos y normaliza el signo menos de KaTeX (U+2212) al guion ASCII — debe quedar
 // funcionalmente idéntica a normalizeText de src/lib/exerciseItems.js y WheelSpinGame.jsx,
@@ -129,10 +151,14 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { exercise_id, answer_given, hint_used, answers, within_budget, elapsed_ms, log_failed_attempt } = req.body || {};
+    const { exercise_id, answer_given, hint_used, answers, elapsed_ms, log_failed_attempt } = req.body || {};
     if (!exercise_id) return res.status(400).json({ error: 'exercise_id requerido' });
 
-    const [exercise] = await sql`SELECT * FROM exercises WHERE id = ${exercise_id}`;
+    const [exercise] = await sql`
+      SELECT e.*, m.difficulty AS mission_difficulty
+      FROM exercises e JOIN missions m ON m.id = e.mission_id
+      WHERE e.id = ${exercise_id}
+    `;
     if (!exercise) return res.status(404).json({ error: 'Ejercicio no existe' });
 
     // Tiempo dedicado a este intento (en segundos), acumulado en user_progress.time_spent sin
@@ -163,7 +189,18 @@ export default async function handler(req, res) {
     // estaban correctas de un intento anterior, el umbral del 60% podría cumplirse igual y
     // otorgar XP por un ejercicio que en realidad sigue incompleto en el cliente.
     const { isCorrect } = log_failed_attempt ? { isCorrect: false } : evaluateAnswers(exercise, answers);
-    const bonus = isCorrect && within_budget ? BONUS_XP : 0;
+
+    // `within_budget` YA NO se lee del cliente (ver comentario de speedBonusBudgetSeconds arriba
+    // — se confiaba en él ciegamente, bono 100% falsificable). Se recalcula aquí con el mismo
+    // `elapsed_ms` que ya se usa para time_spent, contra el presupuesto que el propio servidor
+    // calcula. Esto no vuelve el reloj a prueba de manipulación (elapsed_ms lo sigue mandando el
+    // navegador, no hay una marca de inicio firmada por el servidor), pero cierra el ataque más
+    // trivial: mandar within_budget:true sin ni siquiera fingir un tiempo bajo. El piso de 1000 ms
+    // bloquea además el caso demostrado en la auditoría (elapsed_ms:0): ningún humano lee y
+    // resuelve nada en 0 segundos.
+    const budgetSeconds = speedBonusBudgetSeconds(exercise, exercise.mission_difficulty);
+    const withinBudget = elapsedSeconds > 0 && (Number(elapsed_ms) || 0) >= 1000 && elapsedSeconds <= budgetSeconds;
+    const bonus = isCorrect && withinBudget ? BONUS_XP : 0;
     const xpEarned = isCorrect ? (exercise.xp_value || 10) + bonus : 0;
 
     // Antes se guardaba aquí el string 'completed' para CUALQUIER intento, correcto o no —
