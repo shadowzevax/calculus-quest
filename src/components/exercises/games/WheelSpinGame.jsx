@@ -113,8 +113,9 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
     // A diferencia de los otros 12 juegos, aquí un fallo NO mueve la misión hacia adelante: el
     // gajo se queda para reintentar. Eso significaba que ningún fallo llegaba nunca al servidor
     // (ver onWrongAttempt más abajo) — para el panel del docente, esta misión no tenía ninguna
-    // señal de qué tan difícil era, nunca.
-    if (!isCorrect) onWrongAttempt?.(current.sourceExercise)
+    // señal de qué tan difícil era, nunca. Se manda el arreglo acumulado de respuestas de este
+    // ejercicio (no solo un aviso vacío) para que quede registrada la respuesta real que falló.
+    if (!isCorrect) onWrongAttempt?.(current.sourceExercise, answersByExercise.current[exId])
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }
@@ -130,7 +131,7 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
     }
     const exId = current.sourceExercise.id
     answersByExercise.current[exId] = [...(answersByExercise.current[exId] || []), { index: current.itemIndex, value }]
-    if (!isCorrect) onWrongAttempt?.(current.sourceExercise)
+    if (!isCorrect) onWrongAttempt?.(current.sourceExercise, answersByExercise.current[exId])
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }
@@ -233,7 +234,7 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
               const exId = current.sourceExercise.id
               answersByExercise.current[exId] = answers
               if (isCorrect) removeSolved()
-              else onWrongAttempt?.(current.sourceExercise)
+              else onWrongAttempt?.(current.sourceExercise, answers)
               setLandedId(null)
               setRotation(0)
             }}

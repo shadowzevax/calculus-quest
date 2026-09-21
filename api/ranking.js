@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       FROM user_badges ub JOIN badges b ON b.id = ub.badge_id
       WHERE ub.user_id = u.id AND ub.equipped_at IS NOT NULL
     ) eb ON true
-    WHERE u.role = 'user'
+    WHERE u.role = 'user' AND u.is_test_account = false
     ORDER BY u.xp DESC, u.speed_challenge_ms ASC NULLS LAST, u.created_at ASC LIMIT 50
   `;
   res.status(200).json(rows);

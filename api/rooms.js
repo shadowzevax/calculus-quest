@@ -232,7 +232,7 @@ export default async function handler(req, res) {
       // tenía el turno, mismo patrón que ya usa el bloque de abajo para el acierto final.
       await sql`
         INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned)
-        VALUES (${user.id}, ${exercise.id}, ${'sala:' + room.code}, false, 0)
+        VALUES (${user.id}, ${exercise.id}, ${JSON.stringify({ room: room.code, puzzle_index: room.current_puzzle_index, selected_index, correct_index: puzzle.correct_index })}, false, 0)
       `;
       return res.status(200).json({ ok: true, is_correct: false, explanation: puzzle.explanation });
     }

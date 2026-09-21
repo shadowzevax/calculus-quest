@@ -166,9 +166,21 @@ export default async function handler(req, res) {
     const bonus = isCorrect && within_budget ? BONUS_XP : 0;
     const xpEarned = isCorrect ? (exercise.xp_value || 10) + bonus : 0;
 
+    // Antes se guardaba aquí el string 'completed' para CUALQUIER intento, correcto o no —
+    // exercise_attempts.answer_given nunca reflejaba qué respondió realmente el estudiante, así
+    // que ni el panel docente ni un futuro análisis del Objetivo 3 podían distinguir un error de
+    // otro más allá de "acertó o no". `answers` ya viaja en cada envío (índice + valor por
+    // sub-pregunta para choice/texto, o el objeto de conexiones para emparejamiento) porque el
+    // servidor lo necesita para evaluar — ahora también se guarda tal cual, en JSON, como el
+    // registro real del intento. `answer_given` queda solo de respaldo para el único caso sin
+    // `answers` (el acertijo del Escape Room, que vive en api/rooms.js y no pasa por aquí).
+    const answerRecord = (answers !== undefined && answers !== null)
+      ? JSON.stringify(answers).slice(0, 2000)
+      : (answer_given || '');
+
     await sql`
       INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned, hint_used, time_taken)
-      VALUES (${user.id}, ${exercise_id}, ${answer_given || ''}, ${isCorrect}, ${xpEarned}, ${!!hint_used}, ${elapsedSeconds || null})
+      VALUES (${user.id}, ${exercise_id}, ${answerRecord}, ${isCorrect}, ${xpEarned}, ${!!hint_used}, ${elapsedSeconds || null})
     `;
 
     if (isCorrect) {

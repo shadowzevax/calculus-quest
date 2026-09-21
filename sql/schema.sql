@@ -17,7 +17,13 @@ CREATE TABLE users (
   level INTEGER NOT NULL DEFAULT 1,
   streak_days INTEGER NOT NULL DEFAULT 0,
   last_login TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Cuentas del propio equipo para probar la plataforma (ej. "Test Estudiante", "Test
+  -- Docente"), NUNCA de un estudiante o docente real. Se excluyen del ranking y de la
+  -- analítica (api/ranking.js, api/stats.js) para que ni un estudiante real ni un docente
+  -- real las vean, ni sus intentos/respuestas contaminen los datos reales del curso —
+  -- agregado el 2026-09-21 al preparar la entrega para la prueba con estudiantes reales.
+  is_test_account BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE missions (

@@ -5,6 +5,11 @@ import { requireAdmin } from './_auth.js';
 // encuesta de percepcion, todo con datos reales de uso de la plataforma (no de ejemplo) —
 // sirve tanto para ver en pantalla como para exportar a CSV. El pre-test/post-test se
 // hace por Google Forms, fuera de la plataforma, así que no vive aquí.
+//
+// Todas las consultas de este archivo excluyen users.is_test_account = true (las cuentas
+// "Test Estudiante"/"Test Docente" que usa el equipo para probar la plataforma) — sin este
+// filtro, sus intentos y su respuesta a la encuesta SUS contaminarían los números reales del
+// curso una vez que estudiantes de verdad empiecen a usarla.
 async function handleAnalytics(req, res) {
   const students = await sql`
     SELECT
@@ -22,12 +27,16 @@ async function handleAnalytics(req, res) {
       SELECT COUNT(*) AS attempts, COUNT(*) FILTER (WHERE is_correct) AS correct
       FROM exercise_attempts WHERE user_id = u.id
     ) ea ON true
-    WHERE u.role = 'user'
+    WHERE u.role = 'user' AND u.is_test_account = false
     ORDER BY u.full_name ASC
   `;
+  // Se excluyen las cuentas de prueba del propio equipo (is_test_account) — de lo contrario
+  // sus respuestas a la encuesta contaminarían el puntaje SUS real del curso.
   const surveyRows = await sql`
     SELECT sr.user_id, sq."order", sq.text, (sr.answers->>sq.id::text)::int AS value
-    FROM survey_responses sr, survey_questions sq
+    FROM survey_responses sr
+    JOIN users u ON u.id = sr.user_id AND u.is_test_account = false
+    CROSS JOIN survey_questions sq
   `;
 
   // Dificultad por misión: cuánto se intenta cada una y qué tan seguido se acierta, a partir
@@ -46,6 +55,7 @@ async function handleAnalytics(req, res) {
     FROM missions m
     JOIN exercises e ON e.mission_id = m.id AND e.parent_exercise_id IS NULL AND e.is_active = true
     JOIN exercise_attempts ea ON ea.exercise_id = e.id
+    JOIN users u ON u.id = ea.user_id AND u.role = 'user' AND u.is_test_account = false
     WHERE m.module = 'misiones' AND m.is_active = true
     GROUP BY m.id, m."order", m.title
     ORDER BY m."order" ASC
@@ -84,9 +94,11 @@ export default async function handler(req, res) {
 
   if (req.query.action === 'analytics') return handleAnalytics(req, res);
 
-  const [{ count: totalStudents }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE role = 'user'`;
+  const [{ count: totalStudents }] = await sql`SELECT COUNT(*)::int AS count FROM users WHERE role = 'user' AND is_test_account = false`;
   const [{ count: activeStudents }] = await sql`
-    SELECT COUNT(DISTINCT user_id)::int AS count FROM user_progress
+    SELECT COUNT(DISTINCT up.user_id)::int AS count
+    FROM user_progress up JOIN users u ON u.id = up.user_id
+    WHERE u.role = 'user' AND u.is_test_account = false
   `;
   const [{ count: totalMissions }] = await sql`SELECT COUNT(*)::int AS count FROM missions WHERE is_active = true`;
 

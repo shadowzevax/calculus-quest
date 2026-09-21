@@ -1,9 +1,39 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
 import { buildAvatarDataUri } from '@/lib/avatarBuilder'
+
+// Botón de mostrar/ocultar dentro del propio campo — el gesto típico de cualquier login, para
+// que el estudiante pueda revisar lo que escribió antes de enviarlo (sobre todo en celular,
+// donde es fácil tocar una tecla vecina sin darse cuenta).
+function PasswordInput({ value, onChange, placeholder, minLength, required }) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="relative">
+      <input
+        className="w-full border border-ink/15 rounded-lg pl-3 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
+        type={visible ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        minLength={minLength}
+        required={required}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink/35 hover:text-ink/60 transition-colors"
+        aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        tabIndex={-1}
+      >
+        {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  )
+}
 
 const PRESETS = [
   { id: 'm1', gender: 'male', top: 'shortFlat', clothing: 'shirtCrewNeck', clothesColor: '5199e4', skinColor: 'edb98a', hairColor: '2c1b18' },
@@ -140,9 +170,7 @@ export default function Login() {
               maxLength={6}
               required
             />
-            <input
-              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
-              type="password"
+            <PasswordInput
               placeholder="Contraseña nueva (mín. 6 caracteres)"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -151,9 +179,7 @@ export default function Login() {
             />
           </>
         ) : (
-          <input
-            className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral"
-            type="password"
+          <PasswordInput
             placeholder={mode === 'register' ? 'Contraseña (mín. 6 caracteres)' : 'Contraseña'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

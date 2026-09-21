@@ -124,7 +124,7 @@ export default function MatchingExercise({ exercise, onComplete }) {
   // conexión por buena y pulsa "Siguiente" sin reintentar, ese mismo fallo ya lo registra el
   // flujo normal de onComplete() más abajo — así no se cuenta dos veces un solo intento.
   const retry = () => {
-    api.progress.submit({ exercise_id: exercise.id, answer_given: 'completed', log_failed_attempt: true }).catch(() => {})
+    api.progress.submit({ exercise_id: exercise.id, answer_given: 'completed', answers: connections, log_failed_attempt: true }).catch(() => {})
     setSubmitted(false)
     setResult(null)
     setConnections({})
