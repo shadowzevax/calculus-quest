@@ -288,7 +288,12 @@ export default async function handler(req, res) {
   if (action === 'submit_cards_time') {
     if (room.status !== 'cards') return res.status(400).json({ error: 'El Sistema 6 no está activo' });
     const { time_ms } = req.body || {};
-    if (!time_ms || time_ms <= 0) return res.status(400).json({ error: 'time_ms inválido' });
+    // Piso de 1500ms: nadie voltea y empareja cartas de memoria más rápido que eso de verdad —
+    // sin este piso, cualquiera podía mandar time_ms:1 para ganar siempre el desempate del
+    // ranking (speed_challenge_ms) sin haber jugado nada (hallazgo de la auditoría de calidad
+    // de seguridad, 2026-09-21). No otorga XP por sí solo, pero sí decide el ranking en caso de
+    // empate de XP, así que igual vale la pena que no sea gratis falsificarlo.
+    if (!time_ms || time_ms < 1500) return res.status(400).json({ error: 'time_ms inválido' });
 
     // Solo se guarda la primera vez que este jugador termina en esta sala — no se
     // puede volver a jugar dentro de la misma partida para "mejorar" el tiempo.

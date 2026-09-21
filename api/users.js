@@ -55,6 +55,23 @@ export default async function handler(req, res) {
     if (target.role === 'admin' && admin.role !== 'superadmin') {
       return res.status(403).json({ error: 'Solo el administrador puede eliminar cuentas de docente' });
     }
+    // Si esta cuenta es anfitriona de alguna sala de Escape Room activa, se reasigna el
+    // anfitrión ANTES de borrar (mismo patrón que ya usa la acción "leave" en api/rooms.js).
+    // Sin esto, escape_rooms.host_user_id ON DELETE CASCADE borraba la sala ENTERA —y con
+    // ella expulsaba de golpe a los demás jugadores sin aviso— solo porque quien resultó ser
+    // el anfitrión en ese momento (no necesariamente quien la creó) era esta cuenta (hallazgo
+    // de la auditoría de calidad, 2026-09-21).
+    const hostedRooms = await sql`SELECT id FROM escape_rooms WHERE host_user_id = ${id}`;
+    for (const room of hostedRooms) {
+      const others = await sql`
+        SELECT user_id FROM escape_room_members WHERE room_id = ${room.id} AND user_id != ${id} ORDER BY join_order ASC
+      `;
+      if (others.length > 0) {
+        await sql`UPDATE escape_rooms SET host_user_id = ${others[0].user_id} WHERE id = ${room.id}`;
+      }
+      // Si no queda nadie más en la sala, sí se borra en cascada al eliminar esta cuenta —
+      // correcto, no hay a quién reasignar.
+    }
     await sql`DELETE FROM users WHERE id = ${id}`;
     return res.status(200).json({ ok: true });
   }
