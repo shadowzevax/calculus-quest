@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import confetti from 'canvas-confetti'
-import { PartyPopper } from 'lucide-react'
+import { PartyPopper, Target } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
@@ -77,6 +77,20 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
       <GameHeader index={index} total={total} label="GLOBO" />
       <Prompt text={current.prompt} />
 
+      {/* La mecánica de esta misión es al revés de las otras 12 (aquí NO se pincha la
+          respuesta correcta, se pincha todo lo demás) — Sebastian reportó que la instrucción
+          quedaba enterrada al final, en gris y diminuta, así que a primera vista parecía un
+          ejercicio de opción múltiple normal. Ahora va arriba, antes de los globos, con color
+          y peso suficiente para leerse antes de hacer el primer clic. */}
+      {!feedback && items.kind === 'choice' && (
+        <div className="flex items-start gap-2 mb-4 rounded-xl border-2 border-coral/30 bg-coral/5 px-4 py-3">
+          <Target className="w-5 h-5 text-coral shrink-0 mt-0.5" />
+          <p className="text-sm font-mono-lab font-semibold text-[#B91C1C]">
+            {`Pincha ${current.options.length - 1} globo${current.options.length - 1 === 1 ? '' : 's'}: el que quede sin pinchar es tu respuesta.`}
+          </p>
+        </div>
+      )}
+
       {items.kind === 'choice' ? (
         <div
           ref={areaRef}
@@ -127,12 +141,6 @@ export default function BalloonPopGame({ exercise, onComplete, onFeedback }) {
         <div className="border-2 border-coral/25 rounded-[2rem] p-4 bg-coral/5">
           <TextAnswer feedback={feedback} onCheck={checkText} />
         </div>
-      )}
-
-      {!feedback && items.kind === 'choice' && (
-        <p className="text-[11px] text-ink/70 font-mono-lab -mt-2 mb-2">
-          {`Pincha ${current.options.length - 1} globo${current.options.length - 1 === 1 ? '' : 's'}: el que quede sin pinchar es tu respuesta.`}
-        </p>
       )}
 
       <FeedbackBanner feedback={feedback} />
