@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LineChart, SlidersHorizontal } from 'lucide-react'
+import { LineChart, SlidersHorizontal, Eye, CheckCircle2 } from 'lucide-react'
 import { getExerciseItems, useStepper } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
 import { GameHeader, FeedbackBanner, NextButton, TextAnswer, Prompt } from './GameBits'
@@ -90,14 +90,25 @@ function DiscontinuityGraph({ type, accent = '#1B3A5C' }) {
   )
 }
 
-// Misión 11 — Simulador gráfico: cada opción se reconoce por su FORMA (gráfica en miniatura),
-// no por texto suelto. Al tocar una, se agranda como vista previa antes de calificarla — para
-// el ejercicio de "completar espacio" (hallar k), un deslizante mueve de verdad la pieza de la
-// función en vivo, así se puede EXPLORAR antes de escribir la respuesta.
+// Misión 11 — Simulador gráfico (rediseñado).
+// ANTES: cada opción ya mostraba su propio mini-gráfico, así que la caja grande de arriba
+// ("Toca una opción para ver su gráfica") solo repetía la MISMA gráfica más grande — no
+// revelaba nada nuevo. Y como el toque enviaba la respuesta a los 450 ms sin poder
+// reconsiderar, "elegir" era en realidad "hacer clic y ya", sin ninguna decisión real de por
+// medio. Sebastian lo notó al jugarlo: "no le veo la diversión" y "dice que toque para ver la
+// gráfica pero la gráfica ya se muestra" — ambos diagnósticos eran correctos.
+// AHORA: las opciones muestran SOLO el texto (con un ícono de ojo invitando a mirar) — la
+// gráfica de cada una se mantiene oculta hasta que se toca, y aparece en la caja grande de
+// arriba. Se puede cambiar de vista previa las veces que se quiera, y hay que pulsar
+// "Confirmar esta forma" para responder de verdad: la frase "toca para ver la gráfica" vuelve
+// a ser literalmente cierta, y ya no hay envíos accidentales. Al responder, recién ahí se
+// revelan las 4 gráficas juntas (coloreadas correcta/incorrecta) para comparar y aprender.
+// Para el ejercicio de "completar espacio" (hallar k), un deslizante mueve de verdad la pieza
+// de la función en vivo, así se puede EXPLORAR antes de escribir la respuesta.
 export default function GraphSimulatorGame({ exercise, onComplete, onFeedback }) {
   const items = getExerciseItems(exercise)
   const { index, total, current, selected, feedback, checkChoice, checkText, next } = useStepper(items, onComplete, onFeedback)
-  const [preview, setPreview] = useState(null)
+  const [peek, setPeek] = useState(null) // opción que se está previsualizando, aún sin confirmar
   const [k, setK] = useState(0)
   if (items.kind === 'empty') return <p className="text-red-500 text-sm">Este ejercicio no tiene contenido configurado.</p>
 
@@ -113,14 +124,10 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
     )
   }
 
-  const choose = (i) => {
-    if (feedback) return
-    setPreview(i)
-    setTimeout(() => checkChoice(i), 450)
-  }
+  const confirm = () => { if (peek !== null) checkChoice(peek) }
 
-  const nextItem = () => { next(); setPreview(null); setK(0) }
-  const previewIdx = feedback ? selected : preview
+  const nextItem = () => { next(); setPeek(null); setK(0) }
+  const previewIdx = feedback ? selected : peek
   const previewType = items.kind === 'choice' && previewIdx !== null ? classify(current.options[previewIdx]) : null
 
   return (
@@ -136,7 +143,7 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
                 <DiscontinuityGraph type={previewType} accent={feedback ? (feedback.isCorrect ? '#2A9D8F' : '#E76F51') : '#FF6B4A'} />
               </div>
             ) : (
-              <p className="text-xs font-mono-lab text-ink/70">Toca una opción para ver su gráfica</p>
+              <p className="text-xs font-mono-lab text-ink/40">Toca una opción para ver su gráfica</p>
             )}
           </div>
 
@@ -148,20 +155,38 @@ export default function GraphSimulatorGame({ exercise, onComplete, onFeedback })
               return (
                 <button
                   key={i}
-                  onClick={() => choose(i)}
+                  onClick={() => !feedback && setPeek(i)}
                   disabled={!!feedback}
                   className={`flex flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all ${
-                    preview === i && !feedback ? 'scale-105 border-coral' : 'border-ink/10'
+                    peek === i && !feedback ? 'scale-105 border-coral bg-coral/5' : 'border-ink/10'
                   } ${isRight ? '!border-teal bg-teal/5' : ''} ${isWrongPick ? '!border-red-400 bg-red-50' : ''}`}
                 >
                   <div className="w-full h-14">
-                    <DiscontinuityGraph type={type} accent={isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : '#1B3A5C'} />
+                    {feedback ? (
+                      // Recién al responder se revelan las 4 gráficas juntas, para comparar la
+                      // que se eligió contra la real — antes de eso, se ocultan a propósito.
+                      <DiscontinuityGraph type={type} accent={isRight ? '#2A9D8F' : isWrongPick ? '#E76F51' : '#1B3A5C'} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Eye className={`w-5 h-5 ${peek === i ? 'text-coral' : 'text-ink/20'}`} />
+                      </div>
+                    )}
                   </div>
                   <span className={`text-[11px] font-mono-lab text-center leading-tight ${isRight ? 'text-teal font-semibold' : 'text-ink/60'}`}>{opt}</span>
                 </button>
               )
             })}
           </div>
+
+          {!feedback && (
+            <button
+              onClick={confirm}
+              disabled={peek === null}
+              className="mt-3 w-full flex items-center justify-center gap-2 bg-blueprint hover:bg-coral disabled:opacity-30 disabled:hover:bg-blueprint transition-colors text-white rounded-lg px-4 py-2.5 text-sm font-medium"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Confirmar esta forma
+            </button>
+          )}
         </div>
       ) : (
         <ExploreAndAnswer current={current} feedback={feedback} k={k} setK={setK} onCheck={checkText} />
