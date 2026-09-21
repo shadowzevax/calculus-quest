@@ -57,7 +57,8 @@ const BLOCK_COLORS = ['#FF6B4A', '#457B9D', '#3FBFAD', '#F0A93C']
 // elemento siempre es "nuevo"). A nivel de módulo, React los reconoce como el mismo
 // componente entre renders y las transiciones sí se ven.
 function Block({ i, text, inBin, submitted, correctIndex, selectedId, onSelect, onMove }) {
-  const isRightHere = submitted && ((inBin === 'correct') === (i === correctIndex))
+  const isTheCorrectOne = i === correctIndex
+  const isRightHere = submitted && ((inBin === 'correct') === isTheCorrectOne)
   return (
     <div
       draggable={!submitted}
@@ -76,11 +77,21 @@ function Block({ i, text, inBin, submitted, correctIndex, selectedId, onSelect, 
         inBin
           ? `bg-white border ${submitted ? (isRightHere ? 'border-teal bg-teal/10' : 'border-red-400 bg-red-50') : 'border-ink/10'}`
           : 'text-white'
-      } ${selectedId === i ? 'ring-2 ring-offset-1 ring-coral scale-105' : ''}`}
+      } ${selectedId === i ? 'ring-2 ring-offset-1 ring-coral scale-105' : ''} ${
+        // Marca la opción REALMENTE correcta con un anillo propio, sin importar en qué canasto
+        // haya quedado — antes, si el estudiante se equivocaba de bloque, cada uno se marcaba
+        // solo según SU PROPIO acierto de ubicación, y en el peor caso los 4 podían quedar en
+        // rojo sin ninguna pista de cuál era la respuesta real (hallazgo de la auditoría de
+        // calidad, 2026-09-21 — comparado con OpenBoxGame, que sí revela la opción correcta).
+        submitted && isTheCorrectOne ? 'ring-2 ring-teal/60 ring-offset-1' : ''
+      }`}
       style={!inBin ? { backgroundColor: BLOCK_COLORS[i % BLOCK_COLORS.length] } : undefined}
     >
       {submitted && inBin && (isRightHere ? <CheckCircle2 className="w-3.5 h-3.5 text-teal shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />)}
-      {text}
+      <span className="flex-1">{text}</span>
+      {submitted && isTheCorrectOne && (
+        <span className="text-[9px] font-mono-lab font-bold uppercase tracking-wide text-teal shrink-0">Era esta</span>
+      )}
     </div>
   )
 }

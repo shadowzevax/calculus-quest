@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Dices, ThumbsUp, ThumbsDown, CheckCircle2, XCircle } from 'lucide-react'
 import { getExerciseItems } from '@/lib/exerciseItems'
 import MatchingExercise from '@/components/exercises/MatchingExercise'
-import { GameHeader, FeedbackBanner, TextAnswer, Prompt, MathText } from './GameBits'
+import { FeedbackBanner, TextAnswer, Prompt, MathText } from './GameBits'
 
 const WEDGE_COLORS = ['#F0A93C', '#457B9D', '#3FBFAD', '#FF6B4A', '#9B5DE5', '#2A9D8F', '#E76F51', '#264653']
 
@@ -147,7 +147,12 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
 
   return (
     <div>
-      <GameHeader index={total - pool.length} total={total} label="EJERCICIOS RESUELTOS" />
+      {/* GameHeader asume "vas en el ítem N de total" (siempre muestra index+1) — mal encaje
+          semántico para "cuántos ya resolviste", que es lo que esta ruleta necesita mostrar.
+          Reusarlo así producía, por ejemplo, "EJERCICIOS RESUELTOS 4/4" con un gajo todavía
+          pendiente en la rueda, justo al lado de "1 de 4 por resolver" (hallazgo de la
+          auditoría de calidad, 2026-09-21: los dos contadores parecían contradecirse). */}
+      <p className="text-xs font-mono-lab text-ink/70 mb-3">EJERCICIOS RESUELTOS {total - pool.length} / {total}</p>
 
       <div className="relative w-64 h-64 mx-auto mb-5">
         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 w-0 h-0 border-l-[11px] border-l-transparent border-r-[11px] border-r-transparent border-t-[18px] border-t-ink drop-shadow" />
