@@ -5,6 +5,7 @@ import { sql } from './_db.js';
 import { signToken, setAuthCookie, clearAuthCookie, getUserFromRequest } from './_auth.js';
 import { grantStarterColors } from './_avatar.js';
 import { isCodeValid } from './_regcode.js';
+import { countRecentByEmail, countRecentByIp, logFailedAttempt, getClientIp } from './_ratelimit.js';
 
 // Cuentas de prueba que quedan exentas del dominio institucional y del código
 // del docente, para poder seguir haciendo pruebas/demos sin depender de un correo real.
@@ -25,8 +26,21 @@ export default async function handler(req, res) {
       if (!normalizedEmail.endsWith(INSTITUTIONAL_DOMAIN)) {
         return res.status(400).json({ error: `Debes registrarte con tu correo institucional (${INSTITUTIONAL_DOMAIN})` });
       }
+      // El código de 4 dígitos rota cada 10 min (9000 combinaciones) — sin este límite, un
+      // script podía probarlas todas dentro de esa misma ventana. 20 intentos por IP cada 10
+      // min deja pasar de sobra a un estudiante que se equivoca tecleando, pero reduce un
+      // ataque de fuerza bruta a ~0.2% de probabilidad por rotación (hallazgo de la auditoría
+      // de calidad, 2026-09-21).
+      const ip = getClientIp(req);
+      const recentFails = await countRecentByIp(sql, 'register_code_failed', ip, 10);
+      if (recentFails >= 20) {
+        return res.status(429).json({ error: 'Demasiados intentos con código incorrecto. Espera unos minutos e intenta de nuevo.' });
+      }
       const valid = await isCodeValid(sql, reg_code);
-      if (!valid) return res.status(400).json({ error: 'Código de registro inválido o vencido. Pídele el código actual a tu docente.' });
+      if (!valid) {
+        await logFailedAttempt(sql, 'register_code_failed', { ipAddress: ip, userEmail: normalizedEmail });
+        return res.status(400).json({ error: 'Código de registro inválido o vencido. Pídele el código actual a tu docente.' });
+      }
     }
     const existing = await sql`SELECT id FROM users WHERE email = ${normalizedEmail}`;
     if (existing.length > 0) return res.status(409).json({ error: 'Ese correo ya está registrado' });
@@ -82,11 +96,27 @@ export default async function handler(req, res) {
     if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    // Sin límite, un script paciente podía probar contraseñas comunes contra una cuenta
+    // puntual sin bloquearse (bcrypt lo hace lento, pero no lo impide) — hallazgo de la
+    // auditoría de calidad, 2026-09-21. 10 intentos fallidos cada 10 min por cuenta deja pasar
+    // de sobra a alguien que se equivoca tecleando su propia contraseña.
+    const recentFails = await countRecentByEmail(sql, 'login_failed', normalizedEmail, 10);
+    if (recentFails >= 10) {
+      return res.status(429).json({ error: 'Demasiados intentos fallidos con esta cuenta. Espera unos minutos e intenta de nuevo.' });
+    }
+
     const [user] = await sql`SELECT * FROM users WHERE email = ${normalizedEmail}`;
-    if (!user) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!user) {
+      await logFailedAttempt(sql, 'login_failed', { userEmail: normalizedEmail, ipAddress: getClientIp(req) });
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!valid) {
+      await logFailedAttempt(sql, 'login_failed', { userEmail: normalizedEmail, ipAddress: getClientIp(req) });
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
     await sql`UPDATE users SET last_login = now() WHERE id = ${user.id}`;
     const token = signToken(user);
@@ -104,14 +134,29 @@ export default async function handler(req, res) {
     }
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedCode = code.trim().toUpperCase();
+
+    // Mismo límite que login/registro — el código dura 30 min y es corto, sin límite se podía
+    // probar fuerza bruta contra una cuenta puntual (hallazgo de la auditoría de calidad,
+    // 2026-09-21).
+    const recentFails = await countRecentByEmail(sql, 'reset_code_failed', normalizedEmail, 10);
+    if (recentFails >= 10) {
+      return res.status(429).json({ error: 'Demasiados intentos fallidos. Espera unos minutos e intenta de nuevo.' });
+    }
+
     const [user] = await sql`SELECT id FROM users WHERE email = ${normalizedEmail}`;
-    if (!user) return res.status(400).json({ error: 'Código inválido o vencido' });
+    if (!user) {
+      await logFailedAttempt(sql, 'reset_code_failed', { userEmail: normalizedEmail, ipAddress: getClientIp(req) });
+      return res.status(400).json({ error: 'Código inválido o vencido' });
+    }
 
     const [resetRow] = await sql`
       SELECT id FROM password_reset_codes
       WHERE user_id = ${user.id} AND code = ${normalizedCode} AND used_at IS NULL AND expires_at > now()
     `;
-    if (!resetRow) return res.status(400).json({ error: 'Código inválido o vencido. Pídele uno nuevo a tu docente.' });
+    if (!resetRow) {
+      await logFailedAttempt(sql, 'reset_code_failed', { userEmail: normalizedEmail, ipAddress: getClientIp(req) });
+      return res.status(400).json({ error: 'Código inválido o vencido. Pídele uno nuevo a tu docente.' });
+    }
 
     const password_hash = await bcrypt.hash(new_password, 10);
     await sql`UPDATE users SET password_hash = ${password_hash} WHERE id = ${user.id}`;

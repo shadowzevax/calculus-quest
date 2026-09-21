@@ -215,9 +215,10 @@ export default async function handler(req, res) {
       ? JSON.stringify(answers).slice(0, 2000)
       : (answer_given || '');
 
-    await sql`
+    const [{ id: attemptId }] = await sql`
       INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned, hint_used, time_taken)
       VALUES (${user.id}, ${exercise_id}, ${answerRecord}, ${isCorrect}, ${xpEarned}, ${!!hint_used}, ${elapsedSeconds || null})
+      RETURNING id
     `;
 
     if (isCorrect) {
@@ -227,6 +228,16 @@ export default async function handler(req, res) {
         WHERE user_id = ${user.id} AND exercise_id = ${exercise_id} AND is_correct = true
       `;
       const firstTime = priorCorrect.length <= 1;
+
+      // Si NO era la primera vez, esta fila no otorgó XP de verdad — se corrige el registro
+      // para que diga 0, no lo que habría correspondido de haber sido la primera vez. Antes
+      // quedaba inflado en cualquier reintento correcto de un ejercicio ya acertado: sin efecto
+      // en el ranking/Dashboard (usan users.xp directamente), pero sí habría distorsionado un
+      // futuro análisis del Objetivo 3 que sumara esta columna (hallazgo de la auditoría de
+      // calidad, 2026-09-21).
+      if (!firstTime && xpEarned) {
+        await sql`UPDATE exercise_attempts SET xp_earned = 0 WHERE id = ${attemptId}`;
+      }
 
       if (firstTime && xpEarned) {
         // Recalcula level junto con xp en el mismo UPDATE (misma fórmula que usa el

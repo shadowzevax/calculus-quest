@@ -73,8 +73,11 @@ CREATE TABLE badges (
   rarity TEXT DEFAULT 'comun'
 );
 -- Imagen real de la insignia (SVG/WebP diseñados a mano), servida desde /public/badges/.
--- Las 8 insignias actuales se reparten cada 2 misiones (2, 4, 6... hasta la 14, la última,
--- que además desbloquea el nombre arcoíris) — ver api/_badges.js.
+-- Las 8 insignias actuales se reparten cada 2 misiones (2, 4, 6, 8, 10, 12...) pero las 2
+-- últimas quedan más seguidas a propósito (13, 14 — la última además desbloquea el nombre
+-- arcoíris), para acelerar el ritmo de recompensas hacia el cierre del curso — ver
+-- api/_badges.js. (Corregido el 2026-09-21: el comentario decía "cada 2 hasta la 14", lo cual
+-- no coincidía con los datos reales; hallazgo de la auditoría de calidad.)
 ALTER TABLE badges ADD COLUMN IF NOT EXISTS image TEXT;
 
 CREATE TABLE user_progress (
