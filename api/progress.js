@@ -129,7 +129,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { exercise_id, answer_given, hint_used, answers, within_budget, elapsed_ms, wedge_miss } = req.body || {};
+    const { exercise_id, answer_given, hint_used, answers, within_budget, elapsed_ms, log_failed_attempt } = req.body || {};
     if (!exercise_id) return res.status(400).json({ error: 'exercise_id requerido' });
 
     const [exercise] = await sql`SELECT * FROM exercises WHERE id = ${exercise_id}`;
@@ -153,12 +153,16 @@ export default async function handler(req, res) {
     // cliente para decidir esto (antes cualquiera podía llamar esta API directo con
     // is_correct:true y xp_earned inventado sin haber resuelto nada).
     //
-    // `wedge_miss`: usado solo por la ruleta (Misión 10), donde un gajo fallado no completa el
-    // ejercicio (se queda para reintentar) — se evita evaluateAnswers() a propósito, porque si
-    // otras sub-preguntas de ese mismo ejercicio ya estaban correctas de un intento anterior, el
-    // umbral del 60% podría cumplirse igual y otorgar XP por un ejercicio que en realidad sigue
-    // incompleto en el cliente (el gajo con el fallo actual todavía sigue en la rueda).
-    const { isCorrect } = wedge_miss ? { isCorrect: false } : evaluateAnswers(exercise, answers);
+    // `log_failed_attempt`: usado por juegos donde un fallo se puede reintentar SIN pasar por el
+    // flujo normal de onComplete() — la ruleta de la Misión 10 (un gajo fallado se queda para
+    // reintentar) y el botón "Reintentar" de MatchingExercise.jsx (Misiones 1 y 12, descarta el
+    // intento fallido para armar las conexiones de nuevo). En ambos casos, antes del
+    // 2026-09-20/21 esos fallos no dejaban ningún rastro: para el panel docente, esas misiones
+    // parecían no tener ninguna dificultad, sin importar cuánto le costara al estudiante. Se
+    // evita evaluateAnswers() a propósito: si otras sub-preguntas de ese mismo ejercicio ya
+    // estaban correctas de un intento anterior, el umbral del 60% podría cumplirse igual y
+    // otorgar XP por un ejercicio que en realidad sigue incompleto en el cliente.
+    const { isCorrect } = log_failed_attempt ? { isCorrect: false } : evaluateAnswers(exercise, answers);
     const bonus = isCorrect && within_budget ? BONUS_XP : 0;
     const xpEarned = isCorrect ? (exercise.xp_value || 10) + bonus : 0;
 

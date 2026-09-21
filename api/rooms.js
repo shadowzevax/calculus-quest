@@ -226,6 +226,14 @@ export default async function handler(req, res) {
 
     const isCorrect = selected_index === puzzle.correct_index;
     if (!isCorrect) {
+      // Antes un acertijo fallado no dejaba ningún rastro (igual que le pasaba a la ruleta de
+      // la Misión 10 hasta el 2026-09-20): para el panel docente, esta misión mostraba 100% de
+      // acierto sin importar cuántas veces fallara el grupo. Se registra el fallo de quien
+      // tenía el turno, mismo patrón que ya usa el bloque de abajo para el acierto final.
+      await sql`
+        INSERT INTO exercise_attempts (user_id, exercise_id, answer_given, is_correct, xp_earned)
+        VALUES (${user.id}, ${exercise.id}, ${'sala:' + room.code}, false, 0)
+      `;
       return res.status(200).json({ ok: true, is_correct: false, explanation: puzzle.explanation });
     }
 

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import MathText from '@/lib/mathText'
+import { api } from '@/lib/api'
 
 function shuffle(arr) {
   const a = [...arr]
@@ -115,7 +116,15 @@ export default function MatchingExercise({ exercise, onComplete }) {
     setResult({ isCorrect: correctCount === pairs.length, answers: connections })
   }
 
+  // El intento que se está por descartar SÍ falló de verdad, y hasta el 2026-09-21 ese fallo
+  // desaparecía sin dejar rastro: "Reintentar" borraba el resultado y el servidor solo llegaba a
+  // ver la versión final (correcta, si el estudiante insistía hasta lograrlo) — mismo problema
+  // que tenía la ruleta de la Misión 10 antes de corregirse (ver WheelSpinGame.jsx). Se registra
+  // aquí, al retirar el intento fallido, y NO en submit(): si en cambio el estudiante da la
+  // conexión por buena y pulsa "Siguiente" sin reintentar, ese mismo fallo ya lo registra el
+  // flujo normal de onComplete() más abajo — así no se cuenta dos veces un solo intento.
   const retry = () => {
+    api.progress.submit({ exercise_id: exercise.id, answer_given: 'completed', log_failed_attempt: true }).catch(() => {})
     setSubmitted(false)
     setResult(null)
     setConnections({})
