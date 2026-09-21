@@ -23,7 +23,7 @@ export default function TeacherAnalytics() {
 
   if (!data) return <p className="text-ink/40 font-mono-lab text-sm">Cargando...</p>
 
-  const { students, surveyRows } = data
+  const { students, surveyRows, missionDifficulty = [] } = data
 
   // Promedio por pregunta de la encuesta (surveyRows viene como fila por usuario+pregunta).
   const surveyByQuestion = {}
@@ -108,6 +108,45 @@ export default function TeacherAnalytics() {
         </table>
       </div>
 
+      <h2 className="font-display font-semibold text-ink mb-3">Dificultad por misión</h2>
+      <p className="text-xs text-ink/40 mb-3 max-w-2xl">
+        Qué tan seguido se acierta a la primera en cada misión, sobre todos los intentos
+        registrados (incluye reintentos). Útil para ver de un vistazo dónde le está costando
+        más al curso, sin tener que revisar estudiante por estudiante.
+      </p>
+      <div className="bg-white rounded-xl border border-ink/10 overflow-x-auto mb-8">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-[11px] font-mono-lab text-ink/40 uppercase border-b border-ink/10">
+              <th className="px-4 py-3">Misión</th>
+              <th className="px-4 py-3">Intentos registrados</th>
+              <th className="px-4 py-3">% de acierto</th>
+              <th className="px-4 py-3">Tiempo promedio</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-ink/5">
+            {missionDifficulty.map((m) => {
+              const pct = m.attempts ? Math.round((m.correct / m.attempts) * 100) : null
+              return (
+                <tr key={m.id}>
+                  <td className="px-4 py-3 text-ink">{m.title}</td>
+                  <td className="px-4 py-3 font-mono-lab text-ink/70">{m.attempts}</td>
+                  <td className="px-4 py-3 font-mono-lab">
+                    <span className={pct != null && pct < 50 ? 'text-[#B91C1C] font-semibold' : 'text-ink/70'}>
+                      {pct != null ? `${pct}%` : '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono-lab text-ink/70">{m.avg_time_seconds ? fmtTime(m.avg_time_seconds) : '—'}</td>
+                </tr>
+              )
+            })}
+            {missionDifficulty.length === 0 && (
+              <tr><td colSpan={4} className="px-4 py-6 text-center text-ink/35">Aún no hay intentos registrados.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
       <h2 className="font-display font-semibold text-ink mb-3">Encuesta de usabilidad (SUS)</h2>
       <div className="bg-white rounded-xl border border-ink/10 p-5 mb-6 flex items-center gap-6 flex-wrap">
         <div>
@@ -120,7 +159,7 @@ export default function TeacherAnalytics() {
         <p className="text-xs text-ink/40 flex-1 min-w-[220px]">
           Calculado según la fórmula estándar del System Usability Scale (Brooke, 1986), sobre
           {' '}{susScores.length} estudiante{susScores.length === 1 ? '' : 's'} que respondió{susScores.length === 1 ? '' : 'ron'} las 10 preguntas.
-          El punto de referencia de la literatura para considerar un sistema "aceptable" es ~68.
+          El punto de referencia de la literatura para considerar un sistema &ldquo;aceptable&rdquo; es ~68.
         </p>
       </div>
 

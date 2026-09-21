@@ -64,7 +64,7 @@ function buildPool(exercises) {
 // que cayó, su gajo desaparece para siempre (y si esa era la última de su ejercicio, se marca
 // ese ejercicio como completado); si se falla, el gajo se queda para reintentarlo. La misión
 // termina cuando la ruleta queda completamente vacía.
-export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedback }) {
+export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedback, onWrongAttempt }) {
   const [pool, setPool] = useState(() => buildPool(exercises))
   const [total] = useState(() => pool.length)
   const [rotation, setRotation] = useState(0)
@@ -110,6 +110,11 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
     const isCorrect = optionIndex === current.correctIndex
     const exId = current.sourceExercise.id
     answersByExercise.current[exId] = [...(answersByExercise.current[exId] || []), { index: current.itemIndex, value: optionIndex }]
+    // A diferencia de los otros 12 juegos, aquí un fallo NO mueve la misión hacia adelante: el
+    // gajo se queda para reintentar. Eso significaba que ningún fallo llegaba nunca al servidor
+    // (ver onWrongAttempt más abajo) — para el panel del docente, esta misión no tenía ninguna
+    // señal de qué tan difícil era, nunca.
+    if (!isCorrect) onWrongAttempt?.(current.sourceExercise)
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }
@@ -125,6 +130,7 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
     }
     const exId = current.sourceExercise.id
     answersByExercise.current[exId] = [...(answersByExercise.current[exId] || []), { index: current.itemIndex, value }]
+    if (!isCorrect) onWrongAttempt?.(current.sourceExercise)
     setFeedback({ isCorrect, explanation: current.explanation })
     onFeedback?.(true)
   }
@@ -227,6 +233,7 @@ export default function WheelSpinGame({ exercises, onExerciseComplete, onFeedbac
               const exId = current.sourceExercise.id
               answersByExercise.current[exId] = answers
               if (isCorrect) removeSolved()
+              else onWrongAttempt?.(current.sourceExercise)
               setLandedId(null)
               setRotation(0)
             }}

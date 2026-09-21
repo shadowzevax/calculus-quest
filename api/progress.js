@@ -129,7 +129,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { exercise_id, answer_given, hint_used, answers, within_budget, elapsed_ms } = req.body || {};
+    const { exercise_id, answer_given, hint_used, answers, within_budget, elapsed_ms, wedge_miss } = req.body || {};
     if (!exercise_id) return res.status(400).json({ error: 'exercise_id requerido' });
 
     const [exercise] = await sql`SELECT * FROM exercises WHERE id = ${exercise_id}`;
@@ -152,7 +152,13 @@ export default async function handler(req, res) {
     // realmente dadas (answers) contra exercise.metadata — nunca se confía en lo que mande el
     // cliente para decidir esto (antes cualquiera podía llamar esta API directo con
     // is_correct:true y xp_earned inventado sin haber resuelto nada).
-    const { isCorrect } = evaluateAnswers(exercise, answers);
+    //
+    // `wedge_miss`: usado solo por la ruleta (Misión 10), donde un gajo fallado no completa el
+    // ejercicio (se queda para reintentar) — se evita evaluateAnswers() a propósito, porque si
+    // otras sub-preguntas de ese mismo ejercicio ya estaban correctas de un intento anterior, el
+    // umbral del 60% podría cumplirse igual y otorgar XP por un ejercicio que en realidad sigue
+    // incompleto en el cliente (el gajo con el fallo actual todavía sigue en la rueda).
+    const { isCorrect } = wedge_miss ? { isCorrect: false } : evaluateAnswers(exercise, answers);
     const bonus = isCorrect && within_budget ? BONUS_XP : 0;
     const xpEarned = isCorrect ? (exercise.xp_value || 10) + bonus : 0;
 

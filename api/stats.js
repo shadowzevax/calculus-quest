@@ -30,6 +30,27 @@ async function handleAnalytics(req, res) {
     FROM survey_responses sr, survey_questions sq
   `;
 
+  // Dificultad por misión: cuánto se intenta cada una y qué tan seguido se acierta, a partir
+  // de exercise_attempts (ya se guardaba un intento por cada ejercicio resuelto o fallado en
+  // las 13 misiones normales; la Misión 10/ruleta se sumó a esto el 2026-09-20, antes sus
+  // fallos no dejaban ningún rastro). Sirve para que el docente vea de un vistazo qué misión le
+  // cuesta más al curso — deliberadamente en términos genéricos y reutilizables (nunca se
+  // menciona aquí un pre-test/post-test ni nada específico de una investigación puntual: esta
+  // pantalla es del producto, no de un estudio).
+  const missionDifficulty = await sql`
+    SELECT
+      m.id, m."order", m.title,
+      COUNT(*)::int AS attempts,
+      COUNT(*) FILTER (WHERE ea.is_correct)::int AS correct,
+      ROUND(AVG(ea.time_taken) FILTER (WHERE ea.time_taken IS NOT NULL))::int AS avg_time_seconds
+    FROM missions m
+    JOIN exercises e ON e.mission_id = m.id AND e.parent_exercise_id IS NULL AND e.is_active = true
+    JOIN exercise_attempts ea ON ea.exercise_id = e.id
+    WHERE m.module = 'misiones' AND m.is_active = true
+    GROUP BY m.id, m."order", m.title
+    ORDER BY m."order" ASC
+  `;
+
   if (req.query.format === 'csv') {
     const header = ['Nombre', 'Correo', 'XP', 'Nivel', 'Misiones completadas', 'Tiempo total (s)', 'Ejercicios intentados', 'Ejercicios correctos'];
     const lines = [header.join(',')];
@@ -40,12 +61,21 @@ async function handleAnalytics(req, res) {
         s.exercise_attempts, s.exercise_correct,
       ].join(','));
     }
+    lines.push('');
+    lines.push(['Misión', 'Intentos registrados', 'Aciertos', '% de acierto', 'Tiempo promedio (s)'].join(','));
+    for (const m of missionDifficulty) {
+      const pct = m.attempts ? Math.round((m.correct / m.attempts) * 100) : '';
+      lines.push([
+        `"${(m.title || '').replace(/"/g, '""')}"`,
+        m.attempts, m.correct, pct, m.avg_time_seconds ?? '',
+      ].join(','));
+    }
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="funcionlab-analitica.csv"');
     return res.status(200).send('﻿' + lines.join('\n'));
   }
 
-  return res.status(200).json({ students, surveyRows });
+  return res.status(200).json({ students, surveyRows, missionDifficulty });
 }
 
 export default async function handler(req, res) {

@@ -318,6 +318,17 @@ export default function MissionDetail() {
     })
   }
 
+  // Un gajo fallado en la ruleta NO avanza la misión (se queda para reintentar), así que antes
+  // ningún fallo llegaba jamás al servidor: para el panel del docente, la Misión 10 no tenía
+  // ninguna señal de qué tan difícil era. `wedge_miss` le pide a progress.js que registre el
+  // intento como incorrecto DIRECTAMENTE, sin pasar por evaluateAnswers() — evita el riesgo de
+  // que una mezcla de aciertos/fallos parciales de sub-preguntas ya resueltas se evalúe por
+  // error como "ejercicio completo" y otorgue XP antes de tiempo. Sin await ni manejo de UI:
+  // no cambia XP, nivel ni ranking, así que no hay nada que refrescar en pantalla.
+  const handleWheelWrongAttempt = (ex) => {
+    api.progress.submit({ exercise_id: ex.id, answer_given: 'completed', wedge_miss: true }).catch(() => {})
+  }
+
   const retry = () => {
     setResults([])
     setCurrent(0)
@@ -414,7 +425,7 @@ export default function MissionDetail() {
 
       {!showDone && isWheelMission && exercises.length > 0 && (
         <div className="bg-white rounded-xl border border-ink/10 p-8">
-          <WheelSpinGame key={retryKey} exercises={exercises} onExerciseComplete={handleWheelExerciseComplete} onFeedback={handleFeedback} />
+          <WheelSpinGame key={retryKey} exercises={exercises} onExerciseComplete={handleWheelExerciseComplete} onFeedback={handleFeedback} onWrongAttempt={handleWheelWrongAttempt} />
         </div>
       )}
 
