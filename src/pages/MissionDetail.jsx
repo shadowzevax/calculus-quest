@@ -23,6 +23,7 @@ import GraphSimulatorGame from '@/components/exercises/games/GraphSimulatorGame'
 import MemoryMatchGame from '@/components/exercises/games/MemoryMatchGame'
 import TowerClimbGame from '@/components/exercises/games/TowerClimbGame'
 import { avatarPieceThumb, pieceCropStyle, isColorPiece } from '@/lib/avatarPiecePreview'
+import MissionInfoButton from '@/components/MissionInfoModal'
 
 // Cada ejercicio tiene un `type`; este mapa elige qué componente lo renderiza
 // (evita un if/else gigante). Nuevo tipo = nuevo componente + una línea aquí.
@@ -366,7 +367,13 @@ export default function MissionDetail() {
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div className="flex-1 min-w-[200px]">
           <div className="text-[11px] font-mono-lab text-coral tracking-widest mb-1">MISIÓN</div>
-          <h1 className="text-2xl font-display font-bold text-ink">{mission.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-display font-bold text-ink">{mission.title}</h1>
+            {/* Botón "?" — prototipo solo en la Misión 1 por ahora (MissionInfoModal.jsx
+                devuelve null para el resto), a pedido de Sebastian del 2026-09-23, para revisar
+                el formato antes de replicarlo a las demás misiones. */}
+            <MissionInfoButton mission={mission} />
+          </div>
           <p className="text-ink/50 mt-1">{mission.story || mission.description}</p>
         </div>
 

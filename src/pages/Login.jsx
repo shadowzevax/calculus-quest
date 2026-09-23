@@ -147,7 +147,7 @@ export default function Login() {
         {mode === 'login'
           ? 'Continúa tu recorrido por el laboratorio.'
           : mode === 'reset'
-            ? 'Escribe el código que te dio tu docente y elige una contraseña nueva.'
+            ? 'Escribe el código generado por tu docente y elige una contraseña nueva.'
             : 'Empieza a resolver misiones y ganar XP.'}
       </p>
 
@@ -197,8 +197,8 @@ export default function Login() {
         {mode === 'reset' ? (
           <>
             <input
-              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest uppercase"
-              placeholder="Código (te lo da tu docente)"
+              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest uppercase placeholder:normal-case placeholder:tracking-normal"
+              placeholder="Código generado por tu docente"
               value={resetCode}
               onChange={(e) => setResetCode(e.target.value)}
               maxLength={6}
@@ -226,7 +226,7 @@ export default function Login() {
         {mode === 'register' && (
           <input
             className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest"
-            placeholder="Código de registro (te lo da tu docente)"
+            placeholder="Código de registro (generado por tu docente)"
             value={regCode}
             onChange={(e) => setRegCode(e.target.value)}
             maxLength={4}
