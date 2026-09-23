@@ -222,29 +222,11 @@ export default function EscapeRoomGame({ mission }) {
     }
   }
 
-  // A los 15s de llegar a "done", el anfitrion dispara automaticamente el Sistema 6 para
-  // que todo el equipo pase sin depender de que alguien haga clic manualmente.
-  const autoCardsRef = useRef(false)
-  useEffect(() => {
-    autoCardsRef.current = false
-  }, [room?.id])
   // Al cambiar de sala (crear/unirse a otra) se olvida el último status conocido, para que la
   // detección de transición de refreshState no compare contra el de una partida anterior.
   useEffect(() => {
     lastStatusRef.current = null
   }, [room?.id])
-  useEffect(() => {
-    const amHost = room?.host_user_id === user?.id
-    if (room?.status !== 'done' || !amHost) return
-    const t = setTimeout(() => {
-      if (!autoCardsRef.current) {
-        autoCardsRef.current = true
-        handleStartCards()
-      }
-    }, 15000)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room?.status, room?.host_user_id, user?.id])
 
   const handleNext = () => {
     if (feedback?.nextRoom) setRoom(feedback.nextRoom)
@@ -354,8 +336,14 @@ export default function EscapeRoomGame({ mission }) {
     )
   }
 
-  // Terminado: resumen.
+  // Terminado: resumen. Antes el Sistema 6 lo arrancaba solo el anfitrión (o un temporizador
+  // de 15s), sin esperar a que el resto del equipo estuviera listo — un compañero podía
+  // quedar arrastrado a jugar sin haber alcanzado a leer esta pantalla. Ahora cada quien
+  // confirma "Estoy listo" a su propio ritmo, y solo arranca cuando el contador llega al
+  // total de miembros (2026-09-23, a pedido de Sebastian).
   if (room.status === 'done') {
+    const me = room.members.find((m) => m.user_id === user?.id)
+    const iAmReady = !!me?.ready_for_cards
     return (
       <div className="text-center py-4">
         <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 bg-gold/15">
@@ -365,27 +353,30 @@ export default function EscapeRoomGame({ mission }) {
         <p className="text-ink/50 mt-1">Todo el equipo resolvió los {room.total_puzzles} sistemas críticos.</p>
         <div className="text-left mt-6 space-y-2 max-w-sm mx-auto">
           {room.members.map((m) => (
-            <div key={m.user_id} className="flex items-center gap-2 bg-teal/5 rounded-lg px-3 py-2 text-sm">
-              <CheckCircle2 className="w-4 h-4 text-teal shrink-0" />
+            <div key={m.user_id} className="flex items-center justify-between bg-teal/5 rounded-lg px-3 py-2 text-sm">
               <span className="text-ink/70">{m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}</span>
+              {m.ready_for_cards
+                ? <span className="flex items-center gap-1 text-teal text-xs font-mono-lab"><CheckCircle2 className="w-3.5 h-3.5" /> Listo</span>
+                : <span className="text-ink/30 text-xs font-mono-lab">esperando…</span>}
             </div>
           ))}
         </div>
         {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
-        <div className="flex items-center justify-center gap-3 mt-6">
+        <div className="flex flex-col items-center gap-2 mt-6">
           <button
-            onClick={isHost ? handleStartCards : undefined}
-            disabled={busy || !isHost}
-            title={isHost ? undefined : 'Solo el anfitrión puede iniciarlo — empezará automáticamente en unos segundos'}
+            onClick={handleStartCards}
+            disabled={busy || iAmReady}
             className="bg-gold hover:bg-gold/80 transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2 disabled:opacity-40"
           >
-            <Zap className="w-4 h-4" /> Jugar Sistema 6 (desempate)
+            {iAmReady ? <CheckCircle2 className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+            {iAmReady ? 'Esperando al resto del equipo…' : 'Estoy listo para el Sistema 6'}
           </button>
+          <p className="text-xs font-mono-lab text-ink/40">{room.ready_count} / {room.members.length} listos</p>
         </div>
         <p className="text-xs text-ink/35 mt-3">
           El Sistema 6 es opcional: un desafío de memoria individual (todo el equipo juega a la vez) que
-          no da XP, solo sirve para desempatar el ranking si varios llegan al mismo puntaje. Empieza solo
-          a los 15 segundos.
+          no da XP, solo sirve para desempatar el ranking si varios llegan al mismo puntaje. Empieza en
+          cuanto todo el equipo confirme que está listo.
         </p>
       </div>
     )
@@ -394,6 +385,25 @@ export default function EscapeRoomGame({ mission }) {
   // Sistema 6: memoria de cartas — todo el equipo juega su propio tablero a la vez.
   if (room.status === 'cards') {
     const totalPairs = (room.cards?.length || 0) / 2
+    // Antes, mientras jugabas tu propio tablero, no había forma de saber cómo iba el resto del
+    // equipo — el marcador de compañeros solo aparecía DESPUÉS de terminar el tuyo. Ahora se ve
+    // siempre, para que se sepa quién va ganando durante la partida (2026-09-23, a pedido de
+    // Sebastian). No hay progreso pareja-por-pareja en vivo (eso exigiría sincronizar cada
+    // volteo, no solo el resultado final) — "jugando…" / el tiempo final es la señal real que
+    // ya guarda el servidor.
+    const teamProgress = (
+      <div className="space-y-1.5 max-w-md mx-auto mb-4">
+        <p className="text-[11px] font-mono-lab text-ink/40 uppercase tracking-wide">Tu equipo</p>
+        {room.members.map((m) => (
+          <div key={m.user_id} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-ink/[0.03]">
+            <span className="text-ink/70">{m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}</span>
+            {m.cards_time_ms !== null
+              ? <span className="flex items-center gap-1 text-teal text-xs font-mono-lab"><CheckCircle2 className="w-3.5 h-3.5" /> {(m.cards_time_ms / 1000).toFixed(1)}s</span>
+              : <span className="text-ink/30 text-xs font-mono-lab">jugando…</span>}
+          </div>
+        ))}
+      </div>
+    )
     return (
       <div>
         <p className="text-xs font-mono-lab text-ink/35 mb-3">
@@ -406,6 +416,7 @@ export default function EscapeRoomGame({ mission }) {
               Encuentra las {totalPairs} parejas lo más rápido posible. Tu equipo juega su propio
               tablero al mismo tiempo que vos.
             </p>
+            {teamProgress}
             {cardBoard.length === 0 ? (
               <p className="text-ink/40 text-sm">Preparando tablero…</p>
             ) : (
@@ -438,16 +449,7 @@ export default function EscapeRoomGame({ mission }) {
             <p className="text-sm text-teal font-medium mb-3 flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" /> ¡Listo! Esperando a que tu equipo termine…
             </p>
-            <div className="space-y-1.5 max-w-sm">
-              {room.members.map((m) => (
-                <div key={m.user_id} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-ink/[0.03]">
-                  <span className="text-ink/70">{m.full_name}{m.user_id === user?.id ? ' (tú)' : ''}</span>
-                  {m.cards_time_ms !== null
-                    ? <CheckCircle2 className="w-4 h-4 text-teal" />
-                    : <span className="text-ink/30 text-xs font-mono-lab">jugando…</span>}
-                </div>
-              ))}
-            </div>
+            {teamProgress}
           </div>
         )}
         {error && <p className="text-sm text-red-500 mt-3">{error}</p>}

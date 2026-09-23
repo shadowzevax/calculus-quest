@@ -54,7 +54,7 @@ async function getRoomState(roomId, callerId) {
   if (!room) return null;
 
   const members = await sql`
-    SELECT erm.user_id, erm.join_order, erm.cards_time_ms, u.full_name
+    SELECT erm.user_id, erm.join_order, erm.cards_time_ms, erm.ready_for_cards, u.full_name
     FROM escape_room_members erm
     JOIN users u ON u.id = erm.user_id
     WHERE erm.room_id = ${roomId}
@@ -82,8 +82,12 @@ async function getRoomState(roomId, callerId) {
     total_puzzles: totalPuzzles,
     max_members: room.max_members,
     members: members.map((m) => ({
-      user_id: m.user_id, full_name: m.full_name, join_order: m.join_order, cards_time_ms: m.cards_time_ms,
+      user_id: m.user_id, full_name: m.full_name, join_order: m.join_order,
+      cards_time_ms: m.cards_time_ms, ready_for_cards: m.ready_for_cards,
     })),
+    // Cuántos ya confirmaron "estoy listo" para el Sistema 6 — el frontend lo usa para el
+    // contador "X/N listos" mientras la sala está en 'done', esperando a todo el equipo.
+    ready_count: members.filter((m) => m.ready_for_cards).length,
     turn_user_id: turnUserId,
     my_turn: turnUserId === callerId,
     puzzle,
@@ -279,9 +283,19 @@ export default async function handler(req, res) {
   }
 
   if (action === 'start_cards') {
-    if (room.host_user_id !== user.id) return res.status(403).json({ error: 'Solo quien creó la sala puede iniciar el Sistema 6' });
+    // Antes solo el anfitrión podía iniciar el Sistema 6 (o lo disparaba un temporizador
+    // automático de 15s en el frontend), sin esperar a que el resto del equipo estuviera
+    // listo — un compañero podía quedar arrastrado a jugar sin haber alcanzado a leer la
+    // pantalla de resultados. Ahora CUALQUIER miembro marca su propia disposición, y la sala
+    // solo pasa a 'cards' cuando TODOS ya confirmaron (2026-09-23, a pedido de Sebastian).
     if (room.status !== 'done') return res.status(400).json({ error: 'Primero deben terminar los 5 sistemas' });
-    await sql`UPDATE escape_rooms SET status = 'cards' WHERE id = ${room_id}`;
+    await sql`UPDATE escape_room_members SET ready_for_cards = true WHERE room_id = ${room_id} AND user_id = ${user.id}`;
+
+    const members = await sql`SELECT ready_for_cards FROM escape_room_members WHERE room_id = ${room_id}`;
+    const allReady = members.length > 0 && members.every((m) => m.ready_for_cards);
+    if (allReady) {
+      await sql`UPDATE escape_rooms SET status = 'cards' WHERE id = ${room_id}`;
+    }
     return res.status(200).json(await getRoomState(room_id, user.id));
   }
 

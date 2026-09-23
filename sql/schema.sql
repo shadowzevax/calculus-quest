@@ -201,6 +201,11 @@ CREATE TABLE escape_room_members (
 -- Tiempo (ms) de este miembro en el "Sistema 6" (memoria de cartas), la fase extra
 -- individual-pero-sincronizada que juega el equipo despues de terminar los 5 acertijos.
 ALTER TABLE escape_room_members ADD COLUMN IF NOT EXISTS cards_time_ms INTEGER;
+-- Antes, cualquiera (el anfitrion, o un temporizador automatico de 15s) podia arrancar el
+-- Sistema 6 sin que el resto del equipo estuviera listo. Ahora cada miembro confirma con un
+-- boton "Estoy listo" (marca esta columna); la sala solo pasa a 'cards' cuando TODOS estan en
+-- true (ver api/rooms.js, accion start_cards). 2026-09-23, a pedido de Sebastian.
+ALTER TABLE escape_room_members ADD COLUMN IF NOT EXISTS ready_for_cards BOOLEAN NOT NULL DEFAULT false;
 
 -- Mejor tiempo (ms) que ha logrado el usuario en el Sistema 6, en cualquier sala.
 -- Solo se usa para desempatar el ranking (mismo XP -> gana quien tenga mejor tiempo aqui);
