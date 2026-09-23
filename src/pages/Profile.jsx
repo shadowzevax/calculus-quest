@@ -298,6 +298,12 @@ export default function Profile() {
 
       <div className="bg-white rounded-xl border border-ink/10 p-6 mt-6 max-w-lg">
         <h2 className="text-lg font-display font-semibold text-ink mb-4">Cambiar contraseña</h2>
+        {/* Muestra el correo de la sesión actual — a pedido de Sebastian (2026-09-23), para que
+            un estudiante que olvide con qué correo se registró pueda recordarlo mirando aquí. */}
+        <div className="mb-4 pb-4 border-b border-ink/10">
+          <p className="text-sm text-ink/50">Correo de tu cuenta</p>
+          <p className="text-sm font-medium text-ink">{user?.email}</p>
+        </div>
         <form onSubmit={changePassword} className="space-y-3">
           <div>
             <label className="text-sm text-ink/50">Contraseña actual</label>
