@@ -98,8 +98,9 @@ export const api = {
         invalidate('/users');
         return r;
       }),
-    generateResetCode: (id) =>
-      request('/users?action=reset_code', { method: 'POST', body: JSON.stringify({ id }) }),
+    generateResetCode: (id, noExpiry = false) =>
+      request('/users?action=reset_code', { method: 'POST', body: JSON.stringify({ id, no_expiry: noExpiry }) }),
+    resetCodeStatus: (codeId) => request(`/users?action=reset_code_status&code_id=${codeId}`),
     remove: (id) =>
       request('/users', { method: 'DELETE', body: JSON.stringify({ id }) }).then((r) => {
         invalidate('/users');

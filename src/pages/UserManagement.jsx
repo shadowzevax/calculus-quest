@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Users, KeyRound, RefreshCw, Search, Copy, X, Trash2, ChevronDown, ChevronRight, UserCircle2 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/lib/AuthContext'
 
 const ROLE_LABEL = { superadmin: 'Administrador', admin: 'Docente', user: 'Estudiante' }
@@ -78,21 +79,38 @@ function RegistrationCodeCard() {
   )
 }
 
-// Banner con el código de acceso recién generado para un estudiante puntual — se muestra
-// arriba de la lista hasta que el docente lo cierra o vence (30 min, igual que en el backend).
+// Recuadro con el código de acceso recién generado para un estudiante. Pueden haber varios a
+// la vez (uno por estudiante). Cada uno consulta cada 5 s si el código ya se usó y, en cuanto
+// el estudiante cambia su contraseña, muestra "usado" un momento y se cierra solo.
 function ResetCodeBanner({ result, onClose }) {
   const [now, setNow] = useState(Date.now())
+  const [used, setUsed] = useState(false)
+  // onClose cambia en cada render del padre; se guarda en una ref para no reiniciar el sondeo.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(tick)
   }, [])
-  const secondsLeft = Math.max(0, Math.floor((new Date(result.expires_at).getTime() - now) / 1000))
+  useEffect(() => {
+    if (used) {
+      const t = setTimeout(() => onCloseRef.current(), 4000)
+      return () => clearTimeout(t)
+    }
+    const poll = setInterval(() => {
+      api.users.resetCodeStatus(result.id).then((st) => { if (st.used) setUsed(true) }).catch(() => {})
+    }, 5000)
+    return () => clearInterval(poll)
+  }, [used, result.id])
+  const noExpiry = !result.expires_at
+  const secondsLeft = noExpiry ? Infinity : Math.max(0, Math.floor((new Date(result.expires_at).getTime() - now) / 1000))
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
   const ss = String(secondsLeft % 60).padStart(2, '0')
   const copy = () => navigator.clipboard?.writeText(result.code).catch(() => {})
+  const hint = 'dáselo al estudiante para que entre a "¿Olvidaste tu contraseña?" en el login'
 
   return (
-    <div className="bg-teal/5 border border-teal/30 rounded-xl p-4 mb-4 flex items-center gap-4">
+    <div className={`border rounded-xl p-4 mb-4 flex items-center gap-4 ${used ? 'bg-ink/5 border-ink/15' : 'bg-teal/5 border-teal/30'}`}>
       <div className="w-10 h-10 rounded-lg bg-teal/10 border border-teal/30 flex items-center justify-center shrink-0">
         <KeyRound className="w-4.5 h-4.5 text-teal" />
       </div>
@@ -100,9 +118,13 @@ function ResetCodeBanner({ result, onClose }) {
         <div className="text-[11px] font-mono-lab text-ink/40 uppercase tracking-wide">
           Código para {result.full_name} ({result.email})
         </div>
-        <div className="text-2xl font-display font-bold text-ink tracking-[0.2em] tabular-nums">{result.code}</div>
+        <div className={`text-2xl font-display font-bold tracking-[0.2em] tabular-nums ${used ? 'text-ink/30 line-through' : 'text-ink'}`}>{result.code}</div>
         <div className="text-[11px] text-ink/40 tabular-nums">
-          {secondsLeft > 0 ? `Vence en ${mm}:${ss} — dáselo al estudiante para que entre a "¿Olvidaste tu contraseña?" en el login` : 'Este código ya venció, genera uno nuevo'}
+          {used
+            ? 'El estudiante ya usó este código y cambió su contraseña. Este recuadro se cerrará solo.'
+            : noExpiry
+              ? `Sin vencimiento (sirve una sola vez) — ${hint}`
+              : secondsLeft > 0 ? `Vence en ${mm}:${ss} — ${hint}` : 'Este código ya venció, genera uno nuevo'}
         </div>
       </div>
       <button onClick={copy} title="Copiar código" className="w-8 h-8 rounded-lg border border-ink/15 text-ink/50 hover:bg-ink/5 hover:text-ink flex items-center justify-center shrink-0">
@@ -170,7 +192,8 @@ export default function UserManagement() {
   const isSuperAdmin = viewer?.role === 'superadmin'
   const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
-  const [resetResult, setResetResult] = useState(null)
+  const [resetResults, setResetResults] = useState([]) // un recuadro por estudiante
+  const [noExpiry, setNoExpiry] = useState(false)
   const [generatingFor, setGeneratingFor] = useState(null)
   const [deletingFor, setDeletingFor] = useState(null)
   const [showTeachers, setShowTeachers] = useState(false)
@@ -191,8 +214,9 @@ export default function UserManagement() {
   const generateCode = async (u) => {
     setGeneratingFor(u.id)
     try {
-      const result = await api.users.generateResetCode(u.id)
-      setResetResult(result)
+      const result = await api.users.generateResetCode(u.id, noExpiry)
+      // Un código nuevo para el mismo estudiante reemplaza al anterior (el anterior queda inválido).
+      setResetResults((list) => [result, ...list.filter((r) => r.email !== result.email)])
     } catch (err) {
       alert(err.message)
     } finally {
@@ -250,7 +274,17 @@ export default function UserManagement() {
         <RegistrationCodeCard />
       </div>
 
-      {resetResult && <ResetCodeBanner result={resetResult} onClose={() => setResetResult(null)} />}
+      <div className="flex items-center gap-3 mb-4 bg-white border border-ink/10 rounded-xl px-4 py-3">
+        <Switch checked={noExpiry} onCheckedChange={setNoExpiry} id="no-expiry" />
+        <label htmlFor="no-expiry" className="text-sm text-ink/70 cursor-pointer">
+          Códigos de acceso sin vencimiento
+          <span className="block text-xs text-ink/40">Apagado: el código dura 30 minutos. Encendido: no vence, pero igual sirve una sola vez.</span>
+        </label>
+      </div>
+
+      {resetResults.map((r) => (
+        <ResetCodeBanner key={r.id} result={r} onClose={() => setResetResults((list) => list.filter((x) => x.id !== r.id))} />
+      ))}
 
       {me && (
         <div className="bg-blueprint/5 border border-blueprint/15 rounded-xl px-5 py-3.5 mb-4 flex items-center gap-3">

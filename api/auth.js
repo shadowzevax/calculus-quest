@@ -129,15 +129,22 @@ export default async function handler(req, res) {
   // sesión iniciada (justamente porque la perdió), solo el correo + el código vigente.
   if (action === 'redeem_reset_code' && req.method === 'POST') {
     const { email, code, new_password } = req.body || {};
-    if (!email || !code || !new_password || new_password.length < 6) {
-      return res.status(400).json({ error: 'Correo, código y contraseña nueva (mín. 6 caracteres) son requeridos' });
+    // Cada error dice exactamente qué falló (antes todo era "Código inválido o vencido": un
+    // estudiante con el código correcto no sabía que el problema era haber escrito su @gmail.com
+    // en vez del correo institucional — reportado el 2026-10-17).
+    if (!email || !email.trim()) return res.status(400).json({ error: 'Escribe el correo de tu cuenta.' });
+    if (!code || !code.trim()) return res.status(400).json({ error: 'Escribe el código que te dio tu docente.' });
+    if (!new_password || new_password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña nueva debe tener al menos 6 caracteres.' });
     }
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedCode = code.trim().toUpperCase();
+    if (!TEST_EMAILS.has(normalizedEmail) && !normalizedEmail.endsWith(INSTITUTIONAL_DOMAIN)) {
+      return res.status(400).json({ error: `Usa tu correo institucional (${INSTITUTIONAL_DOMAIN}), el mismo con el que te registraste.` });
+    }
 
-    // Mismo límite que login/registro — el código dura 30 min y es corto, sin límite se podía
-    // probar fuerza bruta contra una cuenta puntual (hallazgo de la auditoría de calidad,
-    // 2026-09-21).
+    // Mismo límite que login/registro: el código es corto, y sin límite se podía probar fuerza
+    // bruta contra una cuenta puntual (hallazgo de la auditoría de calidad, 2026-09-21).
     const recentFails = await countRecentByEmail(sql, 'reset_code_failed', normalizedEmail, 10);
     if (recentFails >= 10) {
       return res.status(429).json({ error: 'Demasiados intentos fallidos. Espera unos minutos e intenta de nuevo.' });
@@ -146,21 +153,30 @@ export default async function handler(req, res) {
     const [user] = await sql`SELECT id FROM users WHERE email = ${normalizedEmail}`;
     if (!user) {
       await logFailedAttempt(sql, 'reset_code_failed', { userEmail: normalizedEmail, ipAddress: getClientIp(req) });
-      return res.status(400).json({ error: 'Código inválido o vencido' });
+      return res.status(400).json({ error: 'No existe ninguna cuenta con ese correo. Revisa que esté bien escrito.' });
     }
 
     const [resetRow] = await sql`
-      SELECT id FROM password_reset_codes
-      WHERE user_id = ${user.id} AND code = ${normalizedCode} AND used_at IS NULL AND expires_at > now()
+      SELECT id, used_at, expires_at <= now() AS expired FROM password_reset_codes
+      WHERE user_id = ${user.id} AND code = ${normalizedCode}
+      ORDER BY created_at DESC LIMIT 1
     `;
-    if (!resetRow) {
+    if (!resetRow || resetRow.used_at || resetRow.expired) {
       await logFailedAttempt(sql, 'reset_code_failed', { userEmail: normalizedEmail, ipAddress: getClientIp(req) });
-      return res.status(400).json({ error: 'Código inválido o vencido. Pídele uno nuevo a tu docente.' });
+      const msg = !resetRow
+        ? 'Ese código no corresponde a esta cuenta. Revisa que lo escribiste bien o pídele uno nuevo a tu docente.'
+        : resetRow.used_at
+          ? 'Ese código ya se usó o fue reemplazado por uno más nuevo. Cada código sirve una sola vez: pídele uno nuevo a tu docente.'
+          : 'Ese código ya venció. Pídele uno nuevo a tu docente.';
+      return res.status(400).json({ error: msg });
     }
 
+    // Se marca como usado ANTES de cambiar la contraseña y solo si nadie lo usó entre medio,
+    // para que el mismo código no sirva dos veces aunque se envíe dos veces al mismo tiempo.
+    const [claimed] = await sql`UPDATE password_reset_codes SET used_at = now() WHERE id = ${resetRow.id} AND used_at IS NULL RETURNING id`;
+    if (!claimed) return res.status(400).json({ error: 'Ese código ya se usó. Cada código sirve una sola vez: pídele uno nuevo a tu docente.' });
     const password_hash = await bcrypt.hash(new_password, 10);
     await sql`UPDATE users SET password_hash = ${password_hash} WHERE id = ${user.id}`;
-    await sql`UPDATE password_reset_codes SET used_at = now() WHERE id = ${resetRow.id}`;
     return res.status(200).json({ ok: true });
   }
 

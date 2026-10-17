@@ -9,11 +9,15 @@ const WEDGE_COLORS = ['#F0A93C', '#457B9D', '#3FBFAD', '#FF6B4A', '#9B5DE5', '#2
 const DIACRITICS = /[̀-ͯ]/g
 // Quita acentos y normaliza el signo menos de KaTeX (U+2212) al guion ASCII — mismo
 // tratamiento que src/lib/exerciseItems.js y api/progress.js (ver D8 de la auditoría).
+// Mismo mapa de símbolos del teclado (∞, ², ×…) que exerciseItems.js y api/progress.js.
+const SYMBOL_TO_TEXT = { '×': '*', '÷': '/', '≤': '<=', '≥': '>=', '≠': '!=', '∞': 'inf', 'π': 'pi', '²': '^2', '³': '^3' }
+const SYMBOL_RE = new RegExp(Object.keys(SYMBOL_TO_TEXT).join('|'), 'g')
 function normalizeText(str) {
   return String(str)
     .normalize('NFD')
     .replace(DIACRITICS, '')
     .replace(/−/g, '-')
+    .replace(SYMBOL_RE, (m) => SYMBOL_TO_TEXT[m])
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '')

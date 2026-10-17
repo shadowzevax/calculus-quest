@@ -17,6 +17,14 @@ export default async function handler(req, res) {
   const admin = await requireAdmin(req, res);
   if (!admin) return;
 
+  // Estado de un código generado: el panel lo consulta cada pocos segundos mientras el recuadro
+  // está abierto y lo cierra solo cuando el estudiante ya lo usó.
+  if (req.method === 'GET' && req.query.action === 'reset_code_status') {
+    const [row] = await sql`SELECT used_at, expires_at <= now() AS expired FROM password_reset_codes WHERE id = ${req.query.code_id || null}`;
+    if (!row) return res.status(404).json({ error: 'Código no encontrado' });
+    return res.status(200).json({ used: !!row.used_at, expired: !!row.expired });
+  }
+
   if (req.method === 'GET') {
     const rows = await sql`
       SELECT id, email, full_name, role, xp, level, avatar, created_at
@@ -80,7 +88,7 @@ export default async function handler(req, res) {
   // chat, etc.) y el estudiante lo canjea el mismo en la pantalla de login por una contraseña
   // nueva — así el docente nunca llega a conocer la contraseña del estudiante.
   if (req.method === 'POST' && req.query.action === 'reset_code') {
-    const { id } = req.body || {};
+    const { id, no_expiry } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id requerido' });
     const [user] = await sql`SELECT id, email, full_name, role FROM users WHERE id = ${id}`;
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -100,10 +108,15 @@ export default async function handler(req, res) {
     const code = generateCode();
     const [row] = await sql`
       INSERT INTO password_reset_codes (user_id, code, expires_at)
-      VALUES (${id}, ${code}, now() + ${CODE_TTL_MINUTES} * interval '1 minute')
-      RETURNING code, expires_at
+      VALUES (${id}, ${code}, CASE WHEN ${!!no_expiry} THEN 'infinity'::timestamptz ELSE now() + ${CODE_TTL_MINUTES} * interval '1 minute' END)
+      RETURNING id, code, expires_at
     `;
-    return res.status(200).json({ code: row.code, expires_at: row.expires_at, email: user.email, full_name: user.full_name });
+    // "Sin vencimiento" (opción del docente): el código igual es de un solo uso y se invalida
+    // al generar otro para el mismo estudiante. expires_at = 'infinity' (válido en Postgres).
+    return res.status(200).json({
+      id: row.id, code: row.code, expires_at: no_expiry ? null : row.expires_at,
+      email: user.email, full_name: user.full_name,
+    });
   }
 
   res.status(405).json({ error: 'Method not allowed' });

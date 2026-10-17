@@ -5,6 +5,7 @@ import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
 import { checkAndAwardBadges } from './_badges.js';
 import { checkAndUnlockAvatarPieces } from './_avatar.js';
+import { isMissionUnlocked } from './_unlock.js';
 
 // "Sistema 6": fase extra de memoria/cartas que juega TODO el equipo a la vez, tras
 // terminar los 5 acertijos — no da XP ni insignia, solo sirve para desempatar el
@@ -138,6 +139,7 @@ export default async function handler(req, res) {
 
     const [mission] = await sql`SELECT * FROM missions WHERE id = ${mission_id}`;
     if (!mission || !mission.is_collaborative) return res.status(400).json({ error: 'Esta mision no es colaborativa' });
+    if (!(await isMissionUnlocked(user, mission_id))) return res.status(403).json({ error: 'Esta misión todavía está bloqueada: completa primero la misión anterior.', locked: true });
 
     const { questions } = await getPuzzles(mission_id);
     if (questions.length === 0) return res.status(400).json({ error: 'Esta mision no tiene acertijos configurados' });
@@ -171,6 +173,7 @@ export default async function handler(req, res) {
     // exige que la sala siga en lobby (no tendría sentido sumarse a mitad de juego).
     const already = await sql`SELECT 1 FROM escape_room_members WHERE room_id = ${room.id} AND user_id = ${user.id}`;
     if (already.length === 0) {
+      if (!(await isMissionUnlocked(user, room.mission_id))) return res.status(403).json({ error: 'Esta misión todavía está bloqueada: completa primero la misión anterior.', locked: true });
       if (room.status !== 'lobby') return res.status(400).json({ error: 'Esa sala ya inició o terminó' });
       const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM escape_room_members WHERE room_id = ${room.id}`;
       if (count >= room.max_members) return res.status(400).json({ error: 'La sala está llena' });

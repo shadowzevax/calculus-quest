@@ -3,6 +3,7 @@
 import { sql } from './_db.js';
 import { requireAuth } from './_auth.js';
 import { checkAndAwardBadges } from './_badges.js';
+import { isMissionUnlocked } from './_unlock.js';
 import { checkAndUnlockAvatarPieces, incrementSpeedBonusCount } from './_avatar.js';
 
 // Debe coincidir con BONUS_XP en src/pages/MissionDetail.jsx.
@@ -34,11 +35,18 @@ const DIACRITICS = /[̀-ͯ]/g;
 // Quita acentos y normaliza el signo menos de KaTeX (U+2212) al guion ASCII — debe quedar
 // funcionalmente idéntica a normalizeText de src/lib/exerciseItems.js y WheelSpinGame.jsx,
 // ya que el servidor valida las respuestas de forma independiente del cliente (ver D8).
+// Mismo mapa que src/lib/exerciseItems.js: los símbolos del teclado de la plataforma (∞, ², ×…)
+// se convierten a su forma de texto. Sin esto, el juego le decía al estudiante "correcto" al
+// escribir "[3,∞)" con el botón ∞, pero aquí se evaluaba como incorrecto y la misión se quedaba
+// congelada (p. ej. al 50 %) — encontrado con datos reales el 2026-10-17.
+const SYMBOL_TO_TEXT = { '×': '*', '÷': '/', '≤': '<=', '≥': '>=', '≠': '!=', '∞': 'inf', 'π': 'pi', '²': '^2', '³': '^3' };
+const SYMBOL_RE = new RegExp(Object.keys(SYMBOL_TO_TEXT).join('|'), 'g');
 function normalizeText(str) {
   return String(str)
     .normalize('NFD')
     .replace(DIACRITICS, '')
     .replace(/−/g, '-')
+    .replace(SYMBOL_RE, (m) => SYMBOL_TO_TEXT[m])
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '');
@@ -160,6 +168,9 @@ export default async function handler(req, res) {
       WHERE e.id = ${exercise_id}
     `;
     if (!exercise) return res.status(404).json({ error: 'Ejercicio no existe' });
+    if (!(await isMissionUnlocked(user, exercise.mission_id))) {
+      return res.status(403).json({ error: 'Esta misión todavía está bloqueada: completa primero la misión anterior.', locked: true });
+    }
 
     // Tiempo dedicado a este intento (en segundos), acumulado en user_progress.time_spent sin
     // importar si acertó o no — antes esta columna se leía en Analytics pero nunca se escribía
@@ -221,6 +232,10 @@ export default async function handler(req, res) {
       RETURNING id
     `;
 
+    // Lo que el servidor decidió de verdad: la interfaz lo usa para mostrar el resultado y el
+    // avance reales (antes asumía su propia corrección, que podía no coincidir con esta).
+    let xpAwarded = 0;
+    let missionStatus = null;
     if (isCorrect) {
       // El XP solo se otorga la primera vez que se acierta este ejercicio.
       const priorCorrect = await sql`
@@ -240,6 +255,7 @@ export default async function handler(req, res) {
       }
 
       if (firstTime && xpEarned) {
+        xpAwarded = xpEarned;
         // Recalcula level junto con xp en el mismo UPDATE (misma fórmula que usa el
         // frontend en Dashboard.jsx: XP_PER_LEVEL = 500) para que no se quede en 1 para siempre.
         await sql`
@@ -265,6 +281,7 @@ export default async function handler(req, res) {
       const completed = Math.min(completedDistinct[0].count, total);
       const pct = Math.min(100, Math.round((completed / total) * 10000) / 100);
       const status = pct >= 100 ? 'completed' : 'in_progress';
+      missionStatus = status;
       const completedDate = status === 'completed' ? new Date() : null;
 
       await sql`
@@ -282,7 +299,10 @@ export default async function handler(req, res) {
     const newBadges = isCorrect ? await checkAndAwardBadges(user.id) : [];
     const newAvatarPieces = isCorrect ? await checkAndUnlockAvatarPieces(user.id) : [];
 
-    return res.status(200).json({ ok: true, new_badges: newBadges, new_avatar_pieces: newAvatarPieces });
+    return res.status(200).json({
+      ok: true, is_correct: isCorrect, xp_awarded: xpAwarded, mission_status: missionStatus,
+      new_badges: newBadges, new_avatar_pieces: newAvatarPieces,
+    });
   }
 
   res.status(405).json({ error: 'Method not allowed' });

@@ -129,6 +129,9 @@ export default function MissionDetail() {
   // Ahora se avisa de forma visible pero sin bloquear: el estudiante puede seguir jugando, y
   // el aviso desaparece solo cuando el siguiente guardado sí funciona.
   const [saveError, setSaveError] = useState(false)
+  // La misión está bloqueada para este estudiante (el servidor lo verifica: abrirla por URL o
+  // desde la consola ya no sirve para saltarse el orden de las misiones).
+  const [lockedMsg, setLockedMsg] = useState('')
   const [results, setResults] = useState([]) // [{exercise, isCorrect, bonus}] de este intento
   const [retryKey, setRetryKey] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(0)
@@ -146,7 +149,11 @@ export default function MissionDetail() {
     setShowDone(false)
     setResults([])
     setLoading(true)
-    Promise.all([api.missions.list('misiones'), api.exercises.byMission(id)])
+    setLockedMsg('')
+    Promise.all([api.missions.list('misiones'), api.exercises.byMission(id).catch((e) => {
+      if (e.status === 403) { setLockedMsg(e.message); return [] }
+      throw e
+    })])
       .then(([missions, ex]) => {
         setMission(missions.find((m) => m.id === id))
         setAllMissions(missions)
@@ -225,12 +232,26 @@ export default function MissionDetail() {
 
   if (loading) return <p className="text-ink/40 font-mono-lab text-sm">Cargando misión...</p>
   if (!mission) return <p className="text-red-500 text-sm">Misión no encontrada.</p>
+  if (lockedMsg) {
+    return (
+      <div className="bg-white rounded-xl border border-ink/10 p-8 text-center max-w-lg mx-auto">
+        <h2 className="text-lg font-display font-bold text-ink">{mission.title}</h2>
+        <p className="text-ink/60 mt-2 text-sm">{lockedMsg}</p>
+        <button
+          onClick={() => navigate('/missions')}
+          className="mt-5 bg-blueprint hover:bg-coral transition-colors text-white rounded-lg px-5 py-2.5 text-sm font-medium"
+        >
+          Volver a Misiones
+        </button>
+      </div>
+    )
+  }
 
   const isWheelMission = mission.game_type === 'wheel_spin'
   const exercise = exercises[current]
   const Component = exercise ? (GAME_COMPONENTS[mission.game_type] || EXERCISE_COMPONENTS[exercise.type]) : null
   const allCorrect = results.length > 0 && results.every((r) => r.isCorrect)
-  const earnedXp = results.filter((r) => r.isCorrect).reduce((sum, r) => sum + (r.exercise.xp_value || 0) + (r.bonus || 0), 0)
+  const earnedXp = results.reduce((sum, r) => sum + (r.xp || 0), 0)
   const nextMission = allMissions.find((m) => m.order === mission.order + 1)
 
   const handleFeedback = (isPaused) => {
@@ -243,62 +264,43 @@ export default function MissionDetail() {
     setTimerPaused(isPaused)
   }
 
-  const handleComplete = async ({ isCorrect, answers }) => {
-    const elapsedMs = Date.now() - exerciseStartRef.current - pausedMsRef.current
-    const withinBudget = elapsedMs <= speedBonusBudget(exercise, mission) * 1000
-    const bonus = isCorrect && withinBudget ? BONUS_XP : 0
-    if (isCorrect) {
-      try {
-        // answers va con las respuestas reales dadas — el servidor recalcula is_correct/xp por
-        // su cuenta a partir de eso (ver api/progress.js), en vez de confiar en is_correct/
-        // xp_earned que manda este mismo request (que ya no se usan para decidir nada, solo
-        // quedan para no romper el resto de esta función que asume que "isCorrect" ya se sabe
-        // localmente, que es lo que decide si avanzar de ejercicio en la UI).
-        await api.progress.submit({
-          exercise_id: exercise.id,
-          answer_given: 'completed',
-          is_correct: true,
-          xp_earned: (exercise.xp_value || 10) + bonus,
-          answers: answers || [],
-          within_budget: withinBudget,
-          elapsed_ms: elapsedMs,
-        })
-        setSaveError(false)
-        // El XP/nivel del usuario vive en el AuthContext (se usa en Dashboard, la barra
-        // lateral, etc.) — sin este refresh, se quedaba desactualizado hasta el próximo login.
-        await refresh()
-        // progress.submit ya invalida el cache de /ranking; se relee de una vez para que
-        // la posición en vivo se sienta inmediata en vez de esperar al próximo poll.
-        api.ranking.list().then((rows) => {
-          const idx = rows.findIndex((r) => r.id === user.id)
-          if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
-        }).catch(() => {})
-        if (bonus > 0) setSpeedBonusCount((c) => c + 1)
-      } catch {
-        setSaveError(true)
-      }
-    } else {
-      try {
-        // Antes, un intento fallido nunca llegaba al backend: la UI avanzaba pero
-        // exercise_attempts se quedaba sin la fila, así que la dificultad adaptativa
-        // (GET /progress?recommend=1) nunca veía fallos y el % de aciertos de
-        // TeacherAnalytics quedaba inflado a ~100%. is_correct/xp_earned se mandan solo
-        // de forma informativa: el servidor los recalcula él mismo con evaluateAnswers.
-        await api.progress.submit({
-          exercise_id: exercise.id,
-          answer_given: 'completed',
-          is_correct: false,
-          xp_earned: 0,
-          answers: answers || [],
-          within_budget: withinBudget,
-          elapsed_ms: elapsedMs,
-        })
-        setSaveError(false)
-      } catch {
-        setSaveError(true)
-      }
+  // Guarda el intento y devuelve lo que decidió el SERVIDOR (is_correct, XP acreditado). Antes la
+  // pantalla asumía su propia corrección: si el servidor la evaluaba distinto (pasó con "∞" escrito
+  // desde el teclado de símbolos), el estudiante veía "correcto" y avanzaba, pero la misión quedaba
+  // congelada en el servidor y la siguiente seguía bloqueada en la lista de misiones.
+  const submitAttempt = async (ex, payload, clientIsCorrect) => {
+    try {
+      const r = await api.progress.submit({ exercise_id: ex.id, answer_given: 'completed', ...payload })
+      setSaveError(false)
+      return { isCorrect: !!r.is_correct, xp: r.xp_awarded || 0 }
+    } catch (e) {
+      if (e.status === 403) setLockedMsg(e.message)
+      setSaveError(true)
+      // Sin respuesta del servidor no se puede saber: se muestra lo que evaluó el juego, sin XP.
+      return { isCorrect: clientIsCorrect, xp: 0 }
     }
-    setResults((r) => [...r, { exercise, isCorrect, bonus }])
+  }
+
+  const refreshRanking = () => {
+    api.ranking.list().then((rows) => {
+      const idx = rows.findIndex((r) => r.id === user.id)
+      if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
+    }).catch(() => {})
+  }
+
+  const handleComplete = async ({ isCorrect: clientIsCorrect, answers }) => {
+    const elapsedMs = Date.now() - exerciseStartRef.current - pausedMsRef.current
+    // Siempre se envía el intento (acierto o fallo): el servidor recalcula is_correct y el XP a
+    // partir de las respuestas reales (ver api/progress.js) — is_correct/xp_earned no se mandan.
+    const res = await submitAttempt(exercise, { answers: answers || [], elapsed_ms: elapsedMs }, clientIsCorrect)
+    const bonus = Math.max(0, res.xp - (exercise.xp_value || 10))
+    if (res.xp > 0) {
+      // El XP/nivel vive en el AuthContext (Dashboard, barra lateral…): se refresca al ganarlo.
+      await refresh()
+      refreshRanking()
+      if (bonus > 0) setSpeedBonusCount((c) => c + 1)
+    }
+    setResults((r) => [...r, { exercise, isCorrect: res.isCorrect, xp: res.xp, bonus }])
     if (current < exercises.length - 1) {
       setCurrent(current + 1)
     } else {
@@ -311,25 +313,13 @@ export default function MissionDetail() {
   // Cada vez que se termina uno de verdad (todas sus preguntas resueltas), se le da su XP y se
   // suma a los resultados; cuando ya se completaron todos, se muestra el resumen de la misión.
   const handleWheelExerciseComplete = async (ex, answers) => {
-    try {
-      await api.progress.submit({
-        exercise_id: ex.id,
-        answer_given: 'completed',
-        is_correct: true,
-        xp_earned: ex.xp_value || 10,
-        answers: answers || [],
-      })
-      setSaveError(false)
+    const res = await submitAttempt(ex, { answers: answers || [] }, true)
+    if (res.xp > 0) {
       await refresh()
-      api.ranking.list().then((rows) => {
-        const idx = rows.findIndex((r) => r.id === user.id)
-        if (idx !== -1) setRankInfo({ position: idx + 1, xp: rows[idx].xp })
-      }).catch(() => {})
-    } catch {
-      setSaveError(true)
+      refreshRanking()
     }
     setResults((r) => {
-      const updated = [...r, { exercise: ex, isCorrect: true, bonus: 0 }]
+      const updated = [...r, { exercise: ex, isCorrect: res.isCorrect, xp: res.xp, bonus: 0 }]
       if (updated.length >= exercises.length) setShowDone(true)
       return updated
     })
@@ -499,7 +489,9 @@ export default function MissionDetail() {
           </h2>
           <p className="text-ink/50 mt-1">
             {allCorrect
-              ? `Acertaste los ${results.length} ejercicios y ganaste ${earnedXp} XP.`
+              ? (earnedXp > 0
+                ? `Acertaste los ${results.length} ejercicios y ganaste ${earnedXp} XP.`
+                : `Acertaste los ${results.length} ejercicios. El XP de esta misión ya lo habías ganado antes.`)
               : 'Debes acertar todos los ejercicios de la misión para avanzar y desbloquear su recompensa.'}
           </p>
 
@@ -520,7 +512,7 @@ export default function MissionDetail() {
                   )}
                 </div>
                 <span className={`font-mono-lab text-xs font-medium ${r.isCorrect ? 'text-teal' : 'text-red-500'}`}>
-                  {r.isCorrect ? `+${r.exercise.xp_value + (r.bonus || 0)} XP` : 'Incorrecto'}
+                  {!r.isCorrect ? 'Incorrecto' : r.xp > 0 ? `+${r.xp} XP` : 'Correcto (XP ya ganado)'}
                 </span>
               </div>
             ))}
