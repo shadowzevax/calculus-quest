@@ -32,6 +32,14 @@ export default async function handler(req, res) {
     return res.status(200).json(rows);
   }
 
+  // Anula un código sin usar (botón X del recuadro): deja de servir y ya no reaparece al recargar.
+  if (req.method === 'POST' && req.query.action === 'reset_code_revoke') {
+    const { id } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'id requerido' });
+    await sql`UPDATE password_reset_codes SET used_at = now() WHERE id = ${id} AND used_at IS NULL`;
+    return res.status(200).json({ ok: true });
+  }
+
   // Cambia el vencimiento de códigos ya generados (interruptor "sin vencimiento" del panel).
   if (req.method === 'POST' && req.query.action === 'reset_code_expiry') {
     const { ids, no_expiry } = req.body || {};

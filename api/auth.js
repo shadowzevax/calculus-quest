@@ -166,7 +166,7 @@ export default async function handler(req, res) {
       const msg = !resetRow
         ? 'Ese código no corresponde a esta cuenta. Revisa que lo escribiste bien o pídele uno nuevo a tu docente.'
         : resetRow.used_at
-          ? 'Ese código ya se usó o fue reemplazado por uno más nuevo. Cada código sirve una sola vez: pídele uno nuevo a tu docente.'
+          ? 'Ese código ya se usó, fue anulado o fue reemplazado por uno más nuevo. Cada código sirve una sola vez: pídele uno nuevo a tu docente.'
           : 'Ese código ya venció. Pídele uno nuevo a tu docente.';
       return res.status(400).json({ error: msg });
     }

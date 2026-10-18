@@ -82,7 +82,7 @@ function RegistrationCodeCard() {
 // Recuadro con el código de acceso recién generado para un estudiante. Pueden haber varios a
 // la vez (uno por estudiante). Cada uno consulta cada 5 s si el código ya se usó y, en cuanto
 // el estudiante cambia su contraseña, muestra "usado" un momento y se cierra solo.
-function ResetCodeBanner({ result, onClose }) {
+function ResetCodeBanner({ result, onClose, onRevoke }) {
   const [now, setNow] = useState(Date.now())
   const [used, setUsed] = useState(false)
   // onClose cambia en cada render del padre; se guarda en una ref para no reiniciar el sondeo.
@@ -130,7 +130,7 @@ function ResetCodeBanner({ result, onClose }) {
       <button onClick={copy} title="Copiar código" className="w-8 h-8 rounded-lg border border-ink/15 text-ink/50 hover:bg-ink/5 hover:text-ink flex items-center justify-center shrink-0">
         <Copy className="w-4 h-4" />
       </button>
-      <button onClick={onClose} title="Cerrar" className="w-8 h-8 rounded-lg border border-ink/15 text-ink/50 hover:bg-ink/5 hover:text-ink flex items-center justify-center shrink-0">
+      <button onClick={used ? onClose : onRevoke} title={used ? 'Cerrar' : 'Anular código'} className="w-8 h-8 rounded-lg border border-ink/15 text-ink/50 hover:bg-ink/5 hover:text-ink flex items-center justify-center shrink-0">
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -303,7 +303,20 @@ export default function UserManagement() {
       </div>
 
       {resetResults.map((r) => (
-        <ResetCodeBanner key={r.id} result={r} onClose={() => setResetResults((list) => list.filter((x) => x.id !== r.id))} />
+        <ResetCodeBanner
+          key={r.id}
+          result={r}
+          onClose={() => setResetResults((list) => list.filter((x) => x.id !== r.id))}
+          onRevoke={async () => {
+            if (!confirm(`¿Anular el código de ${r.full_name}? Dejará de funcionar.`)) return
+            try {
+              await api.users.revokeResetCode(r.id)
+              setResetResults((list) => list.filter((x) => x.id !== r.id))
+            } catch (err) {
+              alert(err.message)
+            }
+          }}
+        />
       ))}
 
       {me && (
