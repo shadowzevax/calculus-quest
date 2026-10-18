@@ -308,7 +308,6 @@ export default function UserManagement() {
           result={r}
           onClose={() => setResetResults((list) => list.filter((x) => x.id !== r.id))}
           onRevoke={async () => {
-            if (!confirm(`¿Anular el código de ${r.full_name}? Dejará de funcionar.`)) return
             try {
               await api.users.revokeResetCode(r.id)
               setResetResults((list) => list.filter((x) => x.id !== r.id))
