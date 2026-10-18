@@ -100,6 +100,9 @@ export const api = {
       }),
     generateResetCode: (id, noExpiry = false) =>
       request('/users?action=reset_code', { method: 'POST', body: JSON.stringify({ id, no_expiry: noExpiry }) }),
+    activeResetCodes: () => request('/users?action=active_reset_codes'),
+    setResetCodeExpiry: (ids, noExpiry) =>
+      request('/users?action=reset_code_expiry', { method: 'POST', body: JSON.stringify({ ids, no_expiry: noExpiry }) }),
     resetCodeStatus: (codeId) => request(`/users?action=reset_code_status&code_id=${codeId}`),
     remove: (id) =>
       request('/users', { method: 'DELETE', body: JSON.stringify({ id }) }).then((r) => {

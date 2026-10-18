@@ -193,7 +193,27 @@ export default function UserManagement() {
   const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
   const [resetResults, setResetResults] = useState([]) // un recuadro por estudiante
-  const [noExpiry, setNoExpiry] = useState(false)
+  const [noExpiry, setNoExpiry] = useState(() => {
+    try { return localStorage.getItem('resetNoExpiry') === '1' } catch { return false }
+  })
+  // Al cargar (o recargar) la página se vuelven a mostrar los códigos que siguen vigentes.
+  useEffect(() => {
+    api.users.activeResetCodes().then(setResetResults).catch(() => {})
+  }, [])
+  // El interruptor también se aplica a los códigos que ya están abiertos, no solo a los nuevos.
+  const toggleNoExpiry = async (checked) => {
+    setNoExpiry(checked)
+    try { localStorage.setItem('resetNoExpiry', checked ? '1' : '0') } catch { /* sin almacenamiento */ }
+    const ids = resetResults.map((r) => r.id)
+    if (!ids.length) return
+    try {
+      const updated = await api.users.setResetCodeExpiry(ids, checked)
+      const byId = Object.fromEntries(updated.map((u) => [u.id, u.expires_at]))
+      setResetResults((list) => list.map((r) => (r.id in byId ? { ...r, expires_at: byId[r.id] } : r)))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
   const [generatingFor, setGeneratingFor] = useState(null)
   const [deletingFor, setDeletingFor] = useState(null)
   const [showTeachers, setShowTeachers] = useState(false)
@@ -275,10 +295,10 @@ export default function UserManagement() {
       </div>
 
       <div className="flex items-center gap-3 mb-4 bg-white border border-ink/10 rounded-xl px-4 py-3">
-        <Switch checked={noExpiry} onCheckedChange={setNoExpiry} id="no-expiry" />
+        <Switch checked={noExpiry} onCheckedChange={toggleNoExpiry} id="no-expiry" />
         <label htmlFor="no-expiry" className="text-sm text-ink/70 cursor-pointer">
           Códigos de acceso sin vencimiento
-          <span className="block text-xs text-ink/40">Apagado: el código dura 30 minutos. Encendido: no vence, pero igual sirve una sola vez.</span>
+          <span className="block text-xs text-ink/40">Apagado: el código dura 30 minutos. Encendido: no vence, pero igual sirve una sola vez. Se aplica también a los códigos ya abiertos.</span>
         </label>
       </div>
 

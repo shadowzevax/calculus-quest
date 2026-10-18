@@ -19,6 +19,32 @@ export default async function handler(req, res) {
 
   // Estado de un código generado: el panel lo consulta cada pocos segundos mientras el recuadro
   // está abierto y lo cierra solo cuando el estudiante ya lo usó.
+  // Códigos de acceso vigentes (sin usar y sin vencer): el panel los vuelve a mostrar al
+  // recargar la página — antes el recuadro se perdía y el docente no podía ver el código otra vez.
+  if (req.method === 'GET' && req.query.action === 'active_reset_codes') {
+    const rows = await sql`
+      SELECT c.id, c.code, CASE WHEN c.expires_at = 'infinity' THEN NULL ELSE c.expires_at END AS expires_at,
+             u.email, u.full_name
+      FROM password_reset_codes c JOIN users u ON u.id = c.user_id
+      WHERE c.used_at IS NULL AND c.expires_at > now()
+      ORDER BY c.created_at DESC
+    `;
+    return res.status(200).json(rows);
+  }
+
+  // Cambia el vencimiento de códigos ya generados (interruptor "sin vencimiento" del panel).
+  if (req.method === 'POST' && req.query.action === 'reset_code_expiry') {
+    const { ids, no_expiry } = req.body || {};
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids requeridos' });
+    const rows = await sql`
+      UPDATE password_reset_codes
+      SET expires_at = CASE WHEN ${!!no_expiry} THEN 'infinity'::timestamptz ELSE now() + ${CODE_TTL_MINUTES} * interval '1 minute' END
+      WHERE id = ANY(${ids}::uuid[]) AND used_at IS NULL AND expires_at > now()
+      RETURNING id, CASE WHEN expires_at = 'infinity' THEN NULL ELSE expires_at END AS expires_at
+    `;
+    return res.status(200).json(rows);
+  }
+
   if (req.method === 'GET' && req.query.action === 'reset_code_status') {
     const [row] = await sql`SELECT used_at, expires_at <= now() AS expired FROM password_reset_codes WHERE id = ${req.query.code_id || null}`;
     if (!row) return res.status(404).json({ error: 'Código no encontrado' });
