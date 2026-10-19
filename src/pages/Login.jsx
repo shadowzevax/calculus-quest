@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
+import WhatsAppSupport from '@/components/WhatsAppSupport'
 import { buildAvatarDataUri } from '@/lib/avatarBuilder'
 
 // Botón de mostrar/ocultar dentro del propio campo — el gesto típico de cualquier login, para
@@ -268,6 +269,7 @@ export default function Login() {
           </button>
         )}
       </div>
+      <WhatsAppSupport />
     </div>
   )
 }
