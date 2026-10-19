@@ -103,6 +103,7 @@ export const api = {
     activeResetCodes: () => request('/users?action=active_reset_codes'),
     setResetCodeExpiry: (ids, noExpiry) =>
       request('/users?action=reset_code_expiry', { method: 'POST', body: JSON.stringify({ ids, no_expiry: noExpiry }) }),
+    unlock: (id) => request('/users?action=unlock', { method: 'POST', body: JSON.stringify({ id }) }),
     revokeResetCode: (id) => request('/users?action=reset_code_revoke', { method: 'POST', body: JSON.stringify({ id }) }),
     resetCodeStatus: (codeId) => request(`/users?action=reset_code_status&code_id=${codeId}`),
     remove: (id) =>

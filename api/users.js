@@ -1,5 +1,6 @@
 import { sql } from './_db.js';
 import { requireAdmin, requireSuperAdmin } from './_auth.js';
+import { unlockEmail } from './_ratelimit.js';
 
 // Sin caracteres ambiguos (0/O, 1/I/L) para que un estudiante lo pueda copiar bien a mano
 // desde el tablero o desde un papel.
@@ -30,6 +31,14 @@ export default async function handler(req, res) {
       ORDER BY c.created_at DESC
     `;
     return res.status(200).json(rows);
+  }
+
+  // "Desbloquear": quita el bloqueo por demasiados intentos fallidos de inicio de sesión.
+  if (req.method === 'POST' && req.query.action === 'unlock') {
+    const [u] = await sql`SELECT email FROM users WHERE id = ${(req.body || {}).id || null}`;
+    if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+    await unlockEmail(sql, u.email, 'desbloqueado por ' + admin.email);
+    return res.status(200).json({ ok: true });
   }
 
   // Anula un código sin usar (botón X del recuadro): deja de servir y ya no reaparece al recargar.
@@ -147,6 +156,7 @@ export default async function handler(req, res) {
     `;
     // "Sin vencimiento" (opción del docente): el código igual es de un solo uso y se invalida
     // al generar otro para el mismo estudiante. expires_at = 'infinity' (válido en Postgres).
+    await unlockEmail(sql, user.email, 'código de acceso generado');
     return res.status(200).json({
       id: row.id, code: row.code, expires_at: no_expiry ? null : row.expires_at,
       email: user.email, full_name: user.full_name,

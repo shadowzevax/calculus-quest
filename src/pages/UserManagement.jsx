@@ -140,6 +140,18 @@ function ResetCodeBanner({ result, onClose, onRevoke }) {
 // Una fila de usuario, con los botones habilitados según lo que el rol de quien mira le
 // permite hacerle al rol del usuario de la fila (ver reglas espejo en api/users.js).
 function UserRow({ u, isSuperAdmin, generatingFor, deletingFor, onGenerateCode, onToggleRole, onDelete }) {
+  const [unlockState, setUnlockState] = useState('') // '' | 'working' | 'done'
+  const unlock = async () => {
+    setUnlockState('working')
+    try {
+      await api.users.unlock(u.id)
+      setUnlockState('done')
+      setTimeout(() => setUnlockState(''), 3000)
+    } catch (err) {
+      setUnlockState('')
+      alert(err.message)
+    }
+  }
   const canCode = u.role === 'user' || (u.role === 'admin' && isSuperAdmin)
   const canChangeRole = isSuperAdmin && u.role !== 'superadmin'
   const canDelete = u.role === 'user' || (u.role === 'admin' && isSuperAdmin)
@@ -162,6 +174,16 @@ function UserRow({ u, isSuperAdmin, generatingFor, deletingFor, onGenerateCode, 
             className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5 flex items-center gap-1 disabled:opacity-40"
           >
             <KeyRound className="w-3.5 h-3.5" /> {generatingFor === u.id ? 'Generando...' : 'Código de acceso'}
+          </button>
+        )}
+        {canCode && (
+          <button
+            onClick={unlock}
+            disabled={unlockState === 'working'}
+            title="Quitar el bloqueo por demasiados intentos fallidos al iniciar sesión"
+            className="text-xs border border-ink/15 rounded px-2 py-1 text-ink/60 hover:bg-ink/5 disabled:opacity-40"
+          >
+            {unlockState === 'done' ? 'Desbloqueado ✓' : unlockState === 'working' ? 'Desbloqueando...' : 'Desbloquear'}
           </button>
         )}
         {canChangeRole && (

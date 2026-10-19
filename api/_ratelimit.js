@@ -14,8 +14,22 @@ export async function countRecentByEmail(sql, actionType, email, windowMinutes) 
     SELECT COUNT(*)::int AS count FROM system_logs
     WHERE action_type = ${actionType} AND user_email = ${email}
       AND created_at > now() - (${windowMinutes}::text || ' minutes')::interval
+      AND created_at > COALESCE((
+        SELECT MAX(created_at) FROM system_logs WHERE action_type = 'login_unlocked' AND user_email = ${email}
+      ), '-infinity')
   `;
   return count;
+}
+
+// Levanta el bloqueo por intentos fallidos de un correo: los fallos anteriores a esta marca dejan
+// de contar. Se usa al entrar bien, al cambiar la contraseña con un código, y cuando el docente
+// genera un código o pulsa "Desbloquear" (antes el estudiante quedaba bloqueado 10 minutos aunque
+// ya tuviera su contraseña nueva — reportado el 2026-10-19).
+export async function unlockEmail(sql, email, description) {
+  await sql`
+    INSERT INTO system_logs (action_type, user_email, description, severity)
+    VALUES ('login_unlocked', ${email}, ${description || null}, 'info')
+  `;
 }
 
 export async function countRecentByIp(sql, actionType, ip, windowMinutes) {

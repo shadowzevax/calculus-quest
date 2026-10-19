@@ -5,7 +5,7 @@ import { sql } from './_db.js';
 import { signToken, setAuthCookie, clearAuthCookie, getUserFromRequest } from './_auth.js';
 import { grantStarterColors } from './_avatar.js';
 import { isCodeValid } from './_regcode.js';
-import { countRecentByEmail, countRecentByIp, logFailedAttempt, getClientIp } from './_ratelimit.js';
+import { countRecentByEmail, countRecentByIp, logFailedAttempt, getClientIp, unlockEmail } from './_ratelimit.js';
 
 // Cuentas de prueba que quedan exentas del dominio institucional y del código
 // del docente, para poder seguir haciendo pruebas/demos sin depender de un correo real.
@@ -119,6 +119,7 @@ export default async function handler(req, res) {
     }
 
     await sql`UPDATE users SET last_login = now() WHERE id = ${user.id}`;
+    if (recentFails > 0) await unlockEmail(sql, normalizedEmail, 'login correcto');
     const token = signToken(user);
     setAuthCookie(res, token);
     delete user.password_hash;
@@ -177,6 +178,7 @@ export default async function handler(req, res) {
     if (!claimed) return res.status(400).json({ error: 'Ese código ya se usó. Cada código sirve una sola vez: pídele uno nuevo a tu docente.' });
     const password_hash = await bcrypt.hash(new_password, 10);
     await sql`UPDATE users SET password_hash = ${password_hash} WHERE id = ${user.id}`;
+    await unlockEmail(sql, normalizedEmail, 'contraseña cambiada con código');
     return res.status(200).json({ ok: true });
   }
 
