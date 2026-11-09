@@ -2,14 +2,13 @@
 // porque Vercel Hobby permite máx. 12 funciones serverless por proyecto.
 import bcrypt from 'bcryptjs';
 import { sql } from './_db.js';
-import { signToken, setAuthCookie, clearAuthCookie, getUserFromRequest } from './_auth.js';
+import { signToken, setAuthCookie, clearAuthCookie, getUserFromRequest, TEST_EMAILS } from './_auth.js';
 import { grantStarterColors } from './_avatar.js';
 import { isCodeValid } from './_regcode.js';
 import { countRecentByEmail, countRecentByIp, logFailedAttempt, getClientIp, unlockEmail } from './_ratelimit.js';
 
 // Cuentas de prueba que quedan exentas del dominio institucional y del código
 // del docente, para poder seguir haciendo pruebas/demos sin depender de un correo real.
-const TEST_EMAILS = new Set(['estudiante@gmail.com', 'docente@gmail.com']);
 const INSTITUTIONAL_DOMAIN = '@umariana.edu.co';
 
 export default async function handler(req, res) {
@@ -176,6 +175,11 @@ export default async function handler(req, res) {
     // para que el mismo código no sirva dos veces aunque se envíe dos veces al mismo tiempo.
     const [claimed] = await sql`UPDATE password_reset_codes SET used_at = now() WHERE id = ${resetRow.id} AND used_at IS NULL RETURNING id`;
     if (!claimed) return res.status(400).json({ error: 'Ese código ya se usó. Cada código sirve una sola vez: pídele uno nuevo a tu docente.' });
+    // Las cuentas de evaluación las comparten varios jurados: el código se valida, pero la
+    // contraseña no cambia, para que nadie deje sin acceso a los demás.
+    if (TEST_EMAILS.has(normalizedEmail)) {
+      return res.status(400).json({ error: 'El código es válido, pero en las cuentas de evaluación la contraseña no se cambia, para no dejar sin acceso a los demás evaluadores. Siga usando la contraseña de las instrucciones.' });
+    }
     const password_hash = await bcrypt.hash(new_password, 10);
     await sql`UPDATE users SET password_hash = ${password_hash} WHERE id = ${user.id}`;
     await unlockEmail(sql, normalizedEmail, 'contraseña cambiada con código');
@@ -191,7 +195,7 @@ export default async function handler(req, res) {
     const authUser = getUserFromRequest(req);
     if (!authUser) return res.status(401).json({ error: 'No autenticado' });
     const [user] = await sql`
-      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, name_rainbow, dark_bubble, avatar_glow, avatar_config, avatar_gender
+      SELECT id, email, full_name, role, avatar, bio, xp, level, streak_days, name_rainbow, dark_bubble, avatar_glow, avatar_config, avatar_gender, is_test_account
       FROM users WHERE id = ${authUser.id}
     `;
     if (!user) return res.status(401).json({ error: 'No autenticado' });

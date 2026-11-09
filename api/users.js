@@ -1,5 +1,5 @@
 import { sql } from './_db.js';
-import { requireAdmin, requireSuperAdmin } from './_auth.js';
+import { requireAdmin, requireSuperAdmin, isEvaluationAccount, maskPerson, TEST_EMAILS, EVALUATION_BLOCKED } from './_auth.js';
 import { unlockEmail } from './_ratelimit.js';
 
 // Sin caracteres ambiguos (0/O, 1/I/L) para que un estudiante lo pueda copiar bien a mano
@@ -14,9 +14,19 @@ function generateCode() {
   return code;
 }
 
+// Una cuenta de evaluación solo puede tocar códigos de las cuentas de prueba.
+async function onlyTestCodes(ids) {
+  const rows = await sql`
+    SELECT u.email FROM password_reset_codes c JOIN users u ON u.id = c.user_id
+    WHERE c.id = ANY(${ids}::uuid[])
+  `;
+  return rows.every((r) => TEST_EMAILS.has(r.email));
+}
+
 export default async function handler(req, res) {
   const admin = await requireAdmin(req, res);
   if (!admin) return;
+  const evaluation = isEvaluationAccount(admin);
 
   // Estado de un código generado: el panel lo consulta cada pocos segundos mientras el recuadro
   // está abierto y lo cierra solo cuando el estudiante ya lo usó.
@@ -30,13 +40,14 @@ export default async function handler(req, res) {
       WHERE c.used_at IS NULL AND c.expires_at > now()
       ORDER BY c.created_at DESC
     `;
-    return res.status(200).json(rows);
+    return res.status(200).json(evaluation ? rows.filter((r) => TEST_EMAILS.has(r.email)) : rows);
   }
 
   // "Desbloquear": quita el bloqueo por demasiados intentos fallidos de inicio de sesión.
   if (req.method === 'POST' && req.query.action === 'unlock') {
     const [u] = await sql`SELECT email FROM users WHERE id = ${(req.body || {}).id || null}`;
     if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (evaluation && !TEST_EMAILS.has(u.email)) return res.status(403).json({ error: EVALUATION_BLOCKED });
     await unlockEmail(sql, u.email, 'desbloqueado por ' + admin.email);
     return res.status(200).json({ ok: true });
   }
@@ -45,6 +56,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST' && req.query.action === 'reset_code_revoke') {
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id requerido' });
+    if (evaluation && !(await onlyTestCodes([id]))) return res.status(403).json({ error: EVALUATION_BLOCKED });
     await sql`UPDATE password_reset_codes SET used_at = now() WHERE id = ${id} AND used_at IS NULL`;
     return res.status(200).json({ ok: true });
   }
@@ -53,6 +65,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST' && req.query.action === 'reset_code_expiry') {
     const { ids, no_expiry } = req.body || {};
     if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids requeridos' });
+    if (evaluation && !(await onlyTestCodes(ids))) return res.status(403).json({ error: EVALUATION_BLOCKED });
     const rows = await sql`
       UPDATE password_reset_codes
       SET expires_at = CASE WHEN ${!!no_expiry} THEN 'infinity'::timestamptz ELSE now() + ${CODE_TTL_MINUTES} * interval '1 minute' END
@@ -73,7 +86,7 @@ export default async function handler(req, res) {
       SELECT id, email, full_name, role, xp, level, avatar, created_at
       FROM users ORDER BY created_at DESC
     `;
-    return res.status(200).json(rows);
+    return res.status(200).json(evaluation ? rows.map((r) => (TEST_EMAILS.has(r.email) ? r : maskPerson(r))) : rows);
   }
 
   // Cambiar de rol es exclusivo del administrador (superadmin) — un docente no puede
@@ -96,6 +109,7 @@ export default async function handler(req, res) {
   // Eliminar una cuenta — un docente solo puede eliminar estudiantes; el administrador puede
   // eliminar estudiantes Y docentes, pero nunca al administrador (ni a sí mismo) por aquí.
   if (req.method === 'DELETE') {
+    if (evaluation) return res.status(403).json({ error: 'Cuenta de evaluación: eliminar cuentas está deshabilitado para proteger a los estudiantes participantes.' });
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id requerido' });
     const [target] = await sql`SELECT role FROM users WHERE id = ${id}`;
@@ -135,6 +149,7 @@ export default async function handler(req, res) {
     if (!id) return res.status(400).json({ error: 'id requerido' });
     const [user] = await sql`SELECT id, email, full_name, role FROM users WHERE id = ${id}`;
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (evaluation && !TEST_EMAILS.has(user.email)) return res.status(403).json({ error: EVALUATION_BLOCKED });
 
     // Un docente solo puede generar códigos para estudiantes; solo el administrador puede
     // generarle uno a otro docente. El propio administrador nunca recibe código por aquí

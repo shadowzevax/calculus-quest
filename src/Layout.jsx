@@ -58,6 +58,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const isAdmin = (user?.role === 'admin' || user?.role === 'superadmin')
+  const isEvaluation = !!user?.is_test_account
   // El sidebar (256px fijos, sin ninguna clase responsive) se comía el 68% del ancho en un
   // celular de 375px, dejando ~119px para el contenido de la misión — suficiente para que
   // varios grids de 2 columnas colapsaran a 0px de ancho real y quedaran imposibles de tocar
@@ -128,7 +129,7 @@ export default function Layout({ children }) {
             <div className="flex items-center gap-2 text-gold text-xs font-semibold font-mono-lab tracking-wide">
               <Shield className="w-3.5 h-3.5" /> MODO DOCENTE
             </div>
-            <div className="text-[11px] text-white/50 mt-0.5">Acceso completo al sistema</div>
+            <div className="text-[11px] text-white/50 mt-0.5">{isEvaluation ? 'Cuenta de evaluación' : 'Acceso completo al sistema'}</div>
           </div>
         )}
 
@@ -186,6 +187,12 @@ export default function Layout({ children }) {
           </div>
           <span className="font-display font-semibold text-white text-sm truncate">FuncionLab</span>
         </div>
+
+        {isEvaluation && (
+          <div role="status" className="shrink-0 px-4 md:px-8 py-2 bg-gold/15 border-b border-gold/30 text-xs text-ink/70 font-body">
+            <strong className="font-semibold text-ink">Cuenta de evaluación.</strong> Las cifras son reales. Para proteger a los participantes (Ley 1581 de 2012), sus nombres y correos aparecen parciales y las acciones sobre sus cuentas están deshabilitadas.
+          </div>
+        )}
 
         <main className="flex-1 overflow-y-auto bg-paper bg-grid-light bg-grid p-4 md:p-8">{children}</main>
       </div>

@@ -1,5 +1,5 @@
 import { sql } from './_db.js';
-import { requireAuth } from './_auth.js';
+import { requireAuth, isEvaluationAccount, maskPerson } from './_auth.js';
 
 export default async function handler(req, res) {
   const user = requireAuth(req, res);
@@ -20,5 +20,5 @@ export default async function handler(req, res) {
     WHERE u.role = 'user' AND u.is_test_account = false
     ORDER BY u.xp DESC, u.speed_challenge_ms ASC NULLS LAST, u.created_at ASC LIMIT 50
   `;
-  res.status(200).json(rows);
+  res.status(200).json(isEvaluationAccount(user) ? rows.map(maskPerson) : rows);
 }

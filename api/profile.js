@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { sql } from './_db.js';
-import { requireAuth, isStaffRole } from './_auth.js';
+import { requireAuth, isStaffRole, isEvaluationAccount } from './_auth.js';
 import { grantStarterColors } from './_avatar.js';
 
 const MAX_AVATAR_LENGTH = 400_000; // ~300KB de imagen en base64, ya redimensionada en el navegador
@@ -80,6 +80,9 @@ export default async function handler(req, res) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' });
 
   const { full_name, bio, avatar, current_password, new_password, name_rainbow, dark_bubble, avatar_glow, avatar_config, avatar_gender } = req.body || {};
+  if (new_password && isEvaluationAccount(user)) {
+    return res.status(403).json({ error: 'En las cuentas de evaluación la contraseña no se puede cambiar, para no dejar sin acceso a los demás evaluadores.' });
+  }
   if (avatar_gender && !['male', 'female'].includes(avatar_gender)) {
     return res.status(400).json({ error: 'Género de avatar inválido' });
   }

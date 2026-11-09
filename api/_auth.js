@@ -5,6 +5,37 @@ import { sql } from './_db.js';
 
 const COOKIE_NAME = 'cq_token';
 
+// Cuentas de evaluación: las dos cuentas de prueba que se entregan a los jurados. Ven la
+// plataforma completa con las cifras reales, pero los nombres y correos de los participantes
+// les llegan enmascarados (Ley 1581 de 2012) y no pueden modificar las cuentas de los demás.
+export const TEST_EMAILS = new Set(['estudiante@gmail.com', 'docente@gmail.com']);
+
+export const EVALUATION_BLOCKED = 'Cuenta de evaluación: esta acción está deshabilitada sobre estudiantes reales para proteger a los participantes. Puede probarla sobre la cuenta Test Estudiante.';
+
+export function isEvaluationAccount(user) {
+  return TEST_EMAILS.has(String(user?.email || '').toLowerCase());
+}
+
+// "Carlos Mario Zafra" -> "C*** M***". Una sola letra por palabra y siempre tres asteriscos,
+// para no revelar la longitud: con más letras, en un grupo de 20 se reconocería a varios.
+export function maskName(fullName) {
+  const words = String(fullName || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  return words.map((w) => `${w[0].toUpperCase()}***`).join(' ') || 'Participante';
+}
+
+export function maskEmail(email) {
+  const [local, domain] = String(email || '').split('@');
+  return domain ? `${local[0] || ''}***@${domain}` : '***';
+}
+
+// Copia de la fila con los datos personales enmascarados (la foto de perfil también se quita).
+export function maskPerson(row) {
+  const out = { ...row, full_name: maskName(row.full_name) };
+  if ('email' in row) out.email = maskEmail(row.email);
+  if ('avatar' in row) out.avatar = null;
+  return out;
+}
+
 // Token con solo lo necesario para identificar al usuario (id, rol, email).
 export function signToken(user) {
   return jwt.sign({ id: user.id, role: user.role, email: user.email }, process.env.JWT_SECRET, {

@@ -1,5 +1,5 @@
 import { sql } from './_db.js';
-import { requireAuth, requireAdmin, isStaffRole } from './_auth.js';
+import { requireAuth, requireAdmin, isStaffRole, isEvaluationAccount, maskName } from './_auth.js';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     // el LIMIT 100 traía los 100 mensajes MÁS ANTIGUOS de toda la historia en vez de
     // los más recientes, y el chat dejaba de mostrar mensajes nuevos tras el #101.
     const rows = await sql`
-      SELECT m.*, u.name_rainbow, u.dark_bubble, u.avatar_glow, u.avatar, u.avatar_config, COALESCE(eb.images, '{}') AS equipped_badge_images
+      SELECT m.*, u.is_test_account AS author_is_test, u.name_rainbow, u.dark_bubble, u.avatar_glow, u.avatar, u.avatar_config, COALESCE(eb.images, '{}') AS equipped_badge_images
       FROM messages m
       LEFT JOIN users u ON u.id = m.user_id
       LEFT JOIN LATERAL (
@@ -20,7 +20,10 @@ export default async function handler(req, res) {
       ) eb ON true
       ORDER BY m.created_at DESC LIMIT 100
     `;
-    return res.status(200).json(rows.reverse());
+    const visible = isEvaluationAccount(user)
+      ? rows.map((m) => (m.author_is_test ? m : { ...m, author_name: maskName(m.author_name), avatar: null }))
+      : rows;
+    return res.status(200).json(visible.reverse());
   }
 
   if (req.method === 'POST') {

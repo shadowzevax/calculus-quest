@@ -1,5 +1,5 @@
 import { sql } from './_db.js';
-import { requireAuth, requireAdmin } from './_auth.js';
+import { requireAuth, requireAdmin, isEvaluationAccount, EVALUATION_BLOCKED } from './_auth.js';
 import { getCurrentCode, regenerateCode, REG_CODE_ROTATE_MS } from './_regcode.js';
 
 export default async function handler(req, res) {
@@ -30,6 +30,7 @@ export default async function handler(req, res) {
     if (!admin) return;
     const { key, value } = req.body || {};
     if (!key) return res.status(400).json({ error: 'key requerido' });
+    if (isEvaluationAccount(admin) && key !== 'chat_enabled') return res.status(403).json({ error: EVALUATION_BLOCKED });
     await sql`
       INSERT INTO app_settings (key, value) VALUES (${key}, ${String(value)})
       ON CONFLICT (key) DO UPDATE SET value = ${String(value)}
