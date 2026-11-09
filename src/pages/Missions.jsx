@@ -151,7 +151,7 @@ export default function Missions() {
                 <p className="text-sm text-ink/50 mt-1 flex-1">{m.description}</p>
 
                 <div className="mt-3 flex items-center justify-between text-xs font-mono-lab">
-                  <span className="text-coral">+{m.xp_reward} XP</span>
+                  <span className="text-coral">+{m.xp_total ?? m.xp_reward} XP</span>
                   {!isAdmin && pct > 0 && <span className="text-ink/40">{pct.toFixed(0)}%</span>}
                 </div>
                 {!isAdmin && pct > 0 && (

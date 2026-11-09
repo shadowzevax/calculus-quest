@@ -11,3 +11,6 @@ claude-workspace/
 .claude/
 .playwright-mcp/
 .mcp.json
+
+# Datos personales de estudiantes: nunca subir al repositorio
+FuncionLab*PRETEST*.csv

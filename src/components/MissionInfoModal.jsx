@@ -129,7 +129,7 @@ export default function MissionInfoButton({ mission }) {
 
           <div className="flex items-center gap-4 pt-3 border-t border-ink/10 text-xs font-mono-lab text-ink/50">
             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~{mission.estimated_time} min</span>
-            <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> {mission.xp_reward} XP</span>
+            <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> {mission.xp_total ?? mission.xp_reward} XP</span>
             <span className="flex items-center gap-1.5 capitalize"><ListChecks className="w-3.5 h-3.5" /> {mission.difficulty}</span>
           </div>
         </div>
