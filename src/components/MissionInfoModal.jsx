@@ -1,5 +1,6 @@
 import { HelpCircle, Target, Gamepad2, Lightbulb, Clock, Zap, ListChecks } from 'lucide-react'
 import { Dialog, DialogTrigger, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { difficultyLabel } from '@/lib/difficulty'
 
 // Gustó el prototipo de la Misión 1 (2026-09-23) — replicado a las 14. El contenido vive aquí,
 // por misión (order), en vez de ser un campo nuevo en la base de datos: más fácil de ajustar
@@ -130,7 +131,7 @@ export default function MissionInfoButton({ mission }) {
           <div className="flex items-center gap-4 pt-3 border-t border-ink/10 text-xs font-mono-lab text-ink/50">
             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~{mission.estimated_time} min</span>
             <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> {mission.xp_total ?? mission.xp_reward} XP</span>
-            <span className="flex items-center gap-1.5 capitalize"><ListChecks className="w-3.5 h-3.5" /> {mission.difficulty}</span>
+            <span className="flex items-center gap-1.5"><ListChecks className="w-3.5 h-3.5" /> {difficultyLabel(mission.difficulty)}</span>
           </div>
         </div>
       </DialogContent>

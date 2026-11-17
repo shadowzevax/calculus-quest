@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Map, Pencil, X } from 'lucide-react'
 import { api } from '@/lib/api'
+import { difficultyLabel } from '@/lib/difficulty'
 
 function EditModal({ mission, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -26,6 +27,9 @@ function EditModal({ mission, onClose, onSaved }) {
     try {
       await api.missions.update({ id: mission.id, ...form, xp_reward: Number(form.xp_reward), estimated_time: Number(form.estimated_time) })
       onSaved()
+    } catch (err) {
+      // p. ej. las cuentas de evaluación no pueden editar misiones: el servidor responde 403 con el motivo
+      alert(err.message || 'No se pudo guardar la misión.')
     } finally {
       setSaving(false)
     }
@@ -98,7 +102,7 @@ export default function MissionManagement() {
           <div key={m.id} className="flex items-center justify-between px-5 py-3.5">
             <div>
               <div className="font-medium text-ink">{m.order}. {m.title}</div>
-              <div className="text-xs font-mono-lab text-ink/40">{m.difficulty} · {m.estimated_time} min · +{m.xp_reward} XP</div>
+              <div className="text-xs font-mono-lab text-ink/40">{difficultyLabel(m.difficulty)} · {m.estimated_time} min · +{m.xp_reward} XP</div>
             </div>
             <button onClick={() => setEditing(m)} className="text-xs border border-ink/15 rounded px-2 py-1.5 text-ink/60 hover:bg-ink/5 flex items-center gap-1">
               <Pencil className="w-3.5 h-3.5" /> Editar

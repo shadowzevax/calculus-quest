@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
 import { MissionsGridSkeleton } from '@/components/Skeleton'
 import { avatarPieceThumb, pieceCropStyle, isColorPiece } from '@/lib/avatarPiecePreview'
+import { difficultyLabel } from '@/lib/difficulty'
 
 const difficultyStyle = {
   facil: 'bg-teal/10 text-teal',
@@ -140,7 +141,7 @@ export default function Missions() {
 
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${difficultyStyle[m.difficulty] || 'bg-ink/5 text-ink/50'}`}>
-                    {m.difficulty}
+                    {difficultyLabel(m.difficulty)}
                   </span>
                   <span className="text-[11px] font-mono-lab text-ink/35">{m.estimated_time} min</span>
                   {m.is_collaborative && (

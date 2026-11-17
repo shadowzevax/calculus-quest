@@ -162,7 +162,7 @@ function UserRow({ u, isSuperAdmin, generatingFor, deletingFor, onGenerateCode, 
         <div className="font-medium text-ink">{u.full_name}</div>
         <div className="text-xs text-ink/40">{u.email}</div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className={`text-[11px] font-mono-lab px-2 py-0.5 rounded uppercase ${ROLE_STYLE[u.role] || ROLE_STYLE.user}`}>
           {ROLE_LABEL[u.role] || 'Estudiante'}
         </span>

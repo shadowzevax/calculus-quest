@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import MiniCurve from '@/components/MiniCurve'
 import { SkeletonBlock, MissionCardSkeleton } from '@/components/Skeleton'
 import { AvatarCircle } from '@/components/ui/avatar-circle'
+import { difficultyLabel } from '@/lib/difficulty'
 
 const XP_PER_LEVEL = 500
 
@@ -33,7 +34,7 @@ function MissionPreviewCard({ mission }) {
       </div>
       <div className="font-display font-semibold text-ink">{mission.title}</div>
       <span className="inline-block mt-2 text-[11px] font-mono-lab px-2 py-0.5 rounded bg-ink/5 text-ink/50 uppercase">
-        {mission.difficulty}
+        {difficultyLabel(mission.difficulty)}
       </span>
     </Link>
   )

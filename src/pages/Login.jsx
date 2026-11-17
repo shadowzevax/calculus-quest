@@ -225,14 +225,21 @@ export default function Login() {
           />
         )}
         {mode === 'register' && (
-          <input
-            className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest"
-            placeholder="Código de registro (generado por tu docente)"
-            value={regCode}
-            onChange={(e) => setRegCode(e.target.value)}
-            maxLength={4}
-            required
-          />
+          <>
+            <input
+              className="w-full border border-ink/15 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-coral/40 focus:border-coral tracking-widest"
+              placeholder="Código de registro"
+              aria-label="Código de registro de 4 dígitos que entrega tu docente"
+              value={regCode}
+              onChange={(e) => setRegCode(e.target.value)}
+              maxLength={4}
+              required
+            />
+            {/* El requisito antes solo estaba en el placeholder, que se corta en celular y desaparece al escribir. */}
+            <p className="text-xs text-ink/60 leading-snug">
+              Para registrarte necesitas tu correo @umariana.edu.co y el código de 4 dígitos que te da tu docente en clase.
+            </p>
+          </>
         )}
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <button
