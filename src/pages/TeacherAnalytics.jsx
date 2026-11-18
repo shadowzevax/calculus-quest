@@ -12,7 +12,7 @@ function fmtTime(seconds) {
 export default function TeacherAnalytics() {
   const [data, setData] = useState(null)
   // Antes el denominador de "Misiones" era un 14 fijo en el JSX; se trae el total real de
-  // misiones activas del módulo 'misiones' (mismo endpoint que ya usa MissionManagement) para
+  // misiones activas del módulo 'misiones' para
   // que la fracción no quede mal si algún día se activan/desactivan misiones.
   const [totalMissions, setTotalMissions] = useState(null)
 

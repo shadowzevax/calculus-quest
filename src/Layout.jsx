@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
   Home, BookOpen, Trophy, MessageSquare, User, BarChart3,
-  Users, Map, LogOut, Shield, BarChart2, Menu, X,
+  Users, LogOut, Shield, BarChart2, Menu, X,
 } from 'lucide-react'
 import { useAuth } from './lib/AuthContext'
 import MiniCurve from './components/MiniCurve'
@@ -21,9 +21,6 @@ const adminNav = [
   { to: '/teacher-panel', label: 'Panel Docente', icon: BarChart3 },
   { to: '/teacher-analytics', label: 'Analítica', icon: BarChart2 },
   { to: '/user-management', label: 'Gestión Usuarios', icon: Users },
-  // "Gestión Misiones" oculto a pedido del usuario (2026-09-08) — la ruta /mission-management
-  // sigue existiendo en App.jsx, solo se quitó del menú. Volver a agregar aquí cuando pida
-  // que se muestre de nuevo: { to: '/mission-management', label: 'Gestión Misiones', icon: Map },
 ]
 
 // Rutas que solo tienen sentido para docente/admin. El backend YA las protege de verdad (sin
@@ -31,7 +28,7 @@ const adminNav = [
 // un enlace guardado veía la pantalla real, rota: "Aún no hay estudiantes registrados" (en
 // realidad un 403 silenciado) o un "Cargando..." infinito — hallazgo de la auditoría de
 // calidad, 2026-09-21. Ahora se le manda de vuelta al Dashboard sin exponer esa confusión.
-const STAFF_ONLY_PATHS = ['/teacher-panel', '/teacher-analytics', '/user-management', '/mission-management']
+const STAFF_ONLY_PATHS = ['/teacher-panel', '/teacher-analytics', '/user-management']
 
 function NavItem({ to, label, icon: Icon }) {
   return (

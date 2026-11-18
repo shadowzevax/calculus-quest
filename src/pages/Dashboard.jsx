@@ -107,11 +107,6 @@ function TeacherShortcuts() {
     { to: '/teacher-analytics', label: 'Analítica de estudiantes', desc: 'XP, tiempo y dificultad por misión', icon: Icons.BarChart3, accent: '#FF6B4A' },
     { to: '/teacher-panel', label: 'Panel Docente', desc: 'Vista general del laboratorio', icon: Icons.LayoutDashboard, accent: '#1B3A5C' },
     { to: '/user-management', label: 'Gestión de Usuarios', desc: 'Roles y código de registro', icon: Icons.Users, accent: '#3FBFAD' },
-    // "Gestión de Misiones" oculta a pedido del usuario (2026-09-08, ver Layout.jsx) — la ruta
-    // /mission-management sigue existiendo, solo se quitó de este acceso rápido. Esta tarjeta
-    // fue el segundo lugar donde seguía asomando pese a estar oculta del sidebar (reportado
-    // 2026-09-21). Volver a agregarla aquí cuando pida que se muestre de nuevo:
-    // { to: '/mission-management', label: 'Gestión de Misiones', desc: 'Editar misiones y ejercicios', icon: Icons.Map, accent: '#F0A93C' },
   ]
   return (
     <div className="bg-white rounded-xl border border-ink/10 p-6 h-full">

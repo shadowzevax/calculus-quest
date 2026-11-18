@@ -39,11 +39,6 @@ function invalidate(prefix) {
 export const api = {
   missions: {
     list: (module = 'misiones') => cachedGet(`/missions?module=${module}`),
-    update: (data) =>
-      request('/missions', { method: 'PATCH', body: JSON.stringify(data) }).then((r) => {
-        invalidate('/missions');
-        return r;
-      }),
   },
   exercises: {
     byMission: (missionId) => cachedGet(`/exercises?mission_id=${missionId}`),
