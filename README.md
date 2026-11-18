@@ -12,7 +12,6 @@ Plataforma web gamificada para practicar cálculo diferencial aplicado a funcion
 - Puntos de experiencia (XP) con bono por rapidez, niveles cada 500 XP, 8 insignias, avatar con piezas coleccionables y tabla de clasificación.
 - Retroalimentación inmediata, ayuda en cada misión y sugerencia de repaso.
 - Roles de estudiante, docente y administrador; panel docente con analítica por estudiante y por misión, exportación a CSV y chat.
-- Encuesta de usabilidad System Usability Scale (SUS) integrada.
 
 ## Tecnologías
 

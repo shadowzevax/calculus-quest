@@ -123,11 +123,6 @@ export const api = {
     getRegCode: () => request('/settings?action=reg_code'),
     regenerateRegCode: () => request('/settings?action=reg_code', { method: 'POST' }),
   },
-  survey: {
-    get: () => request('/profile?action=survey'),
-    submit: (answers, comment) =>
-      request('/profile?action=survey', { method: 'POST', body: JSON.stringify({ answers, comment }) }),
-  },
   analytics: {
     get: () => request('/stats?action=analytics'),
     csvUrl: '/api/stats?action=analytics&format=csv',

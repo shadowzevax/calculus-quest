@@ -1,14 +1,14 @@
 import { sql } from './_db.js';
 import { requireAdmin, isEvaluationAccount, maskPerson } from './_auth.js';
 
-// Panel de analitica por estudiante para el docente (Objetivo 3): desempeño, tiempo y
-// encuesta de percepcion, todo con datos reales de uso de la plataforma (no de ejemplo) —
+// Panel de analitica por estudiante para el docente (Objetivo 3): desempeño y tiempo,
+// todo con datos reales de uso de la plataforma (no de ejemplo) —
 // sirve tanto para ver en pantalla como para exportar a CSV. El pre-test/post-test se
 // hace por Google Forms, fuera de la plataforma, así que no vive aquí.
 //
 // Todas las consultas de este archivo excluyen users.is_test_account = true (las cuentas
 // "Test Estudiante"/"Test Docente" que usa el equipo para probar la plataforma) — sin este
-// filtro, sus intentos y su respuesta a la encuesta SUS contaminarían los números reales del
+// filtro, sus intentos contaminarían los números reales del
 // curso una vez que estudiantes de verdad empiecen a usarla.
 async function handleAnalytics(req, res, admin) {
   const rawStudents = await sql`
@@ -32,14 +32,6 @@ async function handleAnalytics(req, res, admin) {
   `;
   // Las cuentas de evaluación ven las cifras reales, sin la identidad de los participantes.
   const students = isEvaluationAccount(admin) ? rawStudents.map(maskPerson) : rawStudents;
-  // Se excluyen las cuentas de prueba del propio equipo (is_test_account) — de lo contrario
-  // sus respuestas a la encuesta contaminarían el puntaje SUS real del curso.
-  const surveyRows = await sql`
-    SELECT sr.user_id, sq."order", sq.text, (sr.answers->>sq.id::text)::int AS value
-    FROM survey_responses sr
-    JOIN users u ON u.id = sr.user_id AND u.is_test_account = false
-    CROSS JOIN survey_questions sq
-  `;
 
   // Dificultad por misión: cuánto se intenta cada una y qué tan seguido se acierta, a partir
   // de exercise_attempts (ya se guardaba un intento por cada ejercicio resuelto o fallado en
@@ -87,7 +79,7 @@ async function handleAnalytics(req, res, admin) {
     return res.status(200).send('﻿' + lines.join('\n'));
   }
 
-  return res.status(200).json({ students, surveyRows, missionDifficulty });
+  return res.status(200).json({ students, missionDifficulty });
 }
 
 export default async function handler(req, res) {

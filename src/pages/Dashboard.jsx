@@ -104,7 +104,7 @@ function ProfileSidebar({ user, badges, ranking }) {
 // ocupa el perfil, pero con lo que a un docente le sirve ver de un vistazo.
 function TeacherShortcuts() {
   const items = [
-    { to: '/teacher-analytics', label: 'Analítica de estudiantes', desc: 'XP, tiempo, pre/post-test y encuesta', icon: Icons.BarChart3, accent: '#FF6B4A' },
+    { to: '/teacher-analytics', label: 'Analítica de estudiantes', desc: 'XP, tiempo y dificultad por misión', icon: Icons.BarChart3, accent: '#FF6B4A' },
     { to: '/teacher-panel', label: 'Panel Docente', desc: 'Vista general del laboratorio', icon: Icons.LayoutDashboard, accent: '#1B3A5C' },
     { to: '/user-management', label: 'Gestión de Usuarios', desc: 'Roles y código de registro', icon: Icons.Users, accent: '#3FBFAD' },
     // "Gestión de Misiones" oculta a pedido del usuario (2026-09-08, ver Layout.jsx) — la ruta

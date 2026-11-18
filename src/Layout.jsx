@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
   Home, BookOpen, Trophy, MessageSquare, User, BarChart3,
-  Users, Map, LogOut, Shield, MessagesSquare, BarChart2, Menu, X,
+  Users, Map, LogOut, Shield, BarChart2, Menu, X,
 } from 'lucide-react'
 import { useAuth } from './lib/AuthContext'
 import MiniCurve from './components/MiniCurve'
@@ -15,7 +15,6 @@ const studentNav = [
   { to: '/ranking', label: 'Ranking', icon: Trophy },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
   { to: '/profile', label: 'Mi Perfil', icon: User },
-  { to: '/survey', label: 'Encuesta', icon: MessagesSquare },
 ]
 
 const adminNav = [

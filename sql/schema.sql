@@ -283,24 +283,6 @@ CREATE TABLE messages (
 CREATE INDEX idx_messages_created_at ON messages(created_at);
 CREATE INDEX idx_messages_user ON messages(user_id);
 
--- Encuesta de usabilidad SUS (System Usability Scale, Brooke 1986), aplicada al finalizar,
--- solo para quienes SI usaron la plataforma. Escala Likert 1-5. (Definidas originalmente en
--- sql/migration_assessment.sql; se agregan aqui tambien porque TeacherAnalytics y Survey.jsx
--- ya las usan en produccion.)
-CREATE TABLE survey_questions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "order" INTEGER NOT NULL,
-  text TEXT NOT NULL
-);
-
-CREATE TABLE survey_responses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-  answers JSONB NOT NULL, -- { question_id: 1-5 }
-  comment TEXT,
-  submitted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 CREATE INDEX idx_exercises_mission ON exercises(mission_id);
 CREATE INDEX idx_exercises_parent ON exercises(parent_exercise_id);
 CREATE INDEX idx_progress_user ON user_progress(user_id);
