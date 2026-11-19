@@ -8,6 +8,10 @@ export default async function handler(req, res) {
   if (!user) return;
   const { mission_id } = req.query;
   if (!mission_id) return res.status(400).json({ error: 'mission_id requerido' });
+  // Un id mal formado hacía fallar la consulta con un error 500 en vez de una respuesta clara.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(mission_id))) {
+    return res.status(400).json({ error: 'mission_id no válido' });
+  }
   if (!(await isMissionUnlocked(user, mission_id))) {
     return res.status(403).json({ error: 'Esta misión todavía está bloqueada: completa primero la misión anterior.', locked: true });
   }

@@ -60,6 +60,10 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
+    // Las cuentas de evaluación de los jurados no pueden borrar los mensajes reales de los estudiantes.
+    if (isEvaluationAccount(admin)) {
+      return res.status(403).json({ error: 'Cuenta de evaluación: limpiar el chat está deshabilitado para no borrar los mensajes de los estudiantes.' });
+    }
     await sql`DELETE FROM messages`;
     return res.status(200).json({ ok: true });
   }
